@@ -1,9 +1,19 @@
-# Gate tooling is not a runtime dependency — kept in a separate file
-# per agentic-project-kickoff step 6.
+# Gate tooling only — never imported by application code.
+# Updated 2026-09-05 alongside requirements.txt: resolved to the latest
+# mutually-compatible versions and verified with `pip check` plus a full
+# local gate run. mypy and pytest both jumped a major version in this pass
+# (1.x->2.x, 8.x->9.x) — re-verified against this project's actual code
+# after bumping, not assumed compatible from the version number alone.
 black==26.5.1
-flake8==7.1.1
-mypy==1.14.1
-pytest==8.3.4
-pytest-asyncio==0.25.2
-deepeval==2.4.5
-Jinja2==3.1.5
+flake8==7.3.0
+mypy==2.3.1
+pytest==9.1.1
+pytest-asyncio==1.4.0
+# Pinned below 4.2.0 deliberately, matching the donor project's own measured
+# finding: 4.2.0 inverted score polarity for several metrics (BiasMetric,
+# HallucinationMetric, MisuseMetric, ToxicityMetric) on 2026-08-24. A later
+# pip resolve here picked 4.2.1 by default (nothing in our own requirements
+# constrains it below that) — pinned explicitly to the donor's verified-safe
+# 4.1.10 instead of accepting whatever "latest" resolved to.
+deepeval==4.1.10
+Jinja2==3.1.6
