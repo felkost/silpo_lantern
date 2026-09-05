@@ -1,0 +1,15 @@
+# Pinned to what the donor project (SupportFlow) measured against, per
+# agentic-project-kickoff step 6: "pin what you measure". Versions verified
+# installed in that project's environment at kickoff (2026-09-05).
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.5
+mcp==1.29.0
+langgraph==0.5.3
+langgraph-checkpoint-postgres==2.0.9
+langsmith==0.3.5
+psycopg[binary]==3.2.4
+sqlalchemy==2.0.37
+httpx==0.28.1
+python-dotenv==1.0.1
+PyYAML==6.0.2

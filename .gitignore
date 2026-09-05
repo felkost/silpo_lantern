@@ -1,0 +1,50 @@
+# --- Local tooling, never shipped ---
+# Portable skill/agent toolkit (decision D2): private instrumentation, not
+# project deliverable content, and the repo is public.
+.claude/
+
+# --- Secrets and credentials ---
+.env
+.cache/
+*.token.json
+
+# --- Python ---
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# --- Node / web ---
+node_modules/
+apps/web/dist/
+
+# --- Notebook outputs: raw cart/session data can carry PII ---
+# Ignore outputs, keep the notebook source itself tracked.
+notebooks/.ipynb_checkpoints/
+# stripped via nbstripout pre-commit once configured at G1; until then,
+# outputs are cleared by hand before every commit that touches this file.
+
+# --- Raw fixture captures: sanitized copies only reach the repo ---
+# (§12.1.1: "raw records absent from repo, CI, and submission")
+datasets/fixtures/raw/
+
+# --- Generated reports/diagrams that are rebuilt by `make report` ---
+# Ignore contents, then re-include the tracked ones, so a stray file from a
+# crashed run does not get swept up by a broad `git add`.
+docs/reports/*
+!docs/reports/index.html
+!docs/reports/S0/
+!docs/reports/S0/index.html
+
+# --- Evidence lab outputs: kept selectively, not wholesale ---
+# G0 evidence snapshots are committed deliberately (docs/evidence/*.json),
+# but raw/, screenshots, and anything not explicitly promoted stay local.
+docs/evidence/raw/
+
+# --- OS noise ---
+.DS_Store
+Thumbs.db
