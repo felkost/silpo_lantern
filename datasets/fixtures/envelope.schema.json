@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lantern.local/schemas/fixture-envelope.json",
+  "title": "Fixture test envelope",
+  "description": "Per plan section 12.1.1 step 4: test metadata lives in an envelope alongside the MCP payload, never inside it, so fixture metadata never violates the server's own JSON Schema.",
+  "type": "object",
+  "required": ["fixture_id", "origin", "source_schema_hash", "generator_version", "expected_outcome"],
+  "properties": {
+    "fixture_id": { "type": "string" },
+    "origin": { "type": "string", "enum": ["recorded", "synthetic", "mutated"] },
+    "source_schema_hash": { "type": "string" },
+    "generator_version": { "type": "string" },
+    "seed": { "type": ["integer", "null"] },
+    "transformations": { "type": "array", "items": { "type": "string" } },
+    "expected_outcome": { "type": "object" },
+    "payload": {
+      "type": "object",
+      "description": "The actual MCP-shaped payload, untouched by envelope fields."
+    }
+  },
+  "additionalProperties": false
+}

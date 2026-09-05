@@ -1,0 +1,12 @@
+{
+  "$comment": "Skeleton per plan section 12.1.1 step 4/8. Populated at G2 with real sanitized/synthetic/mutated fixture entries. Schema: datasets/fixtures/envelope.schema.json",
+  "schema_hash": null,
+  "generator_version": null,
+  "generated_at": null,
+  "coverage": {
+    "GD": [],
+    "RG": [],
+    "DR": []
+  },
+  "fixtures": []
+}
