@@ -5,11 +5,12 @@ plan section 21.3 — implemented at G3.
 Evidence: `[I5]` section 9.1, confirmed on four independent live runs
 (4 of 4): `minOrderCost` compares only against `productsTotal`, never
 `total` or `totalAfterDiscounts` — bonuses and delivery fees must not
-affect the gap. See amendment A2 (`docs/plan-amendments.md`) for why the
-epsilon rule below is kept even though the anomaly that originally
-motivated it turned out to be a units-confusion bug, not a real server
-inconsistency: it is cheap defense-in-depth against exactly that class of
-mistake recurring.
+affect the gap. The epsilon rule below is kept deliberately even though the
+anomaly that originally motivated it (a cart reading 594.72 against a 599
+threshold with no blocking code) turned out to be a units-confusion bug —
+the comparison was against `totalAfterDiscounts` instead of
+`productsTotal` — not a real server inconsistency: it stays as cheap
+defense-in-depth against exactly that class of mistake recurring.
 """
 
 from decimal import Decimal

@@ -14,8 +14,7 @@ secret-scan:
 	python scripts/secret_scan.py
 
 report:
-	@if [ -z "$(GATE)" ]; then echo "Usage: make report GATE=S0"; exit 1; fi
-	python scripts/render_report.py --gate $(GATE)
+	python scripts/render_report.py
 
 run:
 	@echo "Not available yet — apps/api and apps/web get a runnable server at G1."

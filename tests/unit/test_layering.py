@@ -1,9 +1,14 @@
-"""Enforce the layer table in CLAUDE.md by walking imports, not by trusting
-directory placement alone. Adapted from the donor project's
-`SupportFlow/tests/test_layering.py` — the shape (LAYER_OF + ALLOWED map,
-AST-walk, one negative rule beyond the plain cross-layer check) is reused
-directly; only the layer names and the write-allowlist rule are Lantern's
-own.
+"""Enforce this project's Clean Architecture layer table by walking
+imports, not by trusting directory placement alone. Adapted from the donor
+project's `SupportFlow/tests/test_layering.py` — the shape (LAYER_OF +
+ALLOWED map, AST-walk, one negative rule beyond the plain cross-layer
+check) is reused directly; only the layer names and the write-allowlist
+rule are Lantern's own.
+
+The layer table this test enforces: kernel (settings, no project-local
+imports) -> domain (business rules, imports kernel only) -> safety (Write
+Guard, imports kernel+domain) -> infra (MCP/DB/tracing, imports
+kernel+domain) -> application (the agent graph, imports all of the above).
 """
 
 import ast
@@ -33,7 +38,7 @@ ALLOWED: dict[str, set[str]] = {
     "application": {"kernel", "domain", "safety", "infra"},
 }
 
-# CLAUDE.md invariant: "The domain core does no I/O" — domain and safety must
+# Project invariant: "the domain core does no I/O" — domain and safety must
 # never import a networking, LLM, or database library, because otherwise one
 # convenient edit turns a pure, offline-testable rule into something that
 # silently needs a live connection to pass its own unit test.
@@ -77,7 +82,8 @@ def _imported_names(node: ast.AST) -> list[str]:
 
 def test_no_python_files_yet_or_all_respect_layering():
     """No lantern/ source files exist yet at kickoff; once they do, each
-    one's imports must stay within what CLAUDE.md's layer table allows.
+    one's imports must stay within the layer table defined by LAYER_OF and
+    ALLOWED above.
     """
     violations: list[str] = []
     for path in _iter_python_files():
@@ -102,8 +108,8 @@ def test_no_python_files_yet_or_all_respect_layering():
 
 
 def test_domain_and_safety_never_import_io_libraries():
-    """The single most load-bearing rule in CLAUDE.md's invariants section:
-    a domain rule or the Write Guard that quietly starts importing `httpx`
+    """The single most load-bearing invariant in this project: a domain
+    rule or the Write Guard that quietly starts importing `httpx`
     or `mcp` stops being unit-testable offline, and every existing test can
     stay green while the guarantee it exists to protect is already gone.
     """
@@ -124,8 +130,8 @@ def test_domain_and_safety_never_import_io_libraries():
 
 
 def test_write_allowlist_constant_only_imported_within_safety():
-    """CLAUDE.md invariant: 'only one node in the graph may call a write
-    tool' — enforced here by making the write-allowlist constant itself
+    """Project invariant: only one node in the graph may call a write
+    tool — enforced here by making the write-allowlist constant itself
     unimportable from outside `lantern/safety/**`. Once
     `src/lantern/safety/write_guard.py` defines `WRITE_TOOL_ALLOWLIST`, any
     module outside `safety` importing it directly (instead of going through

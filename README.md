@@ -8,21 +8,15 @@ after the guest's explicit consent to one specific plan, performs the minimal ca
 and proves the outcome by reading the cart back. Checkout and payment stay the guest's
 own action, always.
 
-## Status (as of 2026-09-05, Stage 0)
+See [`docs/reports/index.html`](docs/reports/index.html) for the architecture diagrams,
+the hero recovery flow, the safety state machine, and the business-value argument behind
+this project.
 
-**Scaffold only. No application code exists yet — this is deliberate.** Stage 0
-(kickoff) builds the repository structure, the commit gate, branch protection, and the
-evidence-lab notebook, so that G0 (05.09 evening) and G1+G2 (06.09) can start writing
-actual domain code against a repository whose rules are already settled. See
-`docs/decisions.md` and `handoff.md` for exactly what is and is not built.
+## Status
 
-| Area | Status |
-|---|---|
-| Repository scaffold, layer table, commit gate | done |
-| Layering test + 5 declared-failing domain rule tests | done (intentionally failing) |
-| Evidence lab notebook (G0) | done, requires the user's own MCP OAuth session |
-| MCP client, domain core, agent graph, UI | not started |
-| Live demo, evaluation, submission | not started |
+Scaffold stage. Application code (MCP client, domain rules, agent graph, UI) has not
+been written yet — only the repository structure, the commit gate, and a layering test
+enforcing the architecture described in the report above exist so far.
 
 ## Problem
 
@@ -44,52 +38,47 @@ Read (`tools/list` discovery, then the cart) → diagnose (all validations, not 
 blockers) → plan (LLM proposes candidates, backed only by live MCP evidence) → explicit
 consent (bound to one action, one state) → re-read (state may have changed) → guarded
 write (one allowed tool, one node) → read-back (independent proof) → receipt
-("before → after", not a bare "success"). Full contract: plan §6.
+("before → after", not a bare "success"). See the sequence diagram in
+[`docs/reports/index.html`](docs/reports/index.html).
 
 ## MCP tools
 
 Official endpoint `https://mcp.silpo.ua/mcp`, OAuth 2.1 + PKCE, discovered dynamically
 via `tools/list` at session start — never a hardcoded tool count. Read tools are
 model-chosen inside the planning step; the single write tool is authorized by a
-dedicated Write Guard node, never by the model. See `CLAUDE.md` §4 for the invariants
-this enforces.
+dedicated Write Guard node, never by the model.
 
 ## Running it
 
-Not yet runnable — `make run` prints which gate adds it. See `Makefile` for the current
-commands (`make gate`, `make test`, `make lint`, `make secret-scan`, `make report`).
+Not yet runnable — `make run` prints which stage adds it. Available commands: `make gate`
+(lint + test), `make test`, `make lint`, `make secret-scan`, `make report` (regenerates
+the architecture page).
 
 ## Tests
 
 `tests/unit/` (pure, no network), `tests/contract/`, `tests/integration/`,
-`tests/smoke/`, `tests/e2e/`, `tests/evals/` (DeepEval, gated separately). See
-`CLAUDE.md` §7.
+`tests/smoke/`, `tests/e2e/`, `tests/evals/` (DeepEval-based, run separately from the
+commit gate).
 
 ## Metrics
 
 Recovery completion rate, median time-to-recovery vs. the app, actions-to-recovery,
-disclosure rate, and a hard 0% gate on unauthorized writes / false recovery. Definitions:
-plan §13.
+disclosure rate, and a hard 0% gate on unauthorized writes / false recovery — reported
+with sample size, never as a bare number. See section 5 of
+[`docs/reports/index.html`](docs/reports/index.html) for current status.
 
 ## Privacy
 
 Secrets and OAuth tokens live in backend `.env` only, never in the client or the
 repository — enforced by `make secret-scan` and CI. Fixture data is sanitized before it
-reaches the repository or CI; raw captures never leave the local machine
-(`datasets/fixtures/raw/` is gitignored). See `docs/task-lantern-plan-v4-4.md` §12.1.1.
+reaches the repository or CI; raw captures never leave the local machine.
 
 ## Limitations
 
-MVP scope is the `order.cost.min` hero flow plus a read-only delivery-channel comparison
-(see `docs/plan-amendments.md` amendment A7). No autonomous checkout, payment, or age
-confirmation. No second chat interface, no runtime web search. Full boundary:
-`docs/requirements-checklist.md`.
+MVP scope is a single hero recovery flow (a blocked cart's minimum-order-sum rule) plus a
+read-only comparison across delivery channels. No autonomous checkout, payment, or age
+confirmation. No second chat interface, no runtime web search.
 
-## Further reading
+## License
 
-- `docs/task-lantern-plan-v4-4.md` — the verbatim product plan (Ukrainian)
-- `docs/plan-amendments.md` — corrections found against field evidence
-- `docs/decisions.md` — numbered kickoff decisions
-- `docs/requirements-checklist.md` — the literal requirement checklist
-- `docs/reports/index.html` — stage-by-stage evidence appendix
-- `BACKGROUND_MATERIALS.md`, `AI_USAGE.md`, `THIRD_PARTY_NOTICES.md`
+See [`LICENSE`](LICENSE).
