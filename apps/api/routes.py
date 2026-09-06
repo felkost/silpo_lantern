@@ -137,6 +137,18 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
         resume_input = None  # resume the existing checkpoint
         trace_id = existing_state.get("trace_id", "")
 
+    # A GET must be safe to repeat. Advancing the graph on every call means
+    # a browser refresh, a double-clicked button or a retried request
+    # resumes past the consent pause into `write_guard` with no consent
+    # recorded -- which aborts the session permanently. Measured, not
+    # hypothetical: it destroyed a live session during this stage's own
+    # verification run. When the graph should not move, the current state
+    # is replayed instead.
+    status = existing_state.get("status") if existing_state else None
+    should_advance = not (
+        status == "awaiting_consent" and not existing_state.get("consent_action_id")
+    ) and status not in ("aborted", "no_action_available", "verified", "unverified")
+
     version_tuple = _version_tuple(request)
 
     async def stream() -> AsyncIterator[str]:
@@ -146,56 +158,72 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
             "version": version_tuple,
         }
 
-        async for chunk in graph.astream(resume_input, config, stream_mode="updates"):
-            for node_name, partial in chunk.items():
-                if node_name == "__interrupt__":
-                    continue
-                if node_name == "diagnose" and partial.get("diagnosis") is not None:
-                    diagnosis = partial["diagnosis"]
-                    yield _sse_line(
-                        "diagnosis",
+        def _diagnosis_line(diagnosis: Any) -> str:
+            return _sse_line(
+                "diagnosis",
+                {
+                    **base,
+                    "primary_code": diagnosis.primary_code,
+                    "gap": (str(diagnosis.gap) if diagnosis.gap is not None else None),
+                },
+            )
+
+        def _options_line(candidates: Any) -> str:
+            return _sse_line(
+                "options",
+                {
+                    **base,
+                    "candidates": [
                         {
-                            **base,
-                            "primary_code": diagnosis.primary_code,
-                            "gap": (
-                                str(diagnosis.gap)
-                                if diagnosis.gap is not None
-                                else None
-                            ),
-                        },
-                    )
-                if node_name == "explain" and partial.get("candidates"):
-                    yield _sse_line(
-                        "options",
-                        {
-                            **base,
-                            "candidates": [
-                                {
-                                    "action_id": p.action_id,
-                                    "product_name": p.product_name,
-                                    "quantity": str(p.quantity),
-                                    "expected_delta": str(p.expected_delta),
-                                    "guest_text_uk": p.guest_text_uk,
-                                }
-                                for p in partial["candidates"]
-                            ],
-                        },
-                    )
-                if partial.get("status") == "aborted":
-                    yield _sse_line("error", {**base, "error": partial.get("error")})
+                            "action_id": p.action_id,
+                            "product_name": p.product_name,
+                            "quantity": str(p.quantity),
+                            "expected_delta": str(p.expected_delta),
+                            "guest_text_uk": p.guest_text_uk,
+                        }
+                        for p in candidates
+                    ],
+                },
+            )
+
+        if should_advance:
+            async for chunk in graph.astream(
+                resume_input, config, stream_mode="updates"
+            ):
+                for node_name, partial in chunk.items():
+                    if node_name == "__interrupt__":
+                        continue
+                    if node_name == "diagnose" and partial.get("diagnosis") is not None:
+                        yield _diagnosis_line(partial["diagnosis"])
+                    if node_name == "explain" and partial.get("candidates"):
+                        yield _options_line(partial["candidates"])
+                    if partial.get("status") == "aborted":
+                        yield _sse_line(
+                            "error", {**base, "error": partial.get("error")}
+                        )
+        else:
+            # Replay: the same frames a first-time caller saw, rebuilt from
+            # the checkpoint, so a repeated GET is informative rather than
+            # silent -- and, above all, does not move the graph.
+            if existing_state.get("diagnosis") is not None:
+                yield _diagnosis_line(existing_state["diagnosis"])
+            if existing_state.get("candidates"):
+                yield _options_line(existing_state["candidates"])
+            if status == "aborted":
+                yield _sse_line("error", {**base, "error": existing_state.get("error")})
 
         final_snapshot = await graph.aget_state(config)
         final_state = final_snapshot.values
-        status = final_state.get("status")
-        if status == "awaiting_consent":
+        final_status = final_state.get("status")
+        if final_status == "awaiting_consent":
             yield _sse_line("consent_required", base)
-        elif status in ("verified", "unverified"):
+        elif final_status in ("verified", "unverified"):
             receipt = final_state.get("receipt")
             yield _sse_line(
                 "receipt",
                 {
                     **base,
-                    "status": receipt.status if receipt else status,
+                    "status": receipt.status if receipt else final_status,
                     "reason": receipt.reason if receipt else None,
                     "actual_delta": (
                         str(receipt.actual_delta)

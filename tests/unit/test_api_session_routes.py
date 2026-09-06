@@ -139,6 +139,16 @@ def _awaiting_consent_state() -> Dict[str, Any]:
     }
 
 
+def _consented_state() -> Dict[str, Any]:
+    """The state a client is actually in when it re-calls `/events` to run
+    the write: `POST /consent` has recorded the consent and written
+    `consent_action_id` into the checkpoint. Without that id the route
+    deliberately refuses to advance the graph, because a bare repeat of a
+    GET must not resume past the consent pause -- see `session_events`.
+    """
+    return {**_awaiting_consent_state(), "consent_action_id": "a1"}
+
+
 def _read_pipeline_chunks() -> List[Dict[str, Any]]:
     return [
         {"read": {"cart": Cart(cart_id="cart-1", products_total=Decimal("404.89"))}},
@@ -215,14 +225,14 @@ def test_events_resumes_an_existing_session_rather_than_restarting_it(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     receipt_state = {
-        **_awaiting_consent_state(),
+        **_consented_state(),
         "status": "verified",
         "receipt": None,
     }
     graph = _FakeGraph(
         chunks=[{"write_and_readback": {"status": "verified"}}],
         final_state=receipt_state,
-        initial_state=_awaiting_consent_state(),
+        initial_state=_consented_state(),
     )
     app = _make_app(graph, monkeypatch)
     client = TestClient(app)
@@ -363,14 +373,14 @@ def test_b3_write_guard_refusal_reaches_the_client_as_an_error_event(
     live push they surface as the plan's own `error` SSE event carrying
     the guard's stated reason, not as a silent 200."""
     refused = {
-        **_awaiting_consent_state(),
+        **_consented_state(),
         "status": "aborted",
         "error": guard_reason,
     }
     graph = _FakeGraph(
         chunks=[{"write_guard": {"status": "aborted", "error": guard_reason}}],
         final_state=refused,
-        initial_state=_awaiting_consent_state(),
+        initial_state=_consented_state(),
     )
     app = _make_app(graph, monkeypatch)
     client = TestClient(app)
@@ -419,3 +429,51 @@ def test_create_session_points_the_client_at_the_login_url(
 
     assert body["authorized"] is False
     assert body["auth_url"] == f"/auth/start?session_id={body['session_id']}"
+
+
+def test_repeating_events_without_consent_does_not_advance_the_graph(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A GET must be safe to repeat. Before this, a browser refresh or a
+    retried request resumed the paused graph into `write_guard` with no
+    consent recorded, which aborted the session permanently -- observed on
+    a live run, not imagined. The repeat now replays the current state.
+    """
+    graph = _FakeGraph(
+        chunks=[{"write_guard": {"status": "aborted", "error": "no consent"}}],
+        final_state=_awaiting_consent_state(),
+        initial_state=_awaiting_consent_state(),
+    )
+    app = _make_app(graph, monkeypatch)
+    client = TestClient(app)
+
+    response = client.get("/session/s1/events")
+
+    assert response.status_code == 200
+    assert graph.astream_inputs == [], "the graph must not have been driven"
+    # The client is told where it stands, rather than getting silence.
+    assert "event: diagnosis" in response.text
+    assert "event: options" in response.text
+    assert "event: consent_required" in response.text
+    assert "event: error" not in response.text
+
+
+def test_repeating_events_after_a_terminal_outcome_replays_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Same rule at the other end: re-reading a finished session returns
+    its outcome instead of driving a graph that has nowhere left to go."""
+    aborted = {
+        **_awaiting_consent_state(),
+        "status": "aborted",
+        "error": "write refused: consent has expired",
+    }
+    graph = _FakeGraph(chunks=[], final_state=aborted, initial_state=aborted)
+    app = _make_app(graph, monkeypatch)
+    client = TestClient(app)
+
+    response = client.get("/session/s1/events")
+
+    assert graph.astream_inputs == []
+    assert "event: error" in response.text
+    assert "write refused: consent has expired" in response.text
