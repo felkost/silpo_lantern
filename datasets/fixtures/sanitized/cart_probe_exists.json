@@ -1,0 +1,14 @@
+{
+  "fixture_id": "cart_probe_exists",
+  "origin": "recorded",
+  "source_schema_hash": "live-2026-09-06",
+  "generator_version": "n/a-recorded",
+  "seed": null,
+  "transformations": [],
+  "expected_outcome": {},
+  "payload": {
+    "success": true,
+    "shoppingCartId": "test_cart_001",
+    "exists": true
+  }
+}

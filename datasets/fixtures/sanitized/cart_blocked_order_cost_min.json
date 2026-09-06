@@ -1,0 +1,123 @@
+{
+  "fixture_id": "cart_blocked_order_cost_min",
+  "origin": "recorded",
+  "source_schema_hash": "live-2026-09-06",
+  "generator_version": "n/a-recorded",
+  "seed": null,
+  "transformations": [],
+  "expected_outcome": {},
+  "payload": {
+    "success": true,
+    "cart": {
+      "deliveryType": "NovaPoshta",
+      "timeslot": {
+        "start": "2026-09-10T09:00:00+00:00",
+        "end": "2026-09-10T15:00:00+00:00"
+      },
+      "shipments": [
+        {
+          "companyId": "test_company_001",
+          "branchId": "test_branch_002",
+          "products": [
+            {
+              "productId": "test_product_003",
+              "companyId": "test_company_001",
+              "branchId": "test_branch_002",
+              "slug": "moloko-galychyna-z-chystykh-karpat-2-5-716286",
+              "name": "Молоко «Галичина» «З чистих Карпат» 2,5%",
+              "quantity": 3,
+              "price": 39.99,
+              "oldPrice": 62.49,
+              "subTotal": 187.47,
+              "subDiscount": 67.5,
+              "total": 119.97,
+              "stock": 598,
+              "weighted": false
+            },
+            {
+              "productId": "test_product_004",
+              "companyId": "test_company_001",
+              "branchId": "test_branch_002",
+              "slug": "pyvo-kronenbourg-blanc-609226",
+              "name": "Пиво Kronenbourg Blanc",
+              "quantity": 3,
+              "price": 39.99,
+              "oldPrice": 71.99,
+              "subTotal": 215.97,
+              "subDiscount": 96,
+              "total": 119.97,
+              "stock": 185,
+              "weighted": false
+            },
+            {
+              "productId": "test_product_005",
+              "companyId": "test_company_001",
+              "branchId": "test_branch_002",
+              "slug": "servetky-vologi-premiia-dlia-prybyrannia-universalni-991469",
+              "name": "Серветки вологі «Премія»® для прибирання універсальні",
+              "quantity": 3,
+              "price": 34.99,
+              "oldPrice": 64.99,
+              "subTotal": 194.97,
+              "subDiscount": 90,
+              "total": 104.97,
+              "stock": 20,
+              "weighted": false
+            },
+            {
+              "productId": "test_product_006",
+              "companyId": "test_company_001",
+              "branchId": "test_branch_002",
+              "slug": "vershky-premiia-ultrapasteryzovani-15-1018453",
+              "name": "Вершки «Премія»® ультрапастеризовані 15%",
+              "quantity": 2,
+              "price": 29.99,
+              "oldPrice": 42.49,
+              "subTotal": 84.98,
+              "subDiscount": 25,
+              "total": 59.98,
+              "stock": 16,
+              "weighted": false
+            }
+          ]
+        }
+      ],
+      "calculation": {
+        "total": 533.89,
+        "totalAfterDiscounts": 488.96,
+        "subTotal": 812.39,
+        "subDiscount": 278.5,
+        "productsTotal": 404.89,
+        "delivery": {
+          "total": 129
+        },
+        "payment": {
+          "availableTypes": []
+        },
+        "validations": [
+          {
+            "level": "error",
+            "type": "order",
+            "message": "order.cost.min",
+            "context": {
+              "orderCostMin": 599
+            }
+          },
+          {
+            "level": "info",
+            "type": "order",
+            "message": "order.payment_types.disabled",
+            "context": {
+              "reason": "not_available_for_total",
+              "paymentTypes": [
+                "BNPL"
+              ],
+              "total": 533.89,
+              "minTotal": 1000
+            }
+          }
+        ]
+      }
+    }
+  }
+}

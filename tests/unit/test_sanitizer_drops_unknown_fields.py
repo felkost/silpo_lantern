@@ -14,7 +14,13 @@ from src.lantern.mcp.sanitizer import sanitize_payload
 def test_keeps_only_allowlisted_keys() -> None:
     raw = {"productId": "p1", "name": "Молоко", "price": 39.99, "unexpected_field": "x"}
     sanitized = sanitize_payload(raw)
-    assert sanitized == {"productId": "p1", "name": "Молоко", "price": 39.99}
+    # `productId` survives but pseudonymised — plan section 12.1.1 step 3
+    # requires stable identifiers replaced, not passed through.
+    assert sanitized == {
+        "productId": "test_product_001",
+        "name": "Молоко",
+        "price": 39.99,
+    }
 
 
 def test_drops_address_and_contact_shaped_fields() -> None:
@@ -40,10 +46,66 @@ def test_recurses_into_nested_lists_of_dicts() -> None:
     }
     sanitized = sanitize_payload(raw)
     assert sanitized["products"] == [
-        {"productId": "p1", "price": 10},
-        {"productId": "p2", "price": 20},
+        {"productId": "test_product_001", "price": 10},
+        {"productId": "test_product_002", "price": 20},
     ]
 
 
 def test_an_empty_payload_stays_empty() -> None:
     assert sanitize_payload({}) == {}
+
+
+def test_identifiers_are_pseudonymised_with_referential_integrity() -> None:
+    """Plan section 12.1.1 step 3: stable identifiers are replaced with
+    local `test_*` values "зі збереженням посилальної цілісності" — the
+    same original id must land on the same replacement everywhere in one
+    payload, or a validation's `productId` stops pointing at its line item.
+    """
+    raw = {
+        "shipments": [
+            {
+                "companyId": "real-company-uuid",
+                "products": [
+                    {"productId": "real-product-uuid", "price": 10},
+                    {"productId": "other-product-uuid", "price": 20},
+                ],
+            }
+        ],
+        "validations": [
+            {
+                "level": "error",
+                "type": "product",
+                "message": "product.offer.not_found",
+                "context": {"productId": "real-product-uuid"},
+            }
+        ],
+    }
+    sanitized = sanitize_payload(raw)
+
+    first_item = sanitized["shipments"][0]["products"][0]["productId"]
+    second_item = sanitized["shipments"][0]["products"][1]["productId"]
+    referenced = sanitized["validations"][0]["context"]["productId"]
+
+    assert not first_item.startswith("real-")
+    assert first_item != second_item
+    # the reference still resolves to the same (pseudonymised) product
+    assert referenced == first_item
+
+
+def test_validation_context_keeps_the_load_bearing_threshold() -> None:
+    """`context` is not allow-listed wholesale, but `orderCostMin` is the
+    field DR-03's whole gap depends on — a fixture that drops it cannot
+    exercise the hero rule at all."""
+    raw = {
+        "validations": [
+            {
+                "level": "error",
+                "type": "order",
+                "message": "order.cost.min",
+                "context": {"orderCostMin": 599, "unreviewed_field": "dropped"},
+            }
+        ]
+    }
+    sanitized = sanitize_payload(raw)
+    context = sanitized["validations"][0]["context"]
+    assert context == {"orderCostMin": 599}
