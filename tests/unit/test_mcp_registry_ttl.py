@@ -1,4 +1,4 @@
-"""D-G1-08 (docs/g1-g2-stage-spec.md): the MCP registry's wall-clock TTL is an
+"""D-G1-08: the MCP registry's wall-clock TTL is an
 addition beyond plan section 9.1's event-driven invalidation list, not a
 restatement of it. Uses an injectable clock so the test is deterministic
 (agentic-tdd-and-gate: "Deterministic. If a fixture needs a timestamp, inject

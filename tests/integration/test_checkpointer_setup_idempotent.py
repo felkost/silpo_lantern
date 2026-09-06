@@ -1,4 +1,4 @@
-"""F2 (docs/g1-g2-stage-spec.md): `AsyncPostgresSaver.setup()` is not
+"""F2: `AsyncPostgresSaver.setup()` is not
 implicit (measured) — a missed call site fails deep inside a live user
 request. Confirms it's safe to call across repeated process lifetimes
 (opening and closing the pool twice), not just once.

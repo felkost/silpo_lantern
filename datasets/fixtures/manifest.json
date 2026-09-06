@@ -1,12 +1,63 @@
 {
   "$comment": "Skeleton per plan section 12.1.1 step 4/8. Populated at G2 with real sanitized/synthetic/mutated fixture entries. Schema: datasets/fixtures/envelope.schema.json",
-  "schema_hash": null,
-  "generator_version": null,
-  "generated_at": null,
   "coverage": {
+    "DR": [
+      "a line item with price:0 and an explicit stock/error signal (DR-08)",
+      "a validation code not in the registry (D9-shaped)",
+      "calculation.delivery.total is 0 — genuinely free, distinct from null",
+      "calculation.delivery.total is null, not zero (DR-05)",
+      "gap under GAP_EPSILON — reads borderline, never auto-fixed",
+      "productsTotal already clears minOrderCost — zero validations",
+      "productsTotal arrives as a JSON string, not a float",
+      "productsTotal well below minOrderCost — a clear order.cost.min block"
+    ],
     "GD": [],
-    "RG": [],
-    "DR": []
+    "RG": []
   },
-  "fixtures": []
+  "fixtures": [
+    {
+      "fixture_id": "gap_below_threshold",
+      "origin": "synthetic",
+      "path": "datasets/fixtures/synthetic/gap_below_threshold.json"
+    },
+    {
+      "fixture_id": "gap_at_threshold_borderline",
+      "origin": "synthetic",
+      "path": "datasets/fixtures/synthetic/gap_at_threshold_borderline.json"
+    },
+    {
+      "fixture_id": "gap_above_threshold_clears",
+      "origin": "synthetic",
+      "path": "datasets/fixtures/synthetic/gap_above_threshold_clears.json"
+    },
+    {
+      "fixture_id": "money_as_minor_units_string",
+      "origin": "synthetic",
+      "path": "datasets/fixtures/synthetic/money_as_minor_units_string.json"
+    },
+    {
+      "fixture_id": "null_delivery_cost",
+      "origin": "mutated",
+      "path": "datasets/fixtures/mutated/null_delivery_cost.json"
+    },
+    {
+      "fixture_id": "zero_delivery_cost",
+      "origin": "mutated",
+      "path": "datasets/fixtures/mutated/zero_delivery_cost.json"
+    },
+    {
+      "fixture_id": "unknown_validation_code",
+      "origin": "mutated",
+      "path": "datasets/fixtures/mutated/unknown_validation_code.json"
+    },
+    {
+      "fixture_id": "unavailable_item_zero_price",
+      "origin": "mutated",
+      "path": "datasets/fixtures/mutated/unavailable_item_zero_price.json"
+    }
+  ],
+  "generated_at": "2026-09-06T11:15:20.576549+00:00",
+  "generator_version": "1.0.0",
+  "schema_hash": "synthetic-cart-wire-shape-v1",
+  "seed": 20260907
 }

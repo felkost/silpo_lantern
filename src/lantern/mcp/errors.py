@@ -1,6 +1,6 @@
 """Typed error hierarchy for the MCP adapter (plan section 9.1's "typed
 errors" strengthening — measured to have zero donor precedent, see
-docs/g1-g2-stage-spec.md section 2: silpo_mcp.py never touched `McpError` or
+the G1+G2 stage spec: silpo_mcp.py never touched `McpError` or
 JSON-RPC codes at all).
 """
 

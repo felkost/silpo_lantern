@@ -1,4 +1,4 @@
-"""F14 (docs/g1-g2-stage-spec.md, round 2): the checkpointer's
+"""F14 (round 2): the checkpointer's
 `AsyncConnectionPool` size is an explicit, documented constant — not left as
 an unstated guess — and stays under Neon free tier's own connection ceiling
 (already a named risk in the plan itself, section 9/IV-02).

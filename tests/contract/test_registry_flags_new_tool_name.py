@@ -1,4 +1,4 @@
-"""F4 (docs/g1-g2-stage-spec.md): a new/renamed tool name in a `tools/list`
+"""F4: a new/renamed tool name in a `tools/list`
 response must be flagged, not silently treated as equivalent to a known one
 (D8's precedent — `silpo_create_shopping_cart` appeared unannounced). Scoped
 to **tool names only** — validation-code drift (D9) is a different data path

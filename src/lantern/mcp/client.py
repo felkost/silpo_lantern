@@ -1,9 +1,9 @@
 """MCP client: port of the donor's `silpo_mcp.py` (BACKGROUND_MATERIALS.md),
 strengthened per plan section 9.1 with a dynamic `tools/list` registry (TTL +
 event-driven invalidation) and typed error mapping — both measured to have
-zero donor precedent (docs/g1-g2-stage-spec.md section 2).
+zero donor precedent.
 
-`ToolRegistry` is per-process by design (F9, docs/g1-g2-stage-spec.md): it has
+`ToolRegistry` is per-process by design (F9, the G1+G2 stage spec): it has
 no shared store across worker processes this stage. A forked worker cannot
 reliably detect its own siblings, so this stays a documented constraint
 checked at code/PR review (the launch command must not pass a
@@ -27,7 +27,7 @@ from src.lantern.mcp.errors import (
 )
 
 # F3: JSON-RPC codes that are themselves evidence the cached schema is stale —
-# see docs/g1-g2-stage-spec.md section 4 and plan section 9.1's invalidation list.
+# see the G1+G2 stage spec and plan section 9.1's invalidation list.
 _SCHEMA_INVALIDATING_CODES = {
     mcp_types.METHOD_NOT_FOUND,
     mcp_types.INVALID_PARAMS,

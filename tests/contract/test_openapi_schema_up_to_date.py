@@ -1,4 +1,4 @@
-"""D-G1-07 (docs/g1-g2-stage-spec.md): OpenAPI 3.1 is generated from the
+"""D-G1-07: OpenAPI 3.1 is generated from the
 route definitions (`app.openapi()`, confirmed live: FastAPI 0.141.1 emits
 `"openapi": "3.1.0"` by default), never hand-authored separately — this test
 is the guard against the "two schemas that drift" trap the committed

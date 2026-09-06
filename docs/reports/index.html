@@ -1162,7 +1162,315 @@ tools, so the new tool cannot be called until a person reviews it.</div>
     </svg>
 </div>
 
-<h2>8. Why this is expected to help, not just work</h2>
+<h2>8. Domain Core models</h2>
+<p>This diagram shows the plain data objects that carry one recovery from a raw cart
+to a receipt. A cart holds validations, and each validation that blocks checkout wraps
+into a blocker. The domain core reads a cart and produces a diagnosis: an exact gap in
+money, never a guess. That diagnosis later feeds a proposal with real evidence, and a
+consent record that only a guarded write step is allowed to use.</p>
+<p>None of these objects call the network. They only hold data and compute numbers, so
+every rule about them can be tested without a live server.</p>
+<div class="example"><b>Example.</b> A cart is short by 194.11 UAH of the store's
+minimum order sum. The diagnosis object stores exactly that number as a normal
+decimal, computed once, by code — never restated by the language model later in the
+flow.</div>
+<div class="diagram"><svg viewBox="0 0 1220 760" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="domain-core-class-title domain-core-class-desc">
+      <title id="domain-core-class-title">Domain Core class diagram</title>
+      <desc id="domain-core-class-desc">Class diagram of the nine Domain Core models: a Cart carries Validations that wrap into Blockers, both feeding a Diagnosis; a Diagnosis feeds an ActionProposal carrying Evidence tuples, which G5+G6 turns into a ConsentRecord that authorizes a Receipt; a CartDiff compares a before and after Cart.</desc>
+      <defs><style>text{font-family:Arial,Helvetica,"Liberation Sans","DejaVu Sans",sans-serif;}</style>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6440c9"/></marker>
+        <marker id="arrow-ink" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#24242e"/></marker>
+      </defs>
+      <rect width="100%" height="100%" fill="#ffffff"/>
+
+      <!-- ============ ZONE ============ -->
+      <rect x="40" y="60" width="1140" height="620" rx="8" fill="#f7f7fa" stroke="#9ca3af" stroke-width="1"/>
+      <rect x="60" y="48" width="330" height="20" rx="2" fill="#ffffff"/>
+      <text x="225" y="62" fill="#6b7280" font-size="12" font-weight="700" text-anchor="middle">src/lantern/domain/models.py · DOMAIN LAYER</text>
+
+      <!-- ============ ARROWS ============ -->
+
+      <!-- Cart -> Validation (row1) -->
+      <line x1="360" y1="170" x2="440" y2="170" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="374" y="154" width="52" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="400" y="166" fill="#24242e" font-size="12" text-anchor="middle">1..*</text>
+
+      <!-- Validation -> Blocker (row1) -->
+      <line x1="720" y1="170" x2="800" y2="170" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="734" y="154" width="52" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="760" y="166" fill="#24242e" font-size="12" text-anchor="middle">wraps</text>
+
+      <!-- Blocker -> Diagnosis: straight vertical, same column, no crossing -->
+      <line x1="940" y1="220" x2="940" y2="330" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="952" y="267" width="40" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="972" y="279" fill="#24242e" font-size="12" text-anchor="middle">0..*</text>
+
+      <!-- Cart -> Diagnosis: lane at y=300 (below row1, above row2 — clear of every box), entering
+           Diagnosis's TOP edge at x=850, fanned 90px from Blocker's own top-edge entry at x=940
+           (rule: shared edge -> distinct attach points). A left-edge entry was tried first but its
+           only open corridor (x=720-800) is already occupied by the Diagnosis->ActionProposal
+           arrow at y=380 — the top edge has no such conflict. -->
+      <path d="M 220,220 V 292 Q 220,300 228,300 H 842 Q 850,300 850,308 V 330"
+            fill="none" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="440" y="284" width="88" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="484" y="296" fill="#24242e" font-size="12" text-anchor="middle">diagnose()</text>
+
+      <!-- Diagnosis -> ActionProposal (dashed, G4): row2, right-to-left -->
+      <line x1="800" y1="380" x2="720" y2="380" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <rect x="734" y="364" width="76" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="772" y="376" fill="#6b7280" font-size="12" text-anchor="middle">plan, G4</text>
+
+      <!-- ActionProposal -> EvidenceTuple: row2, right-to-left -->
+      <line x1="440" y1="380" x2="360" y2="380" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="374" y="364" width="52" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="400" y="376" fill="#24242e" font-size="12" text-anchor="middle">1..*</text>
+
+      <!-- ActionProposal -> ConsentRecord: straight vertical, same column (dashed, G5+G6) -->
+      <line x1="580" y1="430" x2="580" y2="520" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <rect x="592" y="467" width="112" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="648" y="479" fill="#6b7280" font-size="12" text-anchor="middle">consent, G5+G6</text>
+
+      <!-- ConsentRecord -> Receipt (dashed, G5+G6): row3 -->
+      <line x1="720" y1="570" x2="800" y2="570" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <rect x="734" y="554" width="52" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="760" y="566" fill="#6b7280" font-size="12" text-anchor="middle">writes</text>
+
+      <!-- Cart -> CartDiff: routed down the left margin (x=52), clear of EvidenceTuple (which starts at x=80) -->
+      <path d="M 100,220 Q 100,228 92,228 H 60 Q 52,228 52,236 V 560 Q 52,568 60,568 H 80"
+            fill="none" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="60" y="452" width="92" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="106" y="464" fill="#24242e" font-size="12" text-anchor="middle">before/after</text>
+
+      <!-- ============ ROW 1: Cart, Validation, Blocker ============ -->
+
+      <rect x="80" y="120" width="280" height="100" rx="6" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <rect x="92" y="132" width="60" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
+      <text x="122" y="144" fill="#24242e" font-size="12" text-anchor="middle">DOMAIN</text>
+      <text x="220" y="163" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Cart</text>
+      <text x="220" y="183" fill="#24242e" font-size="12" text-anchor="middle">extra=allow, frozen</text>
+      <text x="220" y="201" fill="#24242e" font-size="12" text-anchor="middle">productsTotal: Decimal</text>
+
+      <rect x="440" y="120" width="280" height="100" rx="6" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <rect x="452" y="132" width="60" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
+      <text x="482" y="144" fill="#24242e" font-size="12" text-anchor="middle">DOMAIN</text>
+      <text x="580" y="163" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Validation</text>
+      <text x="580" y="183" fill="#24242e" font-size="12" text-anchor="middle">code: from wire "message"</text>
+      <text x="580" y="201" fill="#24242e" font-size="12" text-anchor="middle">level, type, context</text>
+
+      <rect x="800" y="120" width="280" height="100" rx="6" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <rect x="812" y="132" width="60" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
+      <text x="842" y="144" fill="#24242e" font-size="12" text-anchor="middle">DOMAIN</text>
+      <text x="940" y="163" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Blocker</text>
+      <text x="940" y="183" fill="#24242e" font-size="12" text-anchor="middle">policy: PolicyEntry | None</text>
+      <text x="940" y="201" fill="#24242e" font-size="12" text-anchor="middle">is_known, product_ref</text>
+
+      <!-- ============ ROW 2: EvidenceTuple, ActionProposal, Diagnosis ============ -->
+
+      <rect x="80" y="330" width="280" height="100" rx="6" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <rect x="92" y="342" width="60" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
+      <text x="122" y="354" fill="#24242e" font-size="12" text-anchor="middle">DOMAIN</text>
+      <text x="220" y="373" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">EvidenceTuple</text>
+      <text x="220" y="393" fill="#24242e" font-size="12" text-anchor="middle">4 fields, all required</text>
+      <text x="220" y="411" fill="#24242e" font-size="12" text-anchor="middle">(DR-10 Evidence Gate)</text>
+
+      <rect x="440" y="330" width="280" height="100" rx="6" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <rect x="452" y="342" width="60" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
+      <text x="482" y="354" fill="#24242e" font-size="12" text-anchor="middle">DOMAIN</text>
+      <text x="580" y="373" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">ActionProposal</text>
+      <text x="580" y="393" fill="#24242e" font-size="12" text-anchor="middle">product_name, quantity</text>
+      <text x="580" y="411" fill="#24242e" font-size="12" text-anchor="middle">canonical_args (pinned keys)</text>
+
+      <rect x="800" y="330" width="280" height="100" rx="6" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <rect x="812" y="342" width="60" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
+      <text x="842" y="354" fill="#24242e" font-size="12" text-anchor="middle">DOMAIN</text>
+      <text x="940" y="373" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Diagnosis</text>
+      <text x="940" y="393" fill="#24242e" font-size="12" text-anchor="middle">gap: Decimal | None</text>
+      <text x="940" y="411" fill="#24242e" font-size="12" text-anchor="middle">threshold_source, blockers[]</text>
+
+      <!-- ============ ROW 3: CartDiff, ConsentRecord, Receipt ============ -->
+
+      <rect x="80" y="520" width="280" height="100" rx="6" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <rect x="92" y="532" width="60" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
+      <text x="122" y="544" fill="#24242e" font-size="12" text-anchor="middle">DOMAIN</text>
+      <text x="220" y="563" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">CartDiff</text>
+      <text x="220" y="583" fill="#24242e" font-size="12" text-anchor="middle">canonical_diff()</text>
+      <text x="220" y="601" fill="#24242e" font-size="12" text-anchor="middle">asserts its own total delta</text>
+
+      <!-- ConsentRecord (dashed = shape built at G3, behavior at G5+G6) -->
+      <rect x="440" y="520" width="280" height="100" rx="6" fill="#9a85e1" stroke="#6440c9" stroke-width="1" stroke-dasharray="5,4"/>
+      <rect x="452" y="532" width="60" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
+      <text x="482" y="544" fill="#24242e" font-size="12" text-anchor="middle">DOMAIN</text>
+      <text x="580" y="563" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">ConsentRecord</text>
+      <text x="580" y="583" fill="#24242e" font-size="12" text-anchor="middle">mirrors 0003_consents.sql</text>
+      <text x="580" y="601" fill="#24242e" font-size="12" text-anchor="middle">args_hash, state_hash</text>
+
+      <!-- Receipt (dashed) -->
+      <rect x="800" y="520" width="280" height="100" rx="6" fill="#9a85e1" stroke="#6440c9" stroke-width="1" stroke-dasharray="5,4"/>
+      <rect x="812" y="532" width="60" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
+      <text x="842" y="544" fill="#24242e" font-size="12" text-anchor="middle">DOMAIN</text>
+      <text x="940" y="563" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Receipt</text>
+      <text x="940" y="583" fill="#24242e" font-size="12" text-anchor="middle">mirrors 0005_receipts.sql</text>
+      <text x="940" y="601" fill="#24242e" font-size="12" text-anchor="middle">verified: bool (DR-12)</text>
+
+      <!-- ============ LEGEND ============ -->
+      <line x1="40" y1="700" x2="1180" y2="700" stroke="#d1d5db" stroke-width="0.8"/>
+      <text x="40" y="722" fill="#6b7280" font-size="12" font-weight="700" letter-spacing="0.10em">LEGEND</text>
+
+      <rect x="40" y="740" width="18" height="14" rx="2" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <text x="66" y="751" fill="#24242e" font-size="12">Domain model, built at G3</text>
+
+      <rect x="330" y="740" width="18" height="14" rx="2" fill="#9a85e1" stroke="#6440c9" stroke-width="1" stroke-dasharray="4,3"/>
+      <text x="356" y="751" fill="#24242e" font-size="12">Shape built at G3, behavior at G5+G6</text>
+
+      <line x1="700" y1="747" x2="740" y2="747" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <text x="750" y="751" fill="#24242e" font-size="12">Used by, at G3</text>
+
+      <line x1="940" y1="747" x2="980" y2="747" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <text x="990" y="751" fill="#24242e" font-size="12">Used by, at a later stage</text>
+    </svg></div>
+
+<h2>9. Diagnose activity</h2>
+<p>This diagram shows what happens to one cart as it moves through the domain core. A
+cart that does not match the expected shape stops early with a named error — the
+system never guesses at a broken input. A cart that resolves cleanly moves on to
+compute its gap; one rare case, where no threshold can be found at all, is still shown
+to the guest instead of silently failing, just marked as unverified rather than a
+confident number.</p>
+<p>Every path that reaches the end shows every validation the cart carries — including
+ones the shopping app's own screen never displays.</p>
+<div class="example"><b>Example.</b> A cart carries two blocking conditions but the
+app's screen shows only one. Because the disclosure step reads all of them from the
+same normalized diagnosis, the guest sees both reasons at once, not one followed by a
+surprise second block after the first is fixed.</div>
+<div class="diagram"><svg viewBox="0 0 900 980" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="diagnose-activity-title diagnose-activity-desc">
+      <title id="diagnose-activity-title">Diagnose activity diagram</title>
+      <desc id="diagnose-activity-desc">Activity diagram from a raw cart payload through normalize and diagnose to disclosure: a malformed payload exits as CartShapeError, a card with no resolvable order.cost.min threshold flows on as an explicit unverified state rather than aborting, and every path that reaches disclosure shows every validation, including ones the app UI would hide.</desc>
+      <defs><style>text{font-family:Arial,Helvetica,"Liberation Sans","DejaVu Sans",sans-serif;}</style>
+        <marker id="arrow-ink" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#24242e"/></marker>
+        <marker id="arrow-muted" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6b7280"/></marker>
+      </defs>
+      <rect width="100%" height="100%" fill="#ffffff"/>
+
+      <!-- ============ ZONE ============ -->
+      <rect x="40" y="40" width="820" height="900" rx="8" fill="#f7f7fa" stroke="#9ca3af" stroke-width="1"/>
+      <rect x="60" y="28" width="300" height="20" rx="2" fill="#ffffff"/>
+      <text x="210" y="42" fill="#6b7280" font-size="12" font-weight="700" text-anchor="middle">src/lantern/domain/ · DOMAIN LAYER</text>
+
+      <!-- ============ ARROWS ============ -->
+
+      <!-- start -> normalize -->
+      <line x1="450" y1="94" x2="450" y2="140" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+
+      <!-- normalize -> decision1 -->
+      <line x1="450" y1="220" x2="450" y2="284" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+
+      <!-- decision1 -> CartShapeError (invalid, left) -->
+      <path d="M 396,320 Q 340,320 340,336 V 360" fill="none" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="220" y="328" width="90" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="265" y="340" fill="#24242e" font-size="12" text-anchor="middle">invalid shape</text>
+
+      <!-- decision1 -> diagnose (valid, right/down) -->
+      <path d="M 504,320 Q 560,320 560,336 V 360" fill="none" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="565" y="328" width="50" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="590" y="340" fill="#24242e" font-size="12" text-anchor="middle">valid</text>
+
+      <!-- diagnose -> decision2 -->
+      <line x1="560" y1="440" x2="560" y2="484" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+
+      <!-- decision2 -> disclosure (validation_context / time_slots, straight down) -->
+      <line x1="560" y1="540" x2="560" y2="584" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="572" y="548" width="150" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="647" y="560" fill="#24242e" font-size="12" text-anchor="middle">context or slots resolve</text>
+
+      <!-- decision2 -> Unverified (dashed, branch hangs left off the main flow) -->
+      <path d="M 484,510 Q 340,510 340,526 V 550" fill="none" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow-muted)"/>
+      <rect x="230" y="518" width="130" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="295" y="530" fill="#6b7280" font-size="12" text-anchor="middle">no threshold anywhere</text>
+
+      <!-- Unverified -> disclosure (still flows forward, dashed) — stops exactly at the box's
+           own left edge (x=450), never travels inside its footprint (that segment would be
+           hidden once the box, drawn afterward, paints over it) -->
+      <path d="M 340,610 Q 340,660 400,660 H 450" fill="none" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow-muted)"/>
+      <rect x="360" y="636" width="90" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="405" y="648" fill="#6b7280" font-size="12" text-anchor="middle">gap = None</text>
+
+      <!-- disclosure -> final -->
+      <line x1="560" y1="664" x2="560" y2="716" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+
+      <!-- final ring -> filled inner circle already drawn together below -->
+
+      <!-- ============ NODES ============ -->
+
+      <!-- Initial pseudostate: filled circle -->
+      <circle cx="450" cy="80" r="14" fill="#24242e"/>
+      <text x="450" y="66" fill="#6b7280" font-size="12" text-anchor="middle">raw cart payload</text>
+
+      <!-- Normalize (action) -->
+      <rect x="340" y="140" width="220" height="80" rx="14" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <text x="450" y="174" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Normalize</text>
+      <text x="450" y="194" fill="#24242e" font-size="12" text-anchor="middle">normalize_cart()</text>
+
+      <!-- Decision 1: shape valid? — sized so its bottom tip (y=356) clears the row below
+           (boxes start at y=360) with a 4px gap; the previous, taller diamond's tip reached
+           y=376, poking 16px into both boxes' top corners -->
+      <path d="M 450,284 L 504,320 L 450,356 L 396,320 Z" fill="#ffffff" stroke="#24242e" stroke-width="1.2"/>
+      <text x="450" y="316" fill="#24242e" font-size="12" text-anchor="middle">shape</text>
+      <text x="450" y="332" fill="#24242e" font-size="12" text-anchor="middle">valid?</text>
+
+      <!-- CartShapeError: exception terminal (dashed border marks the exception state itself —
+           no separate final-pseudostate icon needed, the raise IS the stop) -->
+      <rect x="240" y="360" width="200" height="80" rx="14" fill="#9a85e1" stroke="#6440c9" stroke-width="1.2" stroke-dasharray="5,4"/>
+      <text x="340" y="392" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">CartShapeError</text>
+      <text x="340" y="412" fill="#24242e" font-size="12" text-anchor="middle">raised, named key</text>
+
+      <!-- Diagnose (action) -->
+      <rect x="450" y="360" width="220" height="80" rx="14" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <text x="560" y="394" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Diagnose</text>
+      <text x="560" y="414" fill="#24242e" font-size="12" text-anchor="middle">diagnose()</text>
+
+      <!-- Decision 2: threshold resolvable? -->
+      <path d="M 560,484 L 624,512 L 560,540 L 496,512 Z" fill="#ffffff" stroke="#24242e" stroke-width="1.2"/>
+      <text x="560" y="508" fill="#24242e" font-size="12" text-anchor="middle">threshold</text>
+      <text x="560" y="524" fill="#24242e" font-size="12" text-anchor="middle">resolvable?</text>
+
+      <!-- Unverified state (exception/abnormal, dashed border, hangs off the flow — G3-F2/F2b) -->
+      <rect x="240" y="550" width="200" height="60" rx="14" fill="#9a85e1" stroke="#6440c9" stroke-width="1.2" stroke-dasharray="5,4"/>
+      <text x="340" y="576" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Unverified</text>
+      <text x="340" y="596" fill="#24242e" font-size="12" text-anchor="middle">threshold_source</text>
+
+      <!-- Build disclosure (action) -->
+      <rect x="450" y="584" width="220" height="80" rx="14" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <text x="560" y="618" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Build disclosure</text>
+      <text x="560" y="638" fill="#24242e" font-size="12" text-anchor="middle">build_disclosure()</text>
+
+      <!-- Final pseudostate: outer ring + filled inner circle -->
+      <circle cx="560" cy="732" r="16" fill="none" stroke="#24242e" stroke-width="1.5"/>
+      <circle cx="560" cy="732" r="9" fill="#24242e"/>
+      <text x="560" y="770" fill="#6b7280" font-size="12" text-anchor="middle">every validation shown,</text>
+      <text x="560" y="788" fill="#6b7280" font-size="12" text-anchor="middle">including UI-invisible ones</text>
+
+      <!-- ============ LEGEND ============ -->
+      <line x1="40" y1="850" x2="860" y2="850" stroke="#d1d5db" stroke-width="0.8"/>
+      <text x="40" y="872" fill="#6b7280" font-size="12" font-weight="700" letter-spacing="0.10em">LEGEND</text>
+
+      <rect x="40" y="890" width="18" height="14" rx="2" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <text x="66" y="901" fill="#24242e" font-size="12">Action, on the main flow</text>
+
+      <rect x="290" y="890" width="18" height="14" rx="2" fill="#9a85e1" stroke="#6440c9" stroke-width="1.2" stroke-dasharray="4,3"/>
+      <text x="316" y="901" fill="#24242e" font-size="12">Exception / fail-safe state</text>
+
+      <path d="M 560,890 L 590,897 L 560,904 L 540,897 Z" fill="#ffffff" stroke="#24242e" stroke-width="1.2"/>
+      <text x="600" y="901" fill="#24242e" font-size="12">Decision</text>
+
+      <circle cx="720" cy="897" r="10" fill="#24242e"/>
+      <text x="738" y="901" fill="#24242e" font-size="12">Initial</text>
+
+      <circle cx="800" cy="897" r="10" fill="none" stroke="#24242e" stroke-width="1.5"/>
+      <circle cx="800" cy="897" r="5" fill="#24242e"/>
+      <text x="818" y="901" fill="#24242e" font-size="12">Final</text>
+    </svg></div>
+
+<h2>10. Why this is expected to help, not just work</h2>
 <p>The mechanism above targets a specific, observed gap: the retailer's own MCP server
 already returns more structured detail about why a cart is blocked than the shopping
 app's screen displays. A cart can carry two independent blocking conditions and the
@@ -1176,7 +1484,7 @@ their cart was blocked and fixed it in one step spent less time and fewer action
 doing it than one navigating a generic "add more items" prompt with no further
 detail.</p>
 
-<h2>9. Measured outcome</h2>
+<h2>11. Measured outcome</h2>
 
 <p class="pending">Not yet measured. This section will report recovery completion
 rate, median time-to-recovery versus the app, and disclosure rate — each with its
@@ -1184,5 +1492,5 @@ sample size, never as a bare percentage — once moderated before/after testing 
 them.</p>
 
 
-<p class="meta">Regenerated 2026-09-06T09:18:27+00:00. No external network resources.</p>
+<p class="meta">Regenerated 2026-09-06T11:05:32+00:00. No external network resources.</p>
 </body></html>

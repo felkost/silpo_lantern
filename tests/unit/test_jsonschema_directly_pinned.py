@@ -1,4 +1,4 @@
-"""D-G1-05 (docs/g1-g2-stage-spec.md): `jsonschema` is already installed
+"""D-G1-05: `jsonschema` is already installed
 transitively via `mcp`, but this project's fixture-validation pipeline
 (plan section 12.1.1) depends on it directly — pin it explicitly so a future
 `mcp` bump can't silently drop it out from under an unrelated part of the

@@ -1,4 +1,4 @@
-"""F7 (docs/g1-g2-stage-spec.md): allow-list based fixture sanitization —
+"""F7: allow-list based fixture sanitization —
 anything not explicitly reviewed is dropped, never passed through by
 default. `scripts/sanitize_fixture.py` (G2) is the thin CLI wrapper that
 reads a raw captured payload, calls `sanitize_payload`, and writes the

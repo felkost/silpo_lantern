@@ -1,4 +1,4 @@
-"""D-G1-03 (docs/g1-g2-stage-spec.md): "App starts" is verified through
+"""D-G1-03: "App starts" is verified through
 `GET /health`, not `docker compose up` (no Dockerfile exists yet). Liveness
 only — no I/O — so this stays a free, offline contract test in `make gate`,
 never reaching Neon or the live MCP server.

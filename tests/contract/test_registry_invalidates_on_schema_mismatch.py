@@ -1,4 +1,4 @@
-"""F3 (docs/g1-g2-stage-spec.md): a TTL-only cache can serve a stale schema
+"""F3: a TTL-only cache can serve a stale schema
 for up to the TTL window even if the server just changed it mid-session. The
 registry must invalidate immediately on a `McpProtocolError` carrying
 `METHOD_NOT_FOUND`/`INVALID_PARAMS`, or a `McpSchemaError` (a cached

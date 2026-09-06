@@ -1,4 +1,4 @@
-"""F12 (docs/g1-g2-stage-spec.md, widened in round 2): a JSON-RPC error's
+"""F12 (widened in round 2): a JSON-RPC error's
 `.data` field is attacker/server-controlled free-form content and must never
 reach a LangSmith trace verbatim — dropped entirely, not merely truncated.
 Round 2 found `.message` is exactly as untrusted as `.data`; the first draft

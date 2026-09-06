@@ -10,7 +10,7 @@ lint:
 test:
 	pytest -q tests/unit tests/contract
 
-# D-G1-04 (docs/g1-g2-stage-spec.md): needs a real Neon Postgres (DATABASE_URL
+# D-G1-04: needs a real Neon Postgres (DATABASE_URL
 # in the environment) — never part of `make gate`/CI, which has no reachable
 # Postgres. Skips cleanly, per-test, when DATABASE_URL is unset.
 test-integration:

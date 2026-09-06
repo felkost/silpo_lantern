@@ -1,4 +1,4 @@
-"""D-G1-06 (docs/g1-g2-stage-spec.md, reframed in round 2): a forward
+"""D-G1-06 (reframed in round 2): a forward
 constraint for G5+G6, not something this stage's own code can violate yet —
 `src/lantern/safety/write_guard.py` doesn't exist. Honestly a tripwire, not
 present-day coverage (round 2 correction): zero files anywhere in this repo

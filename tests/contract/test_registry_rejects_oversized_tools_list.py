@@ -1,4 +1,4 @@
-"""F11 (docs/g1-g2-stage-spec.md): the MCP server is this project's own
+"""F11: the MCP server is this project's own
 stated untrusted threat model (CLAUDE.md section 4). An oversized or
 excessively verbose `tools/list` response must be rejected before the
 registry spends work canonicalizing/hashing/diffing it, not after.

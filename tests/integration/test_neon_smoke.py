@@ -1,4 +1,4 @@
-"""D-G1-04 (docs/g1-g2-stage-spec.md): integration tests need a real Neon
+"""D-G1-04: integration tests need a real Neon
 Postgres and are never part of `make gate`/CI (no reachable Postgres there).
 Skips cleanly when `DATABASE_URL` is unset (F5) rather than failing with a
 confusing connection-refused error.

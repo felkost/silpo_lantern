@@ -1,4 +1,4 @@
-"""D-G1-01 / F1 / F15 (docs/g1-g2-stage-spec.md): the checkpointer needs a bare
+"""D-G1-01 / F1 / F15: the checkpointer needs a bare
 `postgresql://` DSN, but `DATABASE_URL` stays in its SQLAlchemy-dialect form
 (`postgresql+psycopg://`) as the single source of truth (D15). One pure
 conversion function is the only place that translates between the two, so the

@@ -4,7 +4,7 @@ SDK reconnaissance confirmed `TokenStorage` is still a structural
 `typing.Protocol` with the same four async methods in the installed
 `mcp==1.29.0`, no adaptation needed on the port itself.
 
-`build_redirect_handler` is new (F10, docs/g1-g2-stage-spec.md): the donor's
+`build_redirect_handler` is new (F10, the G1+G2 stage spec): the donor's
 `redirect_handler` always raised the same `SilpoMcpAuthRequiredError`,
 whether or not a token had ever existed. A previously-valid token being
 rejected mid-session is a different, previously-unflagged failure — it must

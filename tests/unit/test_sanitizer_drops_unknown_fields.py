@@ -1,4 +1,4 @@
-"""F7 (docs/g1-g2-stage-spec.md): allow-list at the key level — anything not
+"""F7: allow-list at the key level — anything not
 explicitly reviewed is dropped, never passed through by default (safer than
 a deny-list, which only protects against PII shapes someone already thought
 of). The concrete field list here is a first cut built from the G0 evidence
