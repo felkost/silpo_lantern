@@ -1,8 +1,7 @@
-"""D-G1-06 (reframed in round 2): a forward
-constraint for G5+G6, not something this stage's own code can violate yet —
-`src/lantern/safety/write_guard.py` doesn't exist. Honestly a tripwire, not
-present-day coverage (round 2 correction): zero files anywhere in this repo
-match `*allowlist*` today, so this test currently exercises nothing. Kept
+"""A forward constraint for later stages, not something this stage's own
+code can violate yet — `src/lantern/safety/write_guard.py` doesn't exist.
+Honestly a tripwire, not present-day coverage: zero files anywhere in this
+repo match `*allowlist*` today, so this test currently exercises nothing. Kept
 anyway so the constraint is checked automatically the moment such a file is
 added, rather than relying on someone remembering to write this check later.
 
@@ -44,7 +43,7 @@ def test_no_allowlist_named_module_imports_tool_annotations() -> None:
 
 
 def test_this_check_currently_has_nothing_to_exercise() -> None:
-    """Documents the round-2 finding explicitly: this is a tripwire, not
-    coverage, until G5+G6 creates a `*allowlist*`-named module.
+    """Documents this explicitly: this is a tripwire, not
+    coverage, until a later stage creates a `*allowlist*`-named module.
     """
     assert _allowlist_named_files() == []

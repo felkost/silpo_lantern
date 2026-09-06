@@ -1,7 +1,7 @@
-"""D-G1-03: "App starts" is verified through
-`GET /health`, not `docker compose up` (no Dockerfile exists yet). Liveness
-only — no I/O — so this stays a free, offline contract test in `make gate`,
-never reaching Neon or the live MCP server.
+""" "App starts" is verified through `GET /health`, not `docker compose up`
+(no Dockerfile exists yet). Liveness only — no I/O — so this stays a free,
+offline contract test in `make gate`, never reaching Neon or the live MCP
+server.
 """
 
 from fastapi.testclient import TestClient

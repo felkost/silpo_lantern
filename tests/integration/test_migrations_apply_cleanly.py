@@ -1,9 +1,9 @@
-"""Plan section 21.2's DDL requirement (sessions, consents, receipts,
-idempotency_keys, schema version) — a tiny runner over plain SQL files,
-tracked in its own `schema_migrations` table (separate from LangGraph's own
+"""The DDL requirement (sessions, consents, receipts, idempotency_keys,
+schema version) covered by a tiny runner over plain SQL files, tracked in
+its own `schema_migrations` table (separate from LangGraph's own
 `checkpoint_migrations`, which `AsyncPostgresSaver.setup()` owns entirely).
-Applying the same migration set twice must not error (same idempotency
-discipline as F2 for the checkpointer's own `.setup()`).
+Applying the same migration set twice must not error, same idempotency
+discipline as the checkpointer's own `.setup()`.
 """
 
 import os
@@ -15,7 +15,7 @@ from src.lantern.config import strip_sqlalchemy_dialect
 from src.lantern.memory.migrations_runner import run_migrations
 
 pytestmark = pytest.mark.skipif(
-    "DATABASE_URL" not in os.environ, reason="DATABASE_URL not set — see D-G1-04"
+    "DATABASE_URL" not in os.environ, reason="DATABASE_URL not set"
 )
 
 

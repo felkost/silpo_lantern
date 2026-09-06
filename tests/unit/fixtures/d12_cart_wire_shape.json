@@ -1,5 +1,5 @@
 {
-  "_provenance": "G0-02, decision D12 (2026-09-06 live evidence lab run). Numbers copied here as a tracked fixture per go/no-go criterion 2 — never read from the gitignored local evidence directory (D-G3-08/G3-F18).",
+  "_provenance": "Copied from a real live cart read (2026-09-06) into this tracked fixture, so the go/no-go check reproducing the gap never depends on a gitignored local evidence file.",
   "id": "4e83e418-a6b1-4187-b961-f8c9fb4ba2f5",
   "deliveryType": "NovaPoshta",
   "calculation": {

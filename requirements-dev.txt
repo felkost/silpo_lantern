@@ -9,6 +9,13 @@ flake8==7.3.0
 mypy==2.3.1
 pytest==9.1.1
 pytest-asyncio==1.4.0
+# G4 kickoff: randomizes test execution order every run (auto-enabled once
+# installed, no addopts flag needed) so a hidden interdependency between two
+# tests — one leaking state the other happens to rely on — fails loudly
+# instead of staying invisible behind whatever order the files happen to be
+# collected in. Prints its seed on every run; a failure caused by ordering
+# reproduces exactly via `pytest -p randomly --randomly-seed=<printed seed>`.
+pytest-randomly==5.0.0
 # Pinned below 4.2.0 deliberately, matching the donor project's own measured
 # finding: 4.2.0 inverted score polarity for several metrics (BiasMetric,
 # HallucinationMetric, MisuseMetric, ToxicityMetric) on 2026-08-24. A later

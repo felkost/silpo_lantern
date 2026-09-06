@@ -1,9 +1,8 @@
-"""Redaction before every send to LangSmith (plan section 8.2, CLAUDE.md's
-observability invariant). F12 (widened in round 2):
-an MCP error's `.data` is dropped entirely — attacker/server-controlled
-free-form content with no legitimate reason to reach a third-party trace —
-and `.message` is scrubbed too, since round 2 found it exactly as untrusted
-as `.data`, not merely shorter.
+"""Redaction before every send to LangSmith. An MCP error's `.data` is
+dropped entirely — attacker/server-controlled free-form content with no
+legitimate reason to reach a third-party trace — and `.message` is
+scrubbed too, since it turned out to be exactly as untrusted as `.data`,
+not merely shorter.
 """
 
 from typing import Dict, Union
@@ -25,9 +24,8 @@ def sanitize_mcp_error_for_trace(error: McpProtocolError) -> Dict[str, Union[int
     injection surface.
 
     This covers credential-shaped leakage; broader free-text PII in
-    `.message` is not fully addressed here (same honest limitation as F7's
-    sanitizer — no real captured payload exists yet to build a complete
-    rule set against).
+    `.message` is not fully addressed here — no real captured payload
+    exists yet to build a complete rule set against.
     """
     message = error.message
     if any(pattern.search(message) for pattern in PATTERNS.values()):

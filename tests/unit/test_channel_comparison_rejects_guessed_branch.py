@@ -1,7 +1,7 @@
-"""A7/G3-F9: an inferred (guessed) branch is presented at no higher
+"""An inferred (guessed) branch is presented at no higher
 confidence than a measured one — `branch_is_inferred=True` forces
 `needs_check` regardless of every other field, reproducing the current
-channel's own `branch_guessed: true` flag from D10's live evidence.
+channel's own `branch_guessed: true` flag from live evidence.
 """
 
 from decimal import Decimal

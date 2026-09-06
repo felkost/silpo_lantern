@@ -1,10 +1,8 @@
-"""Recorded contract test: the G0 evidence-lab `tools/list` snapshot,
-copied into a tracked fixture (round 2, Lane 3 fix — the original snapshot
-lived under a gitignored local-evidence directory and would break on a
-fresh clone/CI checkout, violating CLAUDE.md's "a tracked file may only
-reference tracked files"). Confirms the fixture parses into typed `Tool`
-objects and that this project's own hash function reproduces the recorded
-`schema_hash`.
+"""Recorded contract test: the `tools/list` snapshot is copied into a
+tracked fixture rather than left under a gitignored local-evidence
+directory, so it does not break on a fresh clone/CI checkout. Confirms the
+fixture parses into typed `Tool` objects and that this project's own hash
+function reproduces the recorded `schema_hash`.
 """
 
 import json

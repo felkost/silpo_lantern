@@ -1,6 +1,6 @@
-"""Plan section 21.2 (G1 deliverable): the SSE event envelope schema must
-itself be a well-formed JSON Schema, even before G4 names concrete `event`
-values.
+"""The SSE event envelope schema must
+itself be a well-formed JSON Schema, even before concrete `event`
+values are named.
 """
 
 import json

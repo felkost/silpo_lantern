@@ -1,7 +1,7 @@
-"""G3-F7: a naive (offset-less) datetime is rejected rather than silently
+"""A naive (offset-less) datetime is rejected rather than silently
 assumed UTC. `datetime.fromisoformat` on an offset-less string returns
 naive with no error, and treating an already-expired slot as still live is
-the worst possible failure direction (`[I5]` section 8.3).
+the worst possible failure direction.
 """
 
 from datetime import datetime

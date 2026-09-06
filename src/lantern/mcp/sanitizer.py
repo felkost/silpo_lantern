@@ -1,15 +1,14 @@
-"""F7: allow-list based fixture sanitization —
-anything not explicitly reviewed is dropped, never passed through by
-default. `scripts/sanitize_fixture.py` (G2) is the thin CLI wrapper that
-reads a raw captured payload, calls `sanitize_payload`, and writes the
-result into `datasets/fixtures/sanitized/`.
+"""Allow-list based fixture sanitization — anything not explicitly reviewed
+is dropped, never passed through by default. `scripts/sanitize_fixture.py`
+is the thin CLI wrapper that reads a raw captured payload, calls
+`sanitize_payload`, and writes the result into
+`datasets/fixtures/sanitized/`.
 
-The field list below is a first cut from the G0 evidence lab's own
-documented cart-snapshot fields (`notebooks/evidence_lab.ipynb`) for
-non-PII, product/pricing-level data. It is not a claim of completeness for
-every field the live server can return — every sanitized fixture still needs
-a human review pass before commit (F7's own review checklist: does an
-allowed field's *value* look like free text that could carry PII).
+The field list below is a first cut from documented cart-snapshot fields
+(`notebooks/evidence_lab.ipynb`) for non-PII, product/pricing-level data. It
+is not a claim of completeness for every field the live server can return —
+every sanitized fixture still needs a human review pass before commit: does
+an allowed field's *value* look like free text that could carry PII.
 """
 
 from typing import Any, Dict
@@ -19,13 +18,13 @@ from typing import Any, Dict
 # actually contains, never by guessing what "seems safe".
 #
 # Widened 2026-09-06 against the real `silpo_get_shopping_cart_by_id` wire
-# shape (G3's own live captures) — the original list was built from the
-# evidence notebook's own *flattened* view (`productsTotal`, `deliveryType`
-# at the top level) and did not include the structural nesting keys
-# (`cart`, `calculation`, `shipments`) the raw wire response actually uses,
-# so sanitizing a real capture silently produced an empty payload. `address`
-# is deliberately never added — it carries exact coordinates and a street
-# address, which plan section 12.1.1 step 3 requires removed, not allowed.
+# shape — the original list was built from the evidence notebook's own
+# *flattened* view (`productsTotal`, `deliveryType` at the top level) and
+# did not include the structural nesting keys (`cart`, `calculation`,
+# `shipments`) the raw wire response actually uses, so sanitizing a real
+# capture silently produced an empty payload. `address` is deliberately
+# never added — it carries exact coordinates and a street address, which
+# must be removed, not allowed.
 ALLOWED_KEYS = frozenset(
     {
         "productId",
@@ -75,13 +74,12 @@ ALLOWED_KEYS = frozenset(
 
 
 # Keys whose *values* are stable identifiers tying a fixture back to a real
-# account, branch or catalogue entry. Plan section 12.1.1 step 3 requires
-# these replaced with local `test_*` values "зі збереженням посилальної
-# цілісності" — dropping them would break the references between a
-# validation's `productId` and the line item it points at, and passing them
-# through would publish real ids. They are pseudonymised instead, with one
-# stable mapping per sanitize run so every reference to the same original
-# id lands on the same replacement.
+# account, branch or catalogue entry. These must be replaced with local
+# `test_*` values, keeping referential integrity — dropping them would break
+# the references between a validation's `productId` and the line item it
+# points at, and passing them through would publish real ids. They are
+# pseudonymised instead, with one stable mapping per sanitize run so every
+# reference to the same original id lands on the same replacement.
 _PSEUDONYMISED_KEYS = {
     "productId": "test_product",
     "companyId": "test_company",
@@ -93,7 +91,7 @@ _PSEUDONYMISED_KEYS = {
 # `context` is a free-form object the server fills as it likes, so it is not
 # allow-listed wholesale. These are the keys measured in real captures, and
 # `orderCostMin` in particular is load-bearing: without it a fixture cannot
-# exercise DR-03's gap at all.
+# exercise the minimum-order-cost gap check at all.
 _ALLOWED_CONTEXT_KEYS = frozenset(
     {
         "orderCostMin",
@@ -113,7 +111,7 @@ def sanitize_payload(raw: Dict[str, Any]) -> Dict[str, Any]:
 
     Stable identifiers are pseudonymised rather than passed through or
     dropped, so the fixture keeps its internal references without carrying
-    real ids (plan section 12.1.1 step 3).
+    real ids.
     """
     return _sanitize_dict(raw, aliases={})
 

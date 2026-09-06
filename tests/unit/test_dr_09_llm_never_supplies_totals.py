@@ -1,11 +1,11 @@
-"""DR-09 (plan section 10): gap and totals are computed by code; the LLM
-only explains and ranks. Enforced two ways per the round-1/round-2
-disposition of G3-F11: (1) here, a signature check that `diagnose()` and
-`compute_order_cost_min_gap()` accept no externally-suppliable
-total/gap argument; (2) at G4, an extension to `test_layering.py` flagging
-any `application`/`interface`-layer function parameter typed `Gap` or
-named `*_gap`/`*_total` not sourced from `Diagnosis` — named here as the
-declared mechanism the contract this test checks depends on downstream.
+"""DR-09: gap and totals are computed by code; the LLM
+only explains and ranks. Enforced two ways: (1) here, a signature check
+that `diagnose()` and `compute_order_cost_min_gap()` accept no
+externally-suppliable total/gap argument; (2) an extension to
+`test_layering.py` flagging any `application`/`interface`-layer function
+parameter typed `Gap` or named `*_gap`/`*_total` not sourced from
+`Diagnosis` — named here as the declared mechanism the contract this test
+checks depends on downstream.
 """
 
 import inspect

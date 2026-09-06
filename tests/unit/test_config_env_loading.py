@@ -1,5 +1,5 @@
-"""Non-regression test for a defect found at G1+G2 stage close: `uvicorn
-apps.api.main:app` (the exact command D-G1-03 names as the "App starts"
+"""Non-regression test for a real defect: `uvicorn
+apps.api.main:app` (the exact command named as the "App starts"
 criterion, and the one `make run` issues) crashed with a bare
 `KeyError: 'DATABASE_URL'`. The tests had passed only because the shell had
 sourced `.env` first — nothing in the application itself ever loaded it,

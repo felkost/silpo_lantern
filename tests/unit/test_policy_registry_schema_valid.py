@@ -1,5 +1,5 @@
-"""G3-F27: `registry.yaml` validates against `registry.schema.json`, and
-carries exactly A8's six confirmed codes plus D9's two quarantined ones.
+"""`registry.yaml` validates against `registry.schema.json`, and
+carries exactly six confirmed codes plus two quarantined ones.
 """
 
 from src.lantern.policies.loader import load_registry

@@ -1,4 +1,4 @@
-"""F10: a previously-valid `DiskTokenStorage`
+"""A previously-valid `DiskTokenStorage`
 token being rejected mid-session must surface as a distinct error from a
 fresh "never logged in" — otherwise a mid-demo expiry looks identical to a
 step nobody ever completed. The distinguishing fact is measurable and cheap:

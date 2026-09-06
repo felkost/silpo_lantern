@@ -1,6 +1,6 @@
-"""G3-F2b (D-G3-03 extended): `minOrderCost` sometimes arrives as a
+"""`minOrderCost` sometimes arrives as a
 per-slot list (`notebooks/evidence_lab.ipynb`: `sorted({s["minOrderCost"]
-for s in slots})`). tonight's evidence showed `[599]` only because every
+for s in slots})`). Measured evidence showed `[599]` only because every
 slot happened to agree — nothing rules out a real cart where slots
 disagree. A multi-valued list is treated as no-threshold-available, before
 any cross-source comparison against the validation context happens.

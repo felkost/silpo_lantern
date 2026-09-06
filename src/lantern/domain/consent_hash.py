@@ -1,6 +1,6 @@
-"""D-G3-13: `args_hash`/`state_hash` construction. Defined here, not left as
-a bare `str` field on `ConsentRecord`, because CLAUDE.md's consent-binding
-invariant ("re-read стан = consent стан, інакше STOP", plan section 11)
+"""`args_hash`/`state_hash` construction. Defined here, not left as
+a bare `str` field on `ConsentRecord`, because the consent-binding
+invariant ("re-read стан = consent стан, інакше STOP")
 depends entirely on this value being reproducible — a field with no defined
 algorithm would let any schema-only test pass regardless of what a later
 stage invents.
@@ -17,7 +17,7 @@ from src.lantern.domain.models import Cart
 def canonical_json(payload: Mapping[str, Any]) -> str:
     """Stable JSON for hashing: sorted keys and no whitespace, so two
     structurally-equal payloads with different key insertion order hash
-    identically (measured at this stage's SDK reconnaissance).
+    identically.
     `Decimal` values serialize via their exact string form, never through
     `float`'s binary approximation; any other non-JSON-safe type raises
     rather than being silently coerced."""

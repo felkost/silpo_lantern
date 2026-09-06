@@ -1,5 +1,5 @@
 """DR-11: the canonical before/after diff. `canonical_diff` asserts its own
-totals invariant internally (G3-F13) — a diff that would silently
+totals invariant internally — a diff that would silently
 understate the real delta raises instead.
 """
 

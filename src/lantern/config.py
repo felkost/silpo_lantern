@@ -1,6 +1,6 @@
-"""Kernel layer: settings and constants only, no project-local imports
-(CLAUDE.md architecture table). Every other layer may depend on this one;
-this one depends on nothing in `src.lantern`.
+"""Kernel layer: settings and constants only, no project-local imports.
+Every other layer may depend on this one; this one depends on nothing in
+`src.lantern`.
 """
 
 import os
@@ -35,7 +35,7 @@ def load_env(path: Optional[Path] = None) -> None:
 
 
 def get_database_url(env_path: Optional[Path] = None) -> str:
-    """The SQLAlchemy-dialect Neon DSN (D15), loading `.env` first.
+    """The SQLAlchemy-dialect Neon DSN, loading `.env` first.
 
     The loading lives here, in the accessor, because a caller that reads the
     variable directly is exactly the defect this replaced: `uvicorn
@@ -54,10 +54,10 @@ def get_database_url(env_path: Optional[Path] = None) -> str:
 
 def strip_sqlalchemy_dialect(url: str) -> str:
     """Derive the bare `postgresql://` DSN `langgraph-checkpoint-postgres`
-    needs from the SQLAlchemy-dialect `DATABASE_URL` (D-G1-01). Fails loud on
+    needs from the SQLAlchemy-dialect `DATABASE_URL`. Fails loud on
     any shape other than the one exact prefix this project actually uses
-    (psycopg 3, per D15) — a silent pass-through would let a future DSN-format
-    drift reach the checkpointer as a much less diagnosable error (R8).
+    (psycopg 3) — a silent pass-through would let a future DSN-format
+    drift reach the checkpointer as a much less diagnosable error.
     """
     if not url.startswith(_SQLALCHEMY_PSYCOPG_PREFIX):
         raise ValueError(

@@ -1,9 +1,9 @@
-"""F8/D-G1-02: the checkpointer is built over an
-`AsyncConnectionPool`, not a single held connection, precisely because a
-single connection has no way to survive Neon's own idle-suspend behavior or
-a transient network blip. Simulates a dropped connection underneath the pool
-and confirms the next checkpoint-level operation still succeeds — the pool
-itself handles reconnection, nothing in application code has to.
+"""The checkpointer is built over an `AsyncConnectionPool`, not a single
+held connection, precisely because a single connection has no way to
+survive Neon's own idle-suspend behavior or a transient network blip.
+Simulates a dropped connection underneath the pool and confirms the next
+checkpoint-level operation still succeeds — the pool itself handles
+reconnection, nothing in application code has to.
 """
 
 import os
@@ -14,7 +14,7 @@ from src.lantern.config import strip_sqlalchemy_dialect
 from src.lantern.memory.checkpointer import get_checkpointer
 
 pytestmark = pytest.mark.skipif(
-    "DATABASE_URL" not in os.environ, reason="DATABASE_URL not set — see D-G1-04"
+    "DATABASE_URL" not in os.environ, reason="DATABASE_URL not set"
 )
 
 

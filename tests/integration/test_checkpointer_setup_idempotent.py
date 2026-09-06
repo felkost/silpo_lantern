@@ -1,7 +1,7 @@
-"""F2: `AsyncPostgresSaver.setup()` is not
-implicit (measured) — a missed call site fails deep inside a live user
-request. Confirms it's safe to call across repeated process lifetimes
-(opening and closing the pool twice), not just once.
+"""`AsyncPostgresSaver.setup()` is not implicit (measured) — a missed call
+site fails deep inside a live user request. Confirms it's safe to call
+across repeated process lifetimes (opening and closing the pool twice), not
+just once.
 """
 
 import os
@@ -12,7 +12,7 @@ from src.lantern.config import strip_sqlalchemy_dialect
 from src.lantern.memory.checkpointer import get_checkpointer
 
 pytestmark = pytest.mark.skipif(
-    "DATABASE_URL" not in os.environ, reason="DATABASE_URL not set — see D-G1-04"
+    "DATABASE_URL" not in os.environ, reason="DATABASE_URL not set"
 )
 
 

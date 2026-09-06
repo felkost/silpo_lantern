@@ -1,9 +1,9 @@
-"""Plan section 21.2's DDL requirement: a tiny runner over plain SQL files
-(ladder rung 6 — a handful of `CREATE TABLE IF NOT EXISTS` statements need
-no migration-framework dependency). Files are named `NNNN_description.sql`,
-applied in filename order, tracked in this project's own `schema_migrations`
-table — separate from LangGraph's `checkpoint_migrations`, which
-`AsyncPostgresSaver.setup()` owns entirely and this runner never touches.
+"""A tiny runner over plain SQL files — a handful of `CREATE TABLE IF NOT
+EXISTS` statements need no migration-framework dependency. Files are named
+`NNNN_description.sql`, applied in filename order, tracked in this
+project's own `schema_migrations` table — separate from LangGraph's
+`checkpoint_migrations`, which `AsyncPostgresSaver.setup()` owns entirely
+and this runner never touches.
 """
 
 from pathlib import Path
@@ -15,8 +15,7 @@ MIGRATIONS_DIR = Path(__file__).resolve().parent / "migrations"
 
 async def run_migrations(dsn: str) -> None:
     """Applies every `*.sql` file under `migrations/` not yet recorded in
-    `schema_migrations`, in filename order. Safe to call repeatedly (F2's
-    idempotency discipline, applied to this project's own tables too).
+    `schema_migrations`, in filename order. Safe to call repeatedly.
     """
     async with await psycopg.AsyncConnection.connect(dsn, autocommit=True) as conn:
         async with conn.cursor() as cur:

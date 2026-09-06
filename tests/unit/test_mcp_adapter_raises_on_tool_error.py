@@ -1,4 +1,4 @@
-"""F6: `CallToolResult.isError` is a field the
+"""`CallToolResult.isError` is a field the
 caller must check — measured, the SDK does not raise for it. A naive caller
 could treat an `isError: true` payload as ordinary data. The typed adapter
 must raise instead, carrying the result's `content` for diagnostics.

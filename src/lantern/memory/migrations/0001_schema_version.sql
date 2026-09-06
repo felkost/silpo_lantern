@@ -1,4 +1,4 @@
--- Plan section 11: "Несумісна версія стану без міграції — fail-safe." One
+-- An incompatible state version without a migration must fail safe. One
 -- row tracks the currently-applied application schema version, distinct
 -- from LangGraph's own checkpoint_migrations (owned by AsyncPostgresSaver).
 CREATE TABLE IF NOT EXISTS schema_version (

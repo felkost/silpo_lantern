@@ -1,4 +1,4 @@
-"""G3-F3: DR-06 says blockers are error-level or an allowlisted warning —
+"""DR-06 says blockers are error-level or an allowlisted warning —
 `info` never blocks, even when a registered policy entry exists for the
 code (`order.payment_types.disabled` is `confirmed` in the registry but
 `level: info` on every live capture so far).

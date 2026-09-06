@@ -1,8 +1,8 @@
-"""DR-01 (plan section 10): money is Decimal/minor units, coordinates are
-float; quantity keeps fractional semantics. Implemented at G3
+"""DR-01: money is Decimal/minor units, coordinates are
+float; quantity keeps fractional semantics
 (`src/lantern/domain/normalizer.py`).
 
-Evidence: `[I5]` section 10.1 — `cart.address` returns coordinates as
+`cart.address` returns coordinates as
 strings (`"latitude": "50.7429136"`), which `get_available_delivery_types`
 then rejects with `-32602: expected number, received string`. The two
 official MCP tools disagree on the type of the same field.

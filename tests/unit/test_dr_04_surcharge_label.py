@@ -1,6 +1,6 @@
-"""DR-04 (plan section 10): surcharge = total - productsTotal, labelled
-"service fee" only where the plan records a UI-confirmed one (self-pickup,
-9 UAH); every other channel gets neutral "difference" wording. G3-F22.
+"""DR-04: surcharge = total - productsTotal, labelled
+"service fee" only where a UI-confirmed one is known (self-pickup,
+9 UAH); every other channel gets neutral "difference" wording.
 """
 
 from decimal import Decimal
@@ -17,8 +17,8 @@ def test_selfpickup_surcharge_is_labelled_service_fee() -> None:
 
 
 def test_other_channel_surcharge_is_labelled_difference() -> None:
-    # Cross-checked against a live capture (decision D12, 2026-09-06):
-    # this cart's own deliveryCost is 129, matching exactly.
+    # Cross-checked against a live capture: this cart's own
+    # deliveryCost is 129, matching exactly.
     amount, label = compute_surcharge(
         total=Decimal("533.89"),
         products_total=Decimal("404.89"),

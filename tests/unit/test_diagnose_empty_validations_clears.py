@@ -1,4 +1,4 @@
-"""G3-F20: a cart with zero validations (D12's first cart, 1561.46,
+"""A cart with zero validations (a real cart at 1561.46,
 "already clears") returns a clean, empty diagnosis rather than a gap
 computed against a threshold that does not apply.
 """

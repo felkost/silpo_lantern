@@ -1,8 +1,8 @@
-"""D-G1-05: `jsonschema` is already installed
+"""`jsonschema` is already installed
 transitively via `mcp`, but this project's fixture-validation pipeline
-(plan section 12.1.1) depends on it directly — pin it explicitly so a future
+depends on it directly — pin it explicitly so a future
 `mcp` bump can't silently drop it out from under an unrelated part of the
-codebase (round 2, Lane 4, F-new).
+codebase.
 """
 
 from src.lantern.config import PROJECT_ROOT

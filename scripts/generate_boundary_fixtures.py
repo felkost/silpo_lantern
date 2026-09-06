@@ -1,13 +1,12 @@
-"""G3 (plan section 12.1.1 step 5, amendment A8/D6): a seeded boundary
-generator producing one synthetic/mutated fixture per row of
-`config/mutation_matrix.yaml`, wrapped in the existing envelope schema
-(`datasets/fixtures/envelope.schema.json`), and registered into
+"""A seeded boundary generator producing one synthetic/mutated fixture per
+row of `config/mutation_matrix.yaml`, wrapped in the existing envelope
+schema (`datasets/fixtures/envelope.schema.json`), and registered into
 `datasets/fixtures/manifest.json`.
 
-Deterministic by construction (G3-F14): uses a local `random.Random(seed)`
-instance, never the global `random` module, so two runs with the same
-seed produce byte-identical output regardless of what else has touched
-global random state in the same process.
+Deterministic by construction: uses a local `random.Random(seed)` instance,
+never the global `random` module, so two runs with the same seed produce
+byte-identical output regardless of what else has touched global random
+state in the same process.
 """
 
 from __future__ import annotations

@@ -49,6 +49,9 @@ notebooks/.ipynb_checkpoints/
 # --- Raw fixture captures: sanitized copies only reach the repo ---
 datasets/fixtures/raw/
 
+# --- IV-05 live smoke output: raw LLM responses, unreviewed ---
+datasets/evidence/
+
 # --- OS noise ---
 .DS_Store
 Thumbs.db

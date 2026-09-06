@@ -203,7 +203,35 @@ same normalized diagnosis, the guest sees both reasons at once, not one followed
 surprise second block after the first is fixed.</div>
 <div class="diagram">{{ domain_activity_svg }}</div>
 
-<h2>10. Why this is expected to help, not just work</h2>
+<h2>10. Planner, Evidence Gate, ranking</h2>
+<p>This diagram shows what happens after the diagnosis: the planner proposes search
+terms for products that could close the gap, never a price or a product id — those are
+structurally absent from what it is allowed to return. Every candidate the search turns
+up is checked against the same call's own typed response before it can reach the
+guest; a candidate with no verified price or that is marked unavailable is dropped, not
+guessed at. What survives is ranked by the smallest top-up that clears the gap, not the
+largest.</p>
+<div class="example"><b>Example.</b> A search returns five products; two have no
+verified price in the same response and are dropped immediately. Of the remaining
+three, the guest sees the cheapest way to clear the block first, not whichever result
+came back first.</div>
+<div class="diagram">{{ g4_activity_svg }}</div>
+
+<h2>11. LLM tool-choice, from a real trace</h2>
+<p>This sequence diagram is drawn from an actual captured run of the recovery graph
+against a live cart, not a hand-drawn guess at the design. It shows the two points
+where a language model is involved — proposing search terms, and narrating one
+accepted candidate — and what each one is and is not allowed to see: the planner
+receives only a tool's name and its JSON Schema, never its raw description text; the
+product name reaching the narration step is wrapped as inert data it cannot mistake
+for an instruction.</p>
+<div class="example"><b>Example.</b> The same live run that produced this diagram found
+three real candidate products and, separately, uncovered a genuine bug in how one
+delivery channel's failure was handled — the kind of gap a hand-drawn diagram cannot
+surface, since it only draws what the design intends, not what happened.</div>
+<div class="diagram">{{ g4_sequence_svg }}</div>
+
+<h2>12. Why this is expected to help, not just work</h2>
 <p>The mechanism above targets a specific, observed gap: the retailer's own MCP server
 already returns more structured detail about why a cart is blocked than the shopping
 app's screen displays. A cart can carry two independent blocking conditions and the
@@ -217,7 +245,7 @@ their cart was blocked and fixed it in one step spent less time and fewer action
 doing it than one navigating a generic "add more items" prompt with no further
 detail.</p>
 
-<h2>11. Measured outcome</h2>
+<h2>13. Measured outcome</h2>
 {% if metrics %}
 <table>
 <tr><th>Metric</th><th>Value</th><th>n</th></tr>
@@ -271,6 +299,8 @@ def render() -> Path:
         tools_list_svg=_inline_svg("tools_list_sequence"),
         domain_class_svg=_inline_svg("domain_core_class"),
         domain_activity_svg=_inline_svg("diagnose_activity"),
+        g4_activity_svg=_inline_svg("g4_planner_evidence_rank_activity"),
+        g4_sequence_svg=_inline_svg("g4_llm_tool_choice_sequence"),
         metrics=_load_metrics(),
         generated_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
     )

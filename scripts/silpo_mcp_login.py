@@ -1,4 +1,4 @@
-"""One-time interactive Silpo MCP login (D-G3-11): drives a real phone+OTP
+"""One-time interactive Silpo MCP login: drives a real phone+OTP
 OAuth flow in a browser and writes the resulting tokens to
 `.cache/silpo_mcp_token.json` via `DiskTokenStorage` — the same file every
 other script in this project (`capture_fixture.py`, the future MCP-backed

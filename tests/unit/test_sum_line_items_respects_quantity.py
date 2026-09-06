@@ -1,4 +1,4 @@
-"""G3-F4b: the pre-existing DR-08 sum test's fixture uses quantities 1 and
+"""The pre-existing DR-08 sum test's fixture uses quantities 1 and
 0, so a quantity-blind implementation (summing price alone) would pass it
 identically to a correct one. This test uses a quantity greater than one
 on a non-zero price, where the two implementations actually diverge.

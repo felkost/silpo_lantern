@@ -1,4 +1,4 @@
-"""G3-F15: an independent re-derivation of the DR-03 gap, structurally
+"""An independent re-derivation of the DR-03 gap, structurally
 separate from `src/lantern/domain/diagnosis.py` — it reads the raw
 validation `context` directly and never constructs a `Cart` or
 `Diagnosis`, so a copy-paste of the implementation would not pass as an

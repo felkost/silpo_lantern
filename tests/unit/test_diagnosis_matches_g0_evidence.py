@@ -1,12 +1,11 @@
-"""Go/no-go criterion 2: reproduces the gap and the three-channel table
-from decision D12's live evidence run (2026-09-06), from a **tracked**
+"""Reproduces the gap and the three-channel table
+from a live evidence run, from a **tracked**
 fixture (`tests/unit/fixtures/d12_cart_wire_shape.json`) — never by
 reading the gitignored local evidence directory, which is absent on a
-fresh clone (this was itself a round-1/round-2 finding, V3/G3-F18: the
-first draft of this criterion pointed at that path directly).
+fresh clone.
 
-Expected numbers are literal constants with a stable-id comment, matching
-G0-02/D12 exactly: gap 194.11 (599 - 404.89), and the three-channel table
+Expected numbers are literal constants matching the live run exactly:
+gap 194.11 (599 - 404.89), and the three-channel table
 699/599/199 -> 294.11/194.11/-205.89.
 """
 
@@ -27,13 +26,13 @@ def test_gap_reproduces_g0_02_d12() -> None:
     cart = normalize_cart(raw)
     diagnosis = diagnose(cart, load_registry())
 
-    # G0-02, D12: 599 - 404.89 = 194.11
+    # 599 - 404.89 = 194.11
     assert diagnosis.gap == Decimal("194.11")
     assert diagnosis.primary_code == "order.cost.min"
 
 
 def test_three_channel_comparison_reproduces_d12_table() -> None:
-    # D12's three-channel table, DeliveryHome/NovaPoshta/SelfPickup.
+    # The three-channel table, DeliveryHome/NovaPoshta/SelfPickup.
     products_total = Decimal("404.89")
     snapshots = [
         ChannelSnapshot(
@@ -50,7 +49,7 @@ def test_three_channel_comparison_reproduces_d12_table() -> None:
         ChannelSnapshot(
             delivery_type="NovaPoshta",
             branch_id="branch-novaposhta",
-            branch_is_inferred=True,  # D10: guessed branch
+            branch_is_inferred=True,  # guessed branch
             min_order_cost=Decimal("599"),
             delivery_cost=Decimal("129"),
             delivery_cost_map=[],
@@ -76,7 +75,7 @@ def test_three_channel_comparison_reproduces_d12_table() -> None:
 
     assert gaps == [Decimal("294.11"), Decimal("194.11"), Decimal("-205.89")]
     # DeliveryHome and NovaPoshta both fail to clear on price alone;
-    # NovaPoshta additionally carries an inferred branch (D10).
+    # NovaPoshta additionally carries an inferred branch.
     assert rows[0].verdict == "needs_check"
     assert rows[1].verdict == "needs_check"
     assert "branch_is_inferred" in rows[1].reason

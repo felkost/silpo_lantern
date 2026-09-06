@@ -1,8 +1,7 @@
-"""DR-02 (plan section 10): time is normalized to UTC internally, displayed
-via ZoneInfo("Europe/Kyiv"). Implemented at G3
-(`src/lantern/domain/normalizer.py`).
+"""DR-02: time is normalized to UTC internally, displayed
+via ZoneInfo("Europe/Kyiv") (`src/lantern/domain/normalizer.py`).
 
-Evidence: `[I5]` section 8.3 — a cart's `timeslot.start` of
+A cart's `timeslot.start` of
 "2026-08-13T06:30:00+00:00" is 09:30 in Kyiv (summer, UTC+3). A conversion
 error gives the worst possible direction: the agent would treat an already
 expired slot as still live.

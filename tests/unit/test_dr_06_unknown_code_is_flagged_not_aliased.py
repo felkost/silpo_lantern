@@ -1,6 +1,6 @@
-"""DR-06 (plan section 10): an unregistered validation code is flagged,
-never aliased to a similarly-named registered one. D9's two live-observed
-codes are the concrete case. G3-F1.
+"""DR-06: an unregistered validation code is flagged,
+never aliased to a similarly-named registered one. Two live-observed
+codes with no registry match are the concrete case.
 """
 
 from src.lantern.domain.diagnosis import diagnose

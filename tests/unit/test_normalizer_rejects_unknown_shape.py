@@ -1,4 +1,4 @@
-"""G3-F16: a malformed payload (missing required key, non-numeric total)
+"""A malformed payload (missing required key, non-numeric total)
 raises `CartShapeError` naming the problem, never a raw Pydantic
 `ValidationError` that could carry unredacted payload content, and never a
 silently-defaulted `Cart`.

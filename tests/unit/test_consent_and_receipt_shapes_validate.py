@@ -1,7 +1,7 @@
-"""D-G3-12/G3-F28: `ConsentRecord` and `Receipt` mirror the already-merged
+"""`ConsentRecord` and `Receipt` mirror the already-merged
 migration columns exactly (`0003_consents.sql`, `0005_receipts.sql`) — a
-model that cannot round-trip through those tables is a shape G5+G6 would
-have to break compatibility with. This checks the field-name sets, not
+model that cannot round-trip through those tables is a shape later stages
+would have to break compatibility with. This checks the field-name sets, not
 just that construction succeeds, so a drift in either direction is caught.
 """
 

@@ -1,0 +1,107 @@
+# Model basket. Ids and prices dated 03.09.2026 against the OpenRouter
+# catalogue — these must be re-verified in the dashboard before any spend
+# (IV-05), not trusted as still-current on the strength of this file alone.
+#
+# Catalogue re-verification (id exists, price matches, context window
+# sufficient) and the IV-05 smoke call (model actually answers) are
+# deliberately two separate checks — a model can still answer while having
+# quietly changed price or been deprecated-but-still-served. This file
+# records the FIRST half's starting point; IV-05 performs the check and
+# updates `verified_at`/`verified_price_*` once run.
+
+snapshot_date: "2026-09-03" # dated catalogue snapshot, not re-fetched yet
+# IV-05 narrow smoke (2026-09-06): planner + fallback both returned valid
+# structured output live (datasets/evidence/iv05_smoke_20260906T152356Z.json,
+# gitignored). This confirms CALLABILITY only.
+#
+# Catalogue re-check (2026-09-06, scripts/iv05_catalogue_check.py against the
+# live OpenRouter /api/v1/models, 430 entries): all ids still exist, all
+# context windows still sufficient. Two price drifts found and corrected
+# below (deepseek/deepseek-v4-flash-0731, z-ai/glm-5.3-flash).
+verified_at: "2026-09-06"
+smoke_tested_at: "2026-09-06" # connectivity/structured-output only
+
+planner:
+  model: "google/gemini-3.8-flash"
+  price_usd_per_million:
+    input: 0.75
+    output: 3.75
+  fallback: "z-ai/glm-5.3-flash"
+  # Infrequent (once per session), context-heavy call — full diagnosis +
+  # disclosure + 3-row channel comparison + the reviewed tool view. Sized
+  # at ~30K in / ~4K out tokens; the window here has headroom over that
+  # measured figure, not assumed to equal it exactly. No conversation
+  # history is ever added on top (state lives in RecoveryState/Neon,
+  # never an accumulated log).
+  expected_tokens: { input: 30000, output: 4000 }
+  context_window_min_tokens: 64000
+  # The planner's JSON is never shown to the guest (it carries no
+  # price/productId/availability fields at all — see
+  # src/lantern/graph/schemas.py), so the language criterion for this
+  # role is soft.
+  language_criterion: soft
+
+explainer:
+  # UA-Eval full run (2026-09-06, 28 prompts x 4 candidates, judged by
+  # x-ai/grok-4.6 against prompts/eval_judge_v1.md's rubric): the only
+  # candidate that cleared the threshold (avg >= 4, zero critical
+  # errors) on COMPLETE data (28/28 scored). deepseek-v4-flash-0731
+  # (avg 4.50) and qwen3.8-flash (avg 4.43, after a retry that fixed an
+  # OpenRouter rate-limit gap) both scored higher on average but carried
+  # critical errors (Russianisms/surzhyk) that disqualify a candidate
+  # regardless of the numeric score.
+  selected: "google/gemini-3.5-flash-lite"
+  # Frequent (once per ActionProposal, 2-3 per session), narrow call — one
+  # candidate's own product_name/quantity/expected_delta, never the
+  # session's full diagnosis or another candidate. Sized at ~6K in / ~1.2K
+  # out — a fifth of the planner's input, so buying planner-sized context
+  # headroom here would pay for capacity this prompt never uses. No
+  # conversation history here either.
+  expected_tokens: { input: 6000, output: 1200 }
+  context_window_min_tokens: 16000
+  candidates:
+    - model: "google/gemini-3.5-flash-lite"
+      price_usd_per_million: { input: 0.30, output: 2.50 }
+    - model: "deepseek/deepseek-v4-flash-0731"
+      # 2026-09-05: the bare "deepseek/deepseek-v4-flash" is a live alias,
+      # not a pinned model id — it resolved to this dated id on that date.
+      # Catalogue re-check (2026-09-06) found the dated id still resolves,
+      # but its price drifted: was in=0.07/out=0.18 per 1M, live is
+      # in=0.04998/out=0.09996 per 1M. Corrected here to the live value.
+      price_usd_per_million: { input: 0.04998, output: 0.09996 }
+    - model: "z-ai/glm-5.3-flash"
+      # Catalogue re-check (2026-09-06): input drifted from 0.08 to 0.075
+      # per 1M; output unchanged at 0.25. Corrected here.
+      price_usd_per_million: { input: 0.075, output: 0.25 }
+    - model: "qwen/qwen3.8-flash"
+      # Filled in from the live catalogue (2026-09-06) — previously unpriced.
+      price_usd_per_million: { input: 0.15, output: 0.47 }
+  language_criterion: hard # UA-only, guest-facing
+
+eval_judge:
+  # Cross-vendor to the planner (google/*), to limit self-preference bias.
+  candidates:
+    - model: "x-ai/grok-4.6"
+      price_usd_per_million: { input: 2.0, output: 6.0 }
+    - model: "anthropic/claude-opus-5"
+      price_usd_per_million: { input: 5.0, output: 25.0 }
+  selected: null # cost/availability decision, made once a smoke run confirms callability
+  calibrated: false # judge agreement (kappa etc.) comes later, not part of this basket
+
+budgets:
+  daily_soft_limit_usd: 3
+  hard_limit_usd: 20
+  # Stated envelope — see also src/lantern/graph/state.py's
+  # MAX_CYCLES/MAX_MCP_ATTEMPTS/MAX_TOKENS/ACTIVE_EXECUTION_SECONDS, which
+  # enforce these same numbers in code.
+  max_cycles: 12
+  max_mcp_attempts: 30
+  max_tokens: 60000
+  active_execution_seconds: 90
+
+degradation_order:
+  # "першим дешевшає explainer (A/B-кандидат), потім скорочуються
+  # dev-прогони; planner деградує останнім."
+  - explainer_ab_candidate
+  - dev_runs
+  - planner

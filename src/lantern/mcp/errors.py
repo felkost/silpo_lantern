@@ -1,7 +1,5 @@
-"""Typed error hierarchy for the MCP adapter (plan section 9.1's "typed
-errors" strengthening — measured to have zero donor precedent, see
-the G1+G2 stage spec: silpo_mcp.py never touched `McpError` or
-JSON-RPC codes at all).
+"""Typed error hierarchy for the MCP adapter — the donor's `silpo_mcp.py`
+never touched `McpError` or JSON-RPC codes at all.
 """
 
 from typing import Optional
@@ -20,8 +18,8 @@ class McpTransportError(McpAdapterError):
 class McpProtocolError(McpAdapterError):
     """A JSON-RPC-level error (`ErrorData`). An unrecognized `.code` still
     produces one of these rather than crashing the mapper or being silently
-    dropped — the same fail-safe philosophy DR-06 applies to unknown
-    validation codes.
+    dropped — the same fail-safe philosophy applies to unknown validation
+    codes.
     """
 
     def __init__(self, code: int, message: str, data: Optional[object] = None):
@@ -33,7 +31,7 @@ class McpProtocolError(McpAdapterError):
 
 class McpToolExecutionError(McpAdapterError):
     """Raised whenever a `CallToolResult.isError` is `True` — a JSON-RPC-level
-    success can still carry a tool-level failure (F6); callers never see a raw
+    success can still carry a tool-level failure; callers never see a raw
     `CallToolResult` with `isError=True` treated as success.
     """
 
@@ -44,13 +42,13 @@ class McpToolExecutionError(McpAdapterError):
 
 class McpSchemaError(McpAdapterError):
     """A cached `inputSchema` failed to validate a call's arguments —
-    triggers registry invalidation (F3).
+    triggers registry invalidation.
     """
 
 
 class McpResponseTooLargeError(McpAdapterError):
-    """A `tools/list` response exceeded the registry's size/count ceiling
-    (F11) — rejected before any hashing/diffing work is spent on it. Not a
+    """A `tools/list` response exceeded the registry's size/count ceiling —
+    rejected before any hashing/diffing work is spent on it. Not a
     JSON-RPC-level error, so distinct from `McpProtocolError`.
     """
 
@@ -58,7 +56,7 @@ class McpResponseTooLargeError(McpAdapterError):
 class McpAuthExpiredError(McpAdapterError):
     """A previously-valid `DiskTokenStorage` token is now rejected — distinct
     from `SilpoMcpAuthRequiredError` (never logged in at all) so a mid-demo
-    expiry surfaces clearly rather than as an opaque transport failure (F10).
+    expiry surfaces clearly rather than as an opaque transport failure.
     """
 
 

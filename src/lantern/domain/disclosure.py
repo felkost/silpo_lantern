@@ -1,8 +1,8 @@
-"""A7/D6/D10: the disclosure layer, including the delivery-channel
+"""The disclosure layer, including the delivery-channel
 comparison. Read-only, pure arithmetic over data the caller already
-fetched — this module never calls MCP itself (D-G3-04): `ChannelSnapshot`
+fetched — this module never calls MCP itself: `ChannelSnapshot`
 is an explicit input, and fetching per-channel data (`get_available_delivery_types`,
-`get_time_slots`) is G4's graph work.
+`get_time_slots`) is graph-node work.
 """
 
 from typing import Literal, Optional, Sequence
@@ -15,7 +15,7 @@ from src.lantern.domain.models import Cart, Diagnosis, Money, Validation
 
 class DisclosureReport(BaseModel):
     """Everything the cart already carries, including validations the
-    app's own UI does not render (plan section 5.1's hero requirement)."""
+    app's own UI does not render."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -27,9 +27,9 @@ class DisclosureReport(BaseModel):
 
 class ChannelSnapshot(BaseModel):
     """One delivery channel's measured state. `branch_is_inferred=True`
-    (D10: the current channel's branch was guessed, not confirmed by a
+    (the current channel's branch was guessed, not confirmed by a
     live call) and `item_availability=None` (never checked) both force a
-    `needs_check` verdict regardless of price/slot numbers — G3-F8/F9."""
+    `needs_check` verdict regardless of price/slot numbers."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -65,7 +65,7 @@ def build_disclosure(cart: Cart, diagnosis: Diagnosis) -> DisclosureReport:
 def compare_channels(
     current_products_total: Money, snapshots: Sequence[ChannelSnapshot]
 ) -> list[ChannelComparisonRow]:
-    """D10/D-G3-05: a row reads `clears_now` only when the gap already
+    """A row reads `clears_now` only when the gap already
     clears (<=0) AND item availability was actually checked (all True) AND
     the branch is a real, confirmed one AND at least one slot is free.
     Any missing piece is `needs_check`, with the specific reason named —

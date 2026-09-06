@@ -1,4 +1,4 @@
-"""Go/no-go criterion 4: every fixture `scripts/generate_boundary_fixtures.py`
+"""Every fixture `scripts/generate_boundary_fixtures.py`
 writes to `datasets/fixtures/{synthetic,mutated}/` validates against
 `datasets/fixtures/envelope.schema.json`. `datasets/fixtures/raw/` is
 excluded by design — those are pre-sanitization intermediate captures, not
