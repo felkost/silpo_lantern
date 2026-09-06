@@ -85,7 +85,11 @@ def get_session(pool: ConnectionPool, session_id: str) -> Optional[Dict[str, str
                 (session_id,),
             )
             row = cur.fetchone()
-    return dict(row) if row is not None else None
+    if row is None:
+        return None
+    # Same UUID-column conversion as `load_consent`: without it this
+    # function's own `Dict[str, str]` annotation is false for `session_id`.
+    return {key: str(value) for key, value in row.items()}
 
 
 def save_session_token(
@@ -169,9 +173,13 @@ def load_consent(
     if row is None:
         return None, True
     expired = row.pop("expired")
+    # `action_id`/`session_id` are UUID columns, so psycopg hands them back
+    # as `uuid.UUID`, while every id in the domain layer is a `str` -- the
+    # conversion belongs here, at the boundary that turns rows into domain
+    # objects, not in the guard that consumes them.
     record = ConsentRecord(
-        action_id=row["action_id"],
-        session_id=row["session_id"],
+        action_id=str(row["action_id"]),
+        session_id=str(row["session_id"]),
         owner=row["owner"],
         cart_id=row["cart_id"],
         canonical_args=row["canonical_args"],
