@@ -31,6 +31,9 @@ langchain-openai==1.6.0
 langgraph-checkpoint-postgres==3.1.2
 langsmith==0.12.2
 psycopg[binary]==3.3.5
+psycopg-pool==3.3.1  # G5+G6 (D-G5-07): pinned explicitly — was transitive-only via
+# langgraph-checkpoint-postgres, and this stage builds the write path's own
+# sync repository directly on it.
 sqlalchemy==2.0.52
 httpx==0.28.1
 python-dotenv==1.2.3

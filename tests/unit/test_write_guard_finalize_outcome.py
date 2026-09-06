@@ -1,0 +1,172 @@
+"""T12/T13/T13b/T13c (G5+G6 stage spec): `finalize_write_outcome` verifies
+identity, not merely a matching total, and turns a raising `canonical_diff`
+into `unverified` rather than letting the exception escape.
+"""
+
+from decimal import Decimal
+
+from src.lantern.domain.models import Cart, LineItem, Validation
+from src.lantern.safety.write_guard import finalize_write_outcome
+
+_RESPONSE = {"success": True, "summary": "ok", "products": []}
+
+
+def _cart(products_total: str, products: list = [], validations: list = []) -> Cart:
+    return Cart(
+        cart_id="cart-1",
+        products_total=Decimal(products_total),
+        products=products,
+        validations=validations,
+    )
+
+
+def test_t12_unreachable_readback_is_unverified() -> None:
+    outcome = finalize_write_outcome(
+        _RESPONSE,
+        read_back_result=None,
+        before=_cart("100.00"),
+        expected_delta=Decimal("39.99"),
+        expected_product_id="p1",
+        expected_quantity=Decimal("1"),
+    )
+    assert outcome.status == "unverified"
+    assert outcome.diff is None
+
+
+def test_t13b_matching_total_but_wrong_identity_is_unverified() -> None:
+    """Someone else added a DIFFERENT item of equal price -- the total
+    moved by the right amount, but this was not the consented write."""
+    before = _cart("100.00")
+    after = _cart(
+        "139.99",
+        products=[
+            LineItem(
+                product_id="a-different-product",
+                name="Not what was consented",
+                quantity=Decimal("1"),
+                price=Decimal("39.99"),
+            )
+        ],
+    )
+    outcome = finalize_write_outcome(
+        _RESPONSE,
+        read_back_result=after,
+        before=before,
+        expected_delta=Decimal("39.99"),
+        expected_product_id="p1",
+        expected_quantity=Decimal("1"),
+    )
+    assert outcome.status == "unverified"
+
+
+def test_wrong_quantity_is_unverified() -> None:
+    before = _cart("100.00")
+    after = _cart(
+        "139.99",
+        products=[
+            LineItem(
+                product_id="p1",
+                name="Milk",
+                quantity=Decimal("1"),
+                price=Decimal("39.99"),
+            )
+        ],
+    )
+    outcome = finalize_write_outcome(
+        _RESPONSE,
+        read_back_result=after,
+        before=before,
+        expected_delta=Decimal("39.99"),
+        expected_product_id="p1",
+        expected_quantity=Decimal("2"),  # consented quantity was 2, cart shows 1
+    )
+    assert outcome.status == "unverified"
+
+
+def test_t13c_raising_canonical_diff_is_unverified_not_an_exception() -> None:
+    """A `productsTotal` that disagrees with the line-item sum -- the
+    concurrent-change case `canonical_diff` itself raises on -- must never
+    escape as an exception; it is exactly the situation that must be
+    reported as `unverified`."""
+    before = _cart("100.00")
+    after = _cart(
+        "999.99",  # deliberately inconsistent with the line items below
+        products=[
+            LineItem(
+                product_id="p1",
+                name="Milk",
+                quantity=Decimal("2"),
+                price=Decimal("39.99"),
+            )
+        ],
+    )
+    outcome = finalize_write_outcome(
+        _RESPONSE,
+        read_back_result=after,
+        before=before,
+        expected_delta=Decimal("79.98"),
+        expected_product_id="p1",
+        expected_quantity=Decimal("2"),
+    )
+    assert outcome.status == "unverified"
+    assert "invariant" in outcome.reason.lower()
+
+
+def test_new_error_validation_on_written_product_is_unverified() -> None:
+    """Over-stock or another blocker surfacing on the exact product just
+    written -- the tool's own description says a quantity exceeding stock
+    is accepted at write time and surfaces only later here."""
+    before = _cart("100.00")
+    after = _cart(
+        "179.98",
+        products=[
+            LineItem(
+                product_id="p1",
+                name="Milk",
+                quantity=Decimal("2"),
+                price=Decimal("39.99"),
+            )
+        ],
+        validations=[
+            Validation(
+                level="error",
+                type="order",
+                code="product.offer.stock.max",
+                context={"productId": "p1", "stock": 1},
+            )
+        ],
+    )
+    outcome = finalize_write_outcome(
+        _RESPONSE,
+        read_back_result=after,
+        before=before,
+        expected_delta=Decimal("79.98"),
+        expected_product_id="p1",
+        expected_quantity=Decimal("2"),
+    )
+    assert outcome.status == "unverified"
+
+
+def test_matching_identity_and_total_is_a_receipt() -> None:
+    before = _cart("100.00")
+    after = _cart(
+        "179.98",
+        products=[
+            LineItem(
+                product_id="p1",
+                name="Milk",
+                quantity=Decimal("2"),
+                price=Decimal("39.99"),
+            )
+        ],
+    )
+    outcome = finalize_write_outcome(
+        _RESPONSE,
+        read_back_result=after,
+        before=before,
+        expected_delta=Decimal("79.98"),
+        expected_product_id="p1",
+        expected_quantity=Decimal("2"),
+    )
+    assert outcome.status == "receipt"
+    assert outcome.actual_delta == Decimal("79.98")

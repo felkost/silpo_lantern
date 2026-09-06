@@ -67,6 +67,10 @@ def make_read_node(
     first call returns no cart body (a measured finding); the second call's
     parsed response nests the cart under a `cart` key
     (`normalizer.normalize_cart`'s own documented input shape).
+
+    `checkoutWebLink` (G5+G6, D-G5-25) is a sibling of `cart` in the raw
+    response, not a field inside it, so it is merged into the dict passed
+    to `normalize_cart` here rather than being silently dropped.
     """
 
     def read_node(state: RecoveryState) -> Dict[str, Any]:
@@ -74,7 +78,9 @@ def make_read_node(
             my_cart = fetch_my_cart()
             cart_id = my_cart["shoppingCartId"]
             full = fetch_cart_by_id(cart_id)
-            cart = normalize_cart(full["cart"])
+            cart_payload = dict(full["cart"])
+            cart_payload.setdefault("checkoutWebLink", full.get("checkoutWebLink"))
+            cart = normalize_cart(cart_payload)
         except (CartShapeError, KeyError) as exc:
             return {"status": "aborted", "error": f"read failed: {exc}"}
         return {"cart": cart, "mcp_attempts_used": state["mcp_attempts_used"] + 2}

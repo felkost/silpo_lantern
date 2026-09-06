@@ -1,13 +1,12 @@
 {
   "source": "tests/contract/fixtures/tools_list_2026-09-05.json",
   "source_schema_hash": "c914be0ad5ba84d1cc3fc269759f972d43cdbe58f67ac607c31c7cf4aee3db16",
-  "reviewed_at": "2026-09-08",
+  "reviewed_at": "2026-09-06",
   "names": [
     "silpo_add_or_update_cart_products",
     "silpo_add_or_update_certificates",
     "silpo_add_or_update_favorite_products",
     "silpo_clear_shopping_cart",
-    "silpo_create_shopping_cart",
     "silpo_find_address",
     "silpo_find_nova_poshta_offices",
     "silpo_find_nova_poshta_settlements",

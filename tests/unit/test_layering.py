@@ -16,6 +16,7 @@ import re
 from pathlib import Path
 
 SRC = Path(__file__).resolve().parent.parent.parent / "src"
+APPS = Path(__file__).resolve().parent.parent.parent / "apps"
 
 # Package name (inside src/lantern/) -> layer name. A layer may always
 # import itself.
@@ -182,6 +183,20 @@ def _iter_python_files():
     yield from SRC.rglob("*.py")
 
 
+def _iter_write_allowlist_scan_files():
+    """G5+G6 (D-G5-24): the write-allowlist tripwire below used to scan
+    only `src/`, so `apps/api` -- the interface layer this stage adds a
+    consent endpoint to -- could import `WRITE_TOOL_ALLOWLIST` directly
+    with every existing test staying green. `apps/` is not in `LAYER_OF`
+    (it has no place in the kernel/domain/safety/infra/application table
+    this file otherwise enforces), so it is scanned only by this one
+    tripwire, not by the general cross-layer checks above.
+    """
+    yield from _iter_python_files()
+    if APPS.exists():
+        yield from APPS.rglob("*.py")
+
+
 def _imported_names(node: ast.AST) -> list[str]:
     if isinstance(node, ast.ImportFrom) and node.module:
         return [node.module]
@@ -251,7 +266,7 @@ def test_write_allowlist_constant_only_imported_within_safety():
     if not allowlist_module.exists():
         return
     violations: list[str] = []
-    for path in _iter_python_files():
+    for path in _iter_write_allowlist_scan_files():
         rel = path.relative_to(SRC.parent)
         if "safety" in path.parts:
             continue

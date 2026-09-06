@@ -39,15 +39,23 @@ def test_build_recovery_graph_has_no_generic_call_any_tool_parameter() -> None:
     """Every MCP-shaped parameter is a distinct, statically-typed
     `Callable` bound to exactly one real tool's own argument shape — never
     a `Callable[[str, ...], ...]`-style generic dispatcher that could be
-    handed a write tool's name at runtime."""
+    handed a write tool's name at runtime.
+
+    G5+G6 (D-G5-24 audit finding): this test's own comment used to claim
+    the name-set assertion below would catch a `call_*` parameter too, but
+    the filter only ever matched `fetch_*` — a real hole, found before any
+    write callable existed to slip through it, not a "declared test edit"
+    made to accommodate one. Widened to `fetch_`/`call_` so the property
+    the comment already claimed is actually enforced.
+    """
     signature = inspect.signature(build_recovery_graph)
-    fetch_params = {
+    mcp_params = {
         name: param
         for name, param in signature.parameters.items()
-        if name.startswith("fetch_")
+        if name.startswith("fetch_") or name.startswith("call_")
     }
 
-    assert set(fetch_params) == {
+    assert set(mcp_params) == {
         "fetch_my_cart",
         "fetch_cart_by_id",
         "fetch_delivery_types",
@@ -57,12 +65,9 @@ def test_build_recovery_graph_has_no_generic_call_any_tool_parameter() -> None:
 
     import collections.abc
 
-    for name, param in fetch_params.items():
+    for name, param in mcp_params.items():
         # Each is a `Callable` bound to one specific tool's own argument
         # shape (e.g. `Callable[[str], Mapping]` for a cart id) — never a
         # generic `Callable[[str, Mapping], Mapping]`-style dispatcher that
-        # a caller could point at an arbitrary tool name at runtime. The
-        # five names above are exhaustive by construction: adding a write
-        # tool would mean adding a sixth `fetch_*`/`call_*` parameter here,
-        # which this test's name-set assertion above would catch.
+        # a caller could point at an arbitrary tool name at runtime.
         assert typing.get_origin(param.annotation) is collections.abc.Callable, name

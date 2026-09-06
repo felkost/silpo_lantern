@@ -121,6 +121,12 @@ class Cart(BaseModel):
     delivery_cost: Optional[Money] = None
     restrictions: list[str] = []
     constraints: dict[str, bool] = {}
+    # G5+G6 (D-G5-25): the requirements checklist requires the ABSENCE of
+    # this field to be treated as an additional signal, never as a plain
+    # equivalence to "blocked" -- the tool's own schema documents it as
+    # present "when cart is non-empty and error-free", so a missing link
+    # can mean either a real blocker or simply an empty cart.
+    checkout_web_link: Optional[str] = None
 
 
 class Blocker(BaseModel):
@@ -193,12 +199,16 @@ class ActionProposal(BaseModel):
     """The consent sentence — "Додати товар X, кількість Y,
     очікувана сума Z" — needs a name and quantity typed on the model
     itself, not buried inside `canonical_args`; `product_name`/`quantity`
-    are X and Y, `expected_delta` is Z. `canonical_args` stays a
-    dict for forward compatibility with tools beyond the hero write, but
-    its key set is pinned for the one tool exercised so far:
-    `{productId: str, quantity: int, addQuantity: bool}` for
-    `silpo_add_or_update_cart_products`, with `addQuantity` always present
-    and explicit (idempotency requires it, never left to a default)."""
+    are X and Y, `expected_delta` is Z. `canonical_args` stays a dict for
+    forward compatibility with tools beyond the hero write, but its key
+    set is pinned for the one tool exercised so far (G5+G6, D-G5-02): the
+    complete, exact `silpo_add_or_update_cart_products` argument object --
+    `{shoppingCartId: str, products: [{productId, companyId, branchId:
+    str, quantity: number, addQuantity: bool}]}` -- byte-for-byte what the
+    Write Guard sends, since `args_hash` binds consent to this object and
+    a hash over a summary of the call proves nothing about the call
+    itself. `addQuantity` is always `False` (replace, not add) and
+    explicit, never left to a default."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -217,31 +227,39 @@ class ActionProposal(BaseModel):
 
 
 class ConsentRecord(BaseModel):
-    """Mirrors `src/lantern/memory/migrations/0003_consents.sql` column for
-    column — that table is already merged and integration-tested against
-    live Neon, so it is the shape that wins over field names like
-    `cart_id`/`prompt_version`/`policy_version` that the migration does
-    not have. `owner` is the migration's column name, kept rather than
-    `user_id_hash`, for the same reason."""
+    """Mirrors `0003_consents.sql` + `0006_consent_receipt_versioning.sql`
+    column for column. `cart_id`/`prompt_version`/`policy_version` were
+    added at G5+G6 (D-G5-09): plan section 11 requires a consent bound to
+    the specific cart and the prompt/policy version that produced it, and
+    `state_hash` deliberately excludes cart identity (it hashes contents,
+    not identity), so `cart_id` has to live here explicitly. `owner` is
+    the migration's column name, kept rather than `user_id_hash`."""
 
     model_config = ConfigDict(frozen=True)
 
     action_id: str
     session_id: str
     owner: str
+    cart_id: str
     canonical_args: dict[str, Any]
     args_hash: str
     state_hash: str
+    prompt_version: Optional[str] = None
+    policy_version: Optional[str] = None
     created_at: datetime
     expires_at: datetime
     consumed_at: Optional[datetime] = None
 
 
 class Receipt(BaseModel):
-    """Mirrors `0005_receipts.sql`. `verified=False` is the
-    "unverified, never a successful receipt" outcome — a later stage
-    decides when to set it; this defines the shape that makes the false
-    case representable rather than assumed away."""
+    """Mirrors `0005_receipts.sql` + `0006_consent_receipt_versioning.sql`.
+    `status`/`reason`/`expected_delta`/`actual_delta`/`trace_id` were added
+    at G5+G6 (D-G5-09): plan section 13.3's metrics need "read-back
+    attempted" separated from "verification succeeded", a stored
+    expectation to compare a delta against, and a way to join a receipt
+    back to its own LangSmith trace — none of which `verified: bool` alone
+    can carry. `verified` stays for existing callers and is derived from
+    `status`."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -251,4 +269,9 @@ class Receipt(BaseModel):
     before_state: dict[str, Any]
     after_state: dict[str, Any]
     verified: bool
+    status: Literal["receipt", "unverified"]
+    reason: str
+    expected_delta: Optional[Money] = None
+    actual_delta: Optional[Money] = None
+    trace_id: Optional[str] = None
     created_at: datetime
