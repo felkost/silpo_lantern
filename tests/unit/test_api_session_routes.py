@@ -289,7 +289,11 @@ def test_consent_records_and_advances_without_running_the_write(
 
     assert response.status_code == 200
     assert response.json()["status"] == "consent_recorded"
-    assert graph.updated_with == {"consent_action_id": "a1"}
+    assert graph.updated_with["consent_action_id"] == "a1"
+    # The deadline is re-based on consent: it is an absolute timestamp, so
+    # the guest's deliberation would otherwise run the write's read-back
+    # reserve down and the guard would refuse -- as it did on a live run.
+    assert graph.updated_with["deadline"] > datetime.now(timezone.utc)
     assert graph.astream_inputs == []  # the write runs on the next /events call
 
 
@@ -354,7 +358,11 @@ def test_t18_consent_request_has_no_field_for_a_client_supplied_hash(
     )
 
     assert response.status_code == 200
-    assert graph.updated_with == {"consent_action_id": "a1"}
+    assert graph.updated_with["consent_action_id"] == "a1"
+    # The deadline is re-based on consent: it is an absolute timestamp, so
+    # the guest's deliberation would otherwise run the write's read-back
+    # reserve down and the guard would refuse -- as it did on a live run.
+    assert graph.updated_with["deadline"] > datetime.now(timezone.utc)
 
 
 @pytest.mark.parametrize(

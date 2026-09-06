@@ -40,7 +40,11 @@ from src.lantern.domain.consent_hash import (
     compute_state_hash,
 )
 from src.lantern.domain.models import ConsentRecord
-from src.lantern.graph.state import RecoveryState, new_recovery_state
+from src.lantern.graph.state import (
+    ACTIVE_EXECUTION_SECONDS,
+    RecoveryState,
+    new_recovery_state,
+)
 from src.lantern.mcp.session import current_token_storage
 from src.lantern.mcp.session_token_storage import SessionTokenStorage
 from src.lantern.memory import repository
@@ -280,7 +284,18 @@ async def submit_consent(
     )
     repository.save_consent(request.app.state.repo_pool, consent)
 
-    await graph.aupdate_state(config, {"consent_action_id": proposal.action_id})
+    # The deadline is re-based here, not left as the session's original one:
+    # it is an absolute timestamp, so the guest's own deliberation time runs
+    # it down, and `has_write_reserve` then refuses the write for lack of a
+    # read-back reserve. Recording consent IS the end of deliberation, so a
+    # fresh active-execution window starts from this moment.
+    await graph.aupdate_state(
+        config,
+        {
+            "consent_action_id": proposal.action_id,
+            "deadline": now + timedelta(seconds=ACTIVE_EXECUTION_SECONDS),
+        },
+    )
 
     return ConsentAckResponse(action_id=proposal.action_id)
 

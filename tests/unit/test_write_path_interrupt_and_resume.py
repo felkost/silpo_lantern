@@ -339,3 +339,40 @@ def test_t15b_crash_after_write_before_readback_reconciles_on_resume() -> None:
     assert final_state["status"] == "verified"
     assert final_state["receipt"].status == "receipt"
     assert backend.journal[("owner-1", "cart-1", proposal.action_id)] == "confirmed"
+
+
+def test_the_consent_pause_does_consume_an_absolute_deadline() -> None:
+    """`new_recovery_state` used to claim the consent wait was excluded
+    from the budget "by construction", because the pause runs no node. It
+    is not: `deadline` is an absolute timestamp, and wall-clock time passes
+    whether or not code executes. Pinned because that false claim reached
+    production and refused a real write with "insufficient budget reserve"
+    after a guest simply took a couple of minutes to decide.
+
+    Only a duration-accumulating budget would have the claimed property;
+    the fix is re-basing the deadline when consent is recorded, which
+    `apps/api/routes.py` does.
+    """
+    from src.lantern.graph.state import (
+        ACTIVE_EXECUTION_SECONDS,
+        has_write_reserve,
+        new_recovery_state,
+    )
+
+    started = datetime(2026, 9, 8, 12, 0, 0, tzinfo=timezone.utc)
+    state = new_recovery_state(session_id="s1", trace_id="t1", now=started)
+
+    # Immediately after the read pipeline: the write reserve is available.
+    assert has_write_reserve(state, started + timedelta(seconds=5)) is True
+
+    # The guest reads three proposals and thinks. No node has run in the
+    # meantime -- and the reserve is gone anyway.
+    deliberated = started + timedelta(seconds=ACTIVE_EXECUTION_SECONDS + 1)
+    assert has_write_reserve(state, deliberated) is False
+
+    # Re-basing the deadline, as recording consent does, restores it.
+    rebased = {
+        **state,
+        "deadline": deliberated + timedelta(seconds=ACTIVE_EXECUTION_SECONDS),
+    }
+    assert has_write_reserve(rebased, deliberated) is True

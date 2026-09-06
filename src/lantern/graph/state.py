@@ -103,12 +103,23 @@ class RecoveryState(TypedDict):
 def new_recovery_state(
     session_id: str, trace_id: str, now: datetime, owner: str = ""
 ) -> RecoveryState:
-    """The graph's entry state. `deadline` is `now + ACTIVE_EXECUTION_SECONDS`
-    — waiting on consent is separate from active execution time by
-    construction, not by a special-cased reset: `enforce_budget` is only
-    ever called by a node while it runs, and the interrupt pause calls no
-    node, so no wall-clock time is charged against `deadline` while the
-    graph is stopped waiting for consent.
+    """The graph's entry state. `deadline` is `now + ACTIVE_EXECUTION_SECONDS`.
+
+    This docstring previously claimed the consent wait was excluded from
+    the budget "by construction", because the interrupt pause runs no node
+    and `enforce_budget` is only called from inside one. That reasoning was
+    wrong and cost a live run: `deadline` is an ABSOLUTE timestamp, not an
+    accumulator of node runtime, and wall-clock time passes whether or not
+    code is executing. `has_write_reserve` compares a real `now` against
+    that fixed point, so a guest who spends longer than
+    ACTIVE_EXECUTION_SECONDS deciding can never be allowed to write --
+    which is exactly what happened, as `write refused: insufficient budget
+    reserve`. Only a duration-accumulating budget would have the property
+    claimed here.
+
+    The deadline is therefore re-based when consent is recorded
+    (`apps/api/routes.py`), which is the moment deliberation ends and a new
+    active segment begins.
     """
     return RecoveryState(
         session_id=session_id,
