@@ -12,7 +12,7 @@ state to `aborted` with a named reason, never an unbounded retry loop.
 """
 
 from datetime import datetime, timedelta
-from typing import List, Literal, Optional, TypedDict
+from typing import Any, Dict, List, Literal, Optional, TypedDict
 
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 
@@ -25,10 +25,13 @@ from src.lantern.domain.models import (
     ActionProposal,
     Blocker,
     Cart,
+    CartDiff,
+    ConsentRecord,
     Diagnosis,
     EvidenceTuple,
     LineItem,
     PolicyEntry,
+    Receipt,
     Validation,
 )
 from src.lantern.graph.schemas import SearchIntent
@@ -41,7 +44,20 @@ MAX_TOKENS = 60_000
 ACTIVE_EXECUTION_SECONDS = 90
 
 RecoveryStatus = Literal[
-    "reading", "diagnosed", "planned", "awaiting_consent", "aborted"
+    "reading",
+    "diagnosed",
+    "planned",
+    "awaiting_consent",
+    "aborted",
+    # G5+G6 additions: "consented" is set once the write guard authorizes
+    # (never before -- an LLM never sets this), "written" once the write
+    # call itself returns, "verified"/"unverified" once the independent
+    # read-back settles the outcome (plan section 11: success from MCP is
+    # never treated as proof by itself).
+    "consented",
+    "written",
+    "verified",
+    "unverified",
 ]
 
 
@@ -61,14 +77,28 @@ class RecoveryState(TypedDict):
     mcp_attempts_used: int
     tokens_used: int
     deadline: datetime
+    # G5+G6 additions. `consent_action_id` is the ONLY thing the API sets
+    # before resuming the graph (via `graph.update_state`, never via the
+    # interrupt's own resume payload -- D-G5-08 requires the guard to
+    # trust nothing from the resume path). It is a bare pointer; the
+    # write guard node loads the actual `ConsentRecord` from Neon by this
+    # id and only then populates `consent` below for the write node to use.
+    owner: str
+    consent_action_id: Optional[str]
+    consent: Optional[ConsentRecord]
+    write_response: Optional[Dict[str, Any]]
+    receipt: Optional[Receipt]
 
 
-def new_recovery_state(session_id: str, trace_id: str, now: datetime) -> RecoveryState:
+def new_recovery_state(
+    session_id: str, trace_id: str, now: datetime, owner: str = ""
+) -> RecoveryState:
     """The graph's entry state. `deadline` is `now + ACTIVE_EXECUTION_SECONDS`
-    — waiting on consent is separate from active execution time, so this
-    clock only ever runs during this stage's own nodes; a future
-    `await_consent` interrupt is explicitly outside it, not yet relevant
-    since no consent node exists this stage.
+    — waiting on consent is separate from active execution time by
+    construction, not by a special-cased reset: `enforce_budget` is only
+    ever called by a node while it runs, and the interrupt pause calls no
+    node, so no wall-clock time is charged against `deadline` while the
+    graph is stopped waiting for consent.
     """
     return RecoveryState(
         session_id=session_id,
@@ -86,7 +116,34 @@ def new_recovery_state(session_id: str, trace_id: str, now: datetime) -> Recover
         mcp_attempts_used=0,
         tokens_used=0,
         deadline=now + timedelta(seconds=ACTIVE_EXECUTION_SECONDS),
+        owner=owner,
+        consent_action_id=None,
+        consent=None,
+        write_response=None,
+        receipt=None,
     )
+
+
+def has_write_reserve(
+    state: RecoveryState,
+    now: datetime,
+    *,
+    reserve_seconds: int = 20,
+    mcp_reads_needed: int = 2,
+    mcp_read_timeout_seconds: int = 10,
+) -> bool:
+    """G5+G6 (D-G5-20): plan section 6.3 -- "before write, a reserve of
+    20s and two reads must remain; otherwise do not start the write." This
+    is a distinct check from `enforce_budget`: it looks *forward* at what
+    the write path is about to need (the write call itself plus the
+    mandatory read-back), not backward at what has already been spent.
+    """
+    if state["mcp_attempts_used"] + mcp_reads_needed > MAX_MCP_ATTEMPTS:
+        return False
+    needed = timedelta(
+        seconds=reserve_seconds + mcp_reads_needed * mcp_read_timeout_seconds
+    )
+    return now + needed <= state["deadline"]
 
 
 def enforce_budget(state: RecoveryState, now: datetime) -> RecoveryState:
@@ -141,6 +198,13 @@ _RECOVERY_STATE_MSGPACK_MODULES = [
     (ChannelSnapshot.__module__, ChannelSnapshot.__name__),
     (ChannelComparisonRow.__module__, ChannelComparisonRow.__name__),
     (SearchIntent.__module__, SearchIntent.__name__),
+    # G5+G6 additions -- without these, the checkpointer's default
+    # serializer degrades a consent/receipt/diff crossing the interrupt
+    # boundary exactly as it did for ActionProposal before it was listed
+    # here (measured live, see this list's own header comment).
+    (ConsentRecord.__module__, ConsentRecord.__name__),
+    (Receipt.__module__, Receipt.__name__),
+    (CartDiff.__module__, CartDiff.__name__),
 ]
 
 

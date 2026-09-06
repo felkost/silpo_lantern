@@ -20,7 +20,7 @@ import json
 from contextlib import contextmanager
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Iterator, Literal, Optional
+from typing import Any, Iterator, Literal, Optional, Tuple
 
 from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
@@ -141,43 +141,55 @@ def claim_and_consume(
     cart_id: str,
     action_id: str,
     canonical_args_hash: str,
-) -> IdempotencyState:
+) -> Tuple[bool, IdempotencyState]:
     """D-G5-07b: the idempotency claim and the consent consumption happen
     in one transaction, immediately before the write call, inside the node
     that performs it -- never in the Write Guard node, which
     `interrupt_before` protects from re-execution but which measurement
-    (M2b) showed does *not* protect the writing node itself. Returns the
-    state the caller should act on: `"in_flight"` means proceed and write;
-    `"confirmed"`/`"failed"` means the action was already settled and its
-    stored result should be returned without a second write.
+    (M2b) showed does *not* protect the writing node itself.
+
+    Returns `(just_claimed, state)`. `just_claimed=True` means THIS call
+    created the journal row -- the caller must proceed to the actual
+    write. `just_claimed=False` means an EARLIER call already claimed
+    this action (a resume after a crash, or a genuine duplicate request);
+    `state` is whatever that earlier call left behind, and the caller
+    must NEVER write again, only reconcile from a read-back.
+
+    The idempotency INSERT happens *before* consuming the consent, and
+    only the caller that wins the `ON CONFLICT` race touches
+    `consents.consumed_at` at all -- a corrected ordering from this
+    stage's own first draft, which consumed the consent unconditionally
+    and made a resumed reconciliation attempt raise
+    `ConsentAlreadyConsumedError` instead of ever reaching the
+    already-existed branch below (found while writing this module's own
+    resume test, not in production).
     """
     with pool.connection() as conn:
         with conn.transaction():
             with conn.cursor(row_factory=dict_row) as cur:
                 cur.execute(
                     """
-                    UPDATE consents SET consumed_at = now()
-                    WHERE action_id = %s AND consumed_at IS NULL
-                    RETURNING action_id
-                    """,
-                    (action_id,),
-                )
-                if cur.fetchone() is None:
-                    raise ConsentAlreadyConsumedError(action_id)
-
-                cur.execute(
-                    """
                     INSERT INTO idempotency_keys
                         (owner, cart_id, action_id, canonical_args_hash, state)
                     VALUES (%s, %s, %s, %s, 'in_flight')
                     ON CONFLICT (owner, cart_id, action_id) DO NOTHING
-                    RETURNING state, canonical_args_hash
+                    RETURNING state
                     """,
                     (owner, cart_id, action_id, canonical_args_hash),
                 )
-                inserted = cur.fetchone()
-                if inserted is not None:
-                    return "in_flight"
+                just_inserted = cur.fetchone()
+                if just_inserted is not None:
+                    cur.execute(
+                        """
+                        UPDATE consents SET consumed_at = now()
+                        WHERE action_id = %s AND consumed_at IS NULL
+                        RETURNING action_id
+                        """,
+                        (action_id,),
+                    )
+                    if cur.fetchone() is None:
+                        raise ConsentAlreadyConsumedError(action_id)
+                    return True, "in_flight"
 
                 cur.execute(
                     """
@@ -191,7 +203,7 @@ def claim_and_consume(
                 if existing["canonical_args_hash"] != canonical_args_hash:
                     raise ActionAlreadyInFlightError(action_id)
                 state: IdempotencyState = existing["state"]
-                return state
+                return False, state
 
 
 def mark_action(

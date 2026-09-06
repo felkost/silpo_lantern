@@ -44,9 +44,19 @@ def test_build_recovery_graph_has_no_generic_call_any_tool_parameter() -> None:
     G5+G6 (D-G5-24 audit finding): this test's own comment used to claim
     the name-set assertion below would catch a `call_*` parameter too, but
     the filter only ever matched `fetch_*` — a real hole, found before any
-    write callable existed to slip through it, not a "declared test edit"
-    made to accommodate one. Widened to `fetch_`/`call_` so the property
-    the comment already claimed is actually enforced.
+    write callable existed to slip through it. Widened to `fetch_`/`call_`
+    so the property the comment already claimed is actually enforced.
+
+    G5+G6 (declared this stage): `call_write_tool` is added deliberately —
+    it is `Callable[[str, Dict], Dict]`, taking a tool name, which reads
+    like the generic dispatcher this test forbids. It is not one: the
+    *name* it is called with is fixed by `ActionProposal.tool_name`, which
+    only ever comes from `WRITE_TOOL_ALLOWLIST`-checked, code-constructed
+    proposals (`safety.write_guard.authorize_write`) — never a name an LLM
+    or a caller supplies directly to this parameter. Its own injection
+    site is checked separately: `test_write_node_is_only_call_site_of_
+    write_tool.py` proves it is referenced in exactly one node function
+    and is not a parameter of `make_write_guard_node`.
     """
     signature = inspect.signature(build_recovery_graph)
     mcp_params = {
@@ -61,6 +71,7 @@ def test_build_recovery_graph_has_no_generic_call_any_tool_parameter() -> None:
         "fetch_delivery_types",
         "fetch_time_slots",
         "fetch_find_products_batch",
+        "call_write_tool",
     }
 
     import collections.abc
