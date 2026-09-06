@@ -14,9 +14,15 @@ this project.
 
 ## Status
 
-Scaffold stage. Application code (MCP client, domain rules, agent graph, UI) has not
-been written yet — only the repository structure, the commit gate, and a layering test
-enforcing the architecture described in the report above exist so far.
+Infrastructure stage complete. The API starts, runs its database migrations and opens a
+pooled LangGraph checkpointer against Postgres; the MCP adapter has a dynamic `tools/list`
+registry with drift detection, a typed error hierarchy and OAuth token storage; the
+fixture pipeline and its schemas exist. The domain rules, the agent graph and the recovery
+UI are the next stages — the write path is deliberately unreachable until the Write Guard
+is built.
+
+One step needs a human: the Silpo MCP session requires a one-time phone+OTP login before
+any live read or fixture capture can run.
 
 ## Problem
 
@@ -48,17 +54,37 @@ via `tools/list` at session start — never a hardcoded tool count. Read tools a
 model-chosen inside the planning step; the single write tool is authorized by a
 dedicated Write Guard node, never by the model.
 
+The registry treats the server as untrusted input: it caches the tool list with an
+expiry, invalidates immediately on a protocol or schema error, rejects an oversized
+response before processing it, and flags any tool name absent from the previous
+snapshot instead of accepting it as usable.
+
 ## Running it
 
-Not yet runnable — `make run` prints which stage adds it. Available commands: `make gate`
-(lint + test), `make test`, `make lint`, `make secret-scan`, `make report` (regenerates
-the architecture page).
+Copy `.env.example` to `.env` and fill in `DATABASE_URL` (a Postgres connection string in
+the `postgresql+psycopg://` form) before the first run.
+
+```
+make run                # start the API: migrations, checkpointer, GET /health
+make gate               # black + flake8 + mypy + unit and contract tests, no network
+make test-integration   # tests that need a reachable Postgres; skipped without DATABASE_URL
+make openapi            # dump the generated OpenAPI 3.1 schema
+make report             # regenerate the architecture page
+make secret-scan
+```
+
+`make run` invokes `python -m apps.api` rather than `uvicorn` directly: on Windows uvicorn
+selects an event loop that the async Postgres driver refuses, and the launcher is what
+fixes it.
 
 ## Tests
 
-`tests/unit/` (pure, no network), `tests/contract/`, `tests/integration/`,
-`tests/smoke/`, `tests/e2e/`, `tests/evals/` (DeepEval-based, run separately from the
-commit gate).
+`tests/unit/` and `tests/contract/` are the commit gate: pure, offline, no network, no
+database — `pytest` there makes no live call of any kind. `tests/integration/` needs a
+real Postgres and runs only via `make test-integration`; each of its tests skips itself
+with a clear reason when `DATABASE_URL` is unset. `tests/smoke/`, `tests/e2e/` and
+`tests/evals/` (DeepEval-based, run separately and never in the commit gate) are
+populated by later stages.
 
 ## Metrics
 

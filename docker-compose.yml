@@ -1,8 +1,14 @@
-# Services declared per plan section 8.2. No build context yet — Dockerfiles
-# for apps/api and apps/web land at G1, when there is application code to
-# containerize. Declared now so the compose topology is reviewable at
-# kickoff, matching plan section 1.6's naming rule (same names locally and
-# in the cloud).
+# Services declared per plan section 8.2. No build context yet.
+#
+# D-G1-09 (docs/g1-g2-stage-spec.md) supersedes this comment's original
+# trigger condition ("Dockerfiles land at G1, when there is application code
+# to containerize"): G1+G2 does add apps/api application code, but plan
+# section 14's own G1+G2 row does not name containerization as this stage's
+# scope, and D-G1-03 verifies "App starts" via `uvicorn apps.api.main:app`
+# directly instead. Dockerfiles are deferred to whichever stage first needs
+# a deployed container — G7's Render probe, at the latest. Declared now so
+# the compose topology is reviewable at kickoff, matching plan section 1.6's
+# naming rule (same names locally and in the cloud).
 services:
   lantern-api:
     build: ./apps/api

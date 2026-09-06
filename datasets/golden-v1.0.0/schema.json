@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lantern.local/schemas/golden-case.json",
+  "title": "Golden case",
+  "description": "Plan section 21.2 (G1: schema; G2-G6: needed variants; G8: full 15-case set + RG-01..07). Structure only this stage — no cases populated yet.",
+  "type": "object",
+  "required": ["case_id", "scenario", "input", "expected_outcome"],
+  "properties": {
+    "case_id": {
+      "type": "string",
+      "description": "Stable identifier, e.g. GD-01."
+    },
+    "scenario": {
+      "type": "string",
+      "description": "One-line description of what this case exercises."
+    },
+    "gd_ref": {
+      "type": "string",
+      "description": "Cross-reference into the plan's GD-01..15 / RG-01..07 numbering, where applicable."
+    },
+    "input": {
+      "type": "object",
+      "required": ["fixture_id"],
+      "properties": {
+        "fixture_id": {
+          "type": "string",
+          "description": "References an entry in datasets/fixtures/manifest.json, never an inline payload — one source of truth for fixture data."
+        }
+      }
+    },
+    "expected_outcome": {
+      "type": "object",
+      "description": "Domain-level expected result (e.g. gap value, blocker codes, receipt shape) — re-derived against a live/measured artifact, never carried forward from an assumption (agentic-tdd-and-gate: 're-derive expected-call and expected-output fixtures against a live probe')."
+    },
+    "budgets": {
+      "type": "object",
+      "description": "Per-case budget overrides (plan section 6.3's defaults apply when omitted): agent cycles, MCP attempts, token ceiling, active-execution seconds."
+    }
+  },
+  "additionalProperties": false
+}
