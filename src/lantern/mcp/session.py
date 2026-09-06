@@ -11,7 +11,8 @@ cannot silently fail to apply to a write.
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Dict, List
+from contextvars import ContextVar
+from typing import Any, Dict, List, Optional
 
 from mcp.client.auth.oauth2 import OAuthClientProvider
 from mcp.client.session import ClientSession
@@ -21,6 +22,7 @@ from pydantic import AnyUrl
 
 from src.lantern.mcp.auth import (
     DiskTokenStorage,
+    TokenStorageLike,
     build_redirect_handler,
     callback_handler,
 )
@@ -29,8 +31,25 @@ from src.lantern.mcp.client import raise_on_tool_error
 DEFAULT_MCP_URL = "https://mcp.silpo.ua/mcp"
 
 
+# The guest whose credential this call should use. Set per request by
+# `apps/api` right before it drives the graph, and read here at call
+# time -- so one shared, cached production graph serves every guest
+# instead of being rebuilt per session.
+#
+# Measured, not assumed (kickoff probe): a `ContextVar` set in the async
+# caller IS visible inside LangGraph's SYNC node functions, through both
+# `ainvoke` and `astream`. Had it not propagated, the fallback would have
+# been a per-session graph.
+#
+# Default `None` means "no guest bound" -> `DiskTokenStorage`, which is
+# what every author-run script wants and what kept them working unchanged.
+current_token_storage: ContextVar[Optional[TokenStorageLike]] = ContextVar(
+    "current_token_storage", default=None
+)
+
+
 def _build_auth(server_url: str) -> OAuthClientProvider:
-    storage = DiskTokenStorage()
+    storage = current_token_storage.get() or DiskTokenStorage()
     return OAuthClientProvider(
         server_url=server_url,
         client_metadata=OAuthClientMetadata(

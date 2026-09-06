@@ -1,0 +1,61 @@
+// Mirrors apps/api's own response shapes and the five SSE event names
+// plan section 1.5 declares (and apps/api/sse-events.schema.json now
+// enforces as a closed enum).
+
+export interface Candidate {
+  action_id: string;
+  product_name: string;
+  /** Decimal-as-string on the wire: the guest's consented increment. */
+  quantity: string;
+  /** Decimal-as-string: price * increment, computed in code, never by an LLM. */
+  expected_delta: string;
+  /** The explainer's rendered Ukrainian sentence -- framing only. */
+  guest_text_uk: string;
+}
+
+export interface CreateSessionResponse {
+  session_id: string;
+  status: string;
+  /** A fresh session has no guest token yet -- the guest logs in first. */
+  authorized: boolean;
+  /** Where to send the guest for Silpo's own phone + OTP login. */
+  auth_url: string;
+}
+
+export interface ConsentAckResponse {
+  status: string;
+  action_id: string;
+}
+
+export interface EventEnvelope {
+  session_id: string;
+  trace_id: string;
+  version: Record<string, string>;
+}
+
+export interface DiagnosisEvent extends EventEnvelope {
+  primary_code: string | null;
+  gap: string | null;
+}
+
+export interface OptionsEvent extends EventEnvelope {
+  candidates: Candidate[];
+}
+
+export interface ReceiptEvent extends EventEnvelope {
+  status: string;
+  reason: string | null;
+  actual_delta: string | null;
+}
+
+export interface ErrorEvent extends EventEnvelope {
+  error: string | null;
+}
+
+export type Screen =
+  | "idle"
+  | "auth_required"
+  | "diagnosis"
+  | "consent"
+  | "receipt"
+  | "error";

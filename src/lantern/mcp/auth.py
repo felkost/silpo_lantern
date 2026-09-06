@@ -13,7 +13,7 @@ rather than as an opaque "never logged in" during a live demo.
 
 import json
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, Optional
+from typing import Any, Awaitable, Callable, Dict, Optional, Protocol
 
 from mcp.shared.auth import OAuthClientInformationFull, OAuthToken
 
@@ -21,6 +21,31 @@ from src.lantern.config import PROJECT_ROOT
 from src.lantern.mcp.errors import McpAuthExpiredError
 
 DEFAULT_TOKEN_PATH = PROJECT_ROOT / ".cache" / "silpo_mcp_token.json"
+
+# The APP-level OAuth client registration (one per application, shared by
+# every guest -- distinct from a guest's own token, which is per session).
+# Written by `scripts/g5_register_oauth_client.py`, whose registration
+# carries a `redirect_uri` pointing at this app's own `/auth/callback`;
+# `DEFAULT_TOKEN_PATH`'s own client was registered by the CLI login script
+# for `https://localhost/callback` and cannot serve an HTTP callback route.
+WEB_CLIENT_PATH = PROJECT_ROOT / ".cache" / "silpo_mcp_web_client.json"
+
+
+class TokenStorageLike(Protocol):
+    """Structural type for the SDK's own `TokenStorage` protocol -- what
+    `DiskTokenStorage` (one operator, one file) and
+    `SessionTokenStorage` (one guest, one Neon row) both satisfy. Defined
+    here, beside the storages themselves, so `session.py` and
+    `build_redirect_handler` share one definition instead of two that
+    could drift."""
+
+    async def get_tokens(self) -> Any: ...  # noqa: E704
+
+    async def set_tokens(self, tokens: Any) -> None: ...  # noqa: E704
+
+    async def get_client_info(self) -> Any: ...  # noqa: E704
+
+    async def set_client_info(self, client_info: Any) -> None: ...  # noqa: E704
 
 
 class SilpoMcpAuthRequiredError(Exception):
@@ -72,7 +97,7 @@ class DiskTokenStorage:
 
 
 def build_redirect_handler(
-    storage: DiskTokenStorage,
+    storage: TokenStorageLike,
 ) -> Callable[[str], Awaitable[None]]:
     """Distinguish "never logged in" from "was logged in, now rejected"
     using one measurable fact — whether a token was ever written to this

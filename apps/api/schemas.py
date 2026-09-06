@@ -3,20 +3,20 @@
 stays focused on wiring, not shape declarations.
 """
 
-from decimal import Decimal
-from typing import Any, Dict, List, Optional
-
 from pydantic import BaseModel
 
 
 class CreateSessionResponse(BaseModel):
+    """`POST /session` only creates the session row and returns its id --
+    the graph does not run yet (D30: real live push). A new session has
+    no guest token yet, so `authorized` is False and `auth_url` is where
+    the client sends the guest to log in (phone + OTP at Silpo's own
+    page); `GET /session/{id}/events` comes after that."""
+
     session_id: str
-    trace_id: str
-    status: str
-    error: Optional[str] = None
-    primary_code: Optional[str] = None
-    gap: Optional[str] = None
-    candidates: List[Dict[str, Any]] = []
+    status: str = "created"
+    authorized: bool = False
+    auth_url: str = ""
 
 
 class ConsentRequest(BaseModel):
@@ -28,7 +28,12 @@ class ConsentRequest(BaseModel):
     action_id: str
 
 
-class ConsentResponse(BaseModel):
-    status: str
-    reason: Optional[str] = None
-    actual_delta: Optional[Decimal] = None
+class ConsentAckResponse(BaseModel):
+    """Acknowledges that consent was recorded and the graph's checkpoint
+    was updated to resume into the Write Guard -- NOT the write's own
+    outcome. The guest's client reconnects to `GET /session/{id}/events`
+    to see `receipt`/`error` for the write itself, the same way it saw
+    `diagnosis`/`options`/`consent_required` for the read pipeline."""
+
+    status: str = "consent_recorded"
+    action_id: str

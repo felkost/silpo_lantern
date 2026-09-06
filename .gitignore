@@ -39,6 +39,7 @@ htmlcov/
 # --- Node / web ---
 node_modules/
 apps/web/dist/
+apps/web/*.tsbuildinfo
 
 # --- Notebook outputs: raw cart/session data can carry PII ---
 # Ignore outputs, keep the notebook source itself tracked.

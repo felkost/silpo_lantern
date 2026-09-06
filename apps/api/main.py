@@ -20,6 +20,7 @@ from typing import Any, AsyncIterator, Dict
 
 from fastapi import FastAPI
 
+from apps.api.oauth_routes import router as oauth_router
 from apps.api.routes import router
 from src.lantern.config import (
     get_database_url,
@@ -54,6 +55,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             app.state.owner_secret = get_owner_secret()
             app.state.version_tuple = {}
             app.state.graph = None
+            # `oauth_routes.py`: state -> PKCE verifier, single-worker
+            # in-process store (same assumption `ToolRegistry` already
+            # documents for this project).
+            app.state.oauth_pending = {}
 
             def build_graph() -> Any:
                 if app.state.graph is None:
@@ -70,6 +75,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(title="Lantern API", lifespan=lifespan)
 app.include_router(router)
+app.include_router(oauth_router)
 
 
 @app.get("/health")

@@ -20,7 +20,7 @@ import json
 from contextlib import contextmanager
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Iterator, Literal, Optional, Tuple
+from typing import Any, Dict, Iterator, Literal, Optional, Tuple
 
 from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
@@ -71,6 +71,57 @@ def create_session(
             "INSERT INTO sessions (session_id, thread_id, owner) VALUES (%s, %s, %s)",
             (session_id, thread_id, owner),
         )
+
+
+def get_session(pool: ConnectionPool, session_id: str) -> Optional[Dict[str, str]]:
+    """G5+G6: looks up a session's own `owner` -- needed by `GET
+    /session/{id}/events` the FIRST time it is called for a session,
+    before any graph checkpoint exists to read `owner` back from."""
+    with pool.connection() as conn:
+        with conn.cursor(row_factory=dict_row) as cur:
+            cur.execute(
+                "SELECT session_id, thread_id, owner FROM sessions"
+                " WHERE session_id = %s",
+                (session_id,),
+            )
+            row = cur.fetchone()
+    return dict(row) if row is not None else None
+
+
+def save_session_token(
+    pool: ConnectionPool, session_id: str, token: Dict[str, Any]
+) -> None:
+    """Stores (or replaces) the OAuth token the guest of THIS session
+    authorised. Upsert, not insert: re-authorising an existing session
+    (an expired token, a fresh consent screen) must replace the old
+    credential rather than fail on the primary key."""
+    with pool.connection() as conn:
+        conn.execute(
+            """
+            INSERT INTO oauth_tokens (session_id, token)
+            VALUES (%s, %s)
+            ON CONFLICT (session_id) DO UPDATE SET
+                token = EXCLUDED.token,
+                updated_at = now()
+            """,
+            (session_id, json.dumps(token)),
+        )
+
+
+def load_session_token(
+    pool: ConnectionPool, session_id: str
+) -> Optional[Dict[str, Any]]:
+    with pool.connection() as conn:
+        with conn.cursor(row_factory=dict_row) as cur:
+            cur.execute(
+                "SELECT token FROM oauth_tokens WHERE session_id = %s",
+                (session_id,),
+            )
+            row = cur.fetchone()
+    if row is None:
+        return None
+    token: Dict[str, Any] = row["token"]
+    return token
 
 
 def save_consent(pool: ConnectionPool, consent: ConsentRecord) -> None:

@@ -26,7 +26,7 @@
     "/session/{session_id}/events": {
       "get": {
         "summary": "Session Events",
-        "description": "Streams the session's already-recorded outcome as SSE events --\n`diagnosis`, `options`, `consent_required`, `receipt`, or `error`\n(plan section 1.5), each carrying `session_id`/`trace_id`/the version\ntuple. Deliberately a snapshot replay, not a live per-node push: the\ngraph's own read pipeline already completes synchronously inside\n`POST /session` (bounded by the plan's own 90s active-execution\nbudget), so there is no separate live progress to tail by the time a\nclient opens this connection.",
+        "description": "Drives the graph one segment further and streams each completed\nnode as one of plan section 1.5's five SSE events. Called twice by a\nreal client: once right after `POST /session` (runs the read\npipeline to its `awaiting_consent` pause), and once again after\n`POST /session/{id}/consent` (resumes into the write pipeline to a\n`receipt`/`error` outcome).",
         "operationId": "session_events_session__session_id__events_get",
         "parameters": [
           {
@@ -64,6 +64,7 @@
     "/session/{session_id}/consent": {
       "post": {
         "summary": "Submit Consent",
+        "description": "Records consent and advances the checkpoint's `consent_action_id`\n-- it does NOT run the write itself. The actual outcome (a Write Guard\nrefusal, or a verified/unverified receipt) is observed by the client's\nnext call to `GET /session/{id}/events`, which resumes the graph.",
         "operationId": "submit_consent_session__session_id__consent_post",
         "parameters": [
           {
@@ -92,7 +93,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConsentResponse"
+                  "$ref": "#/components/schemas/ConsentAckResponse"
                 }
               }
             }
@@ -113,19 +114,34 @@
     "/auth/start": {
       "get": {
         "summary": "Auth Start",
-        "description": "The backend's own Silpo MCP OAuth (plan section 1.2) is a\nbackend-to-server credential, obtained today by the one-time\nphone+OTP script (`scripts/silpo_mcp_login.py`) -- `CLAUDE.md`'s own\nsession protocol requires that flow to never let an agent open a\nbrowser. This route's contract exists per plan section 1.5; making it\nactually drive the OAuth redirect is future work, not this stage's:\nno route here depends on it, and B1-B3's own criteria never exercise\nlive OAuth.",
+        "description": "Sends THIS guest to Silpo's own login (phone + OTP). `session_id`\nis required: the token that comes back belongs to one guest, and the\ncallback has to know whose session to store it against.",
         "operationId": "auth_start_auth_start_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
                 "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "type": "object",
-                  "title": "Response Auth Start Auth Start Get"
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -137,17 +153,77 @@
       "get": {
         "summary": "Auth Callback",
         "operationId": "auth_callback_auth_callback_get",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Code"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "name": "error",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Error"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "object",
                   "additionalProperties": {
                     "type": "string"
                   },
-                  "type": "object",
                   "title": "Response Auth Callback Auth Callback Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -180,6 +256,25 @@
   },
   "components": {
     "schemas": {
+      "ConsentAckResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "consent_recorded"
+          },
+          "action_id": {
+            "type": "string",
+            "title": "Action Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action_id"
+        ],
+        "title": "ConsentAckResponse",
+        "description": "Acknowledges that consent was recorded and the graph's checkpoint\nwas updated to resume into the Write Guard -- NOT the write's own\noutcome. The guest's client reconnects to `GET /session/{id}/events`\nto see `receipt`/`error` for the write itself, the same way it saw\n`diagnosis`/`options`/`consent_required` for the read pipeline."
+      },
       "ConsentRequest": {
         "properties": {
           "action_id": {
@@ -194,106 +289,34 @@
         "title": "ConsentRequest",
         "description": "D-G5-18/T18: the guest picks an `action_id` only. `args_hash` and\n`state_hash` are never accepted from the client -- the server\nrecomputes both from the proposal and cart it already holds, so a\ntampered value on the wire has nothing to overwrite."
       },
-      "ConsentResponse": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "title": "Status"
-          },
-          "reason": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Reason"
-          },
-          "actual_delta": {
-            "anyOf": [
-              {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Actual Delta"
-          }
-        },
-        "type": "object",
-        "required": [
-          "status"
-        ],
-        "title": "ConsentResponse"
-      },
       "CreateSessionResponse": {
         "properties": {
           "session_id": {
             "type": "string",
             "title": "Session Id"
           },
-          "trace_id": {
-            "type": "string",
-            "title": "Trace Id"
-          },
           "status": {
             "type": "string",
-            "title": "Status"
+            "title": "Status",
+            "default": "created"
           },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error"
+          "authorized": {
+            "type": "boolean",
+            "title": "Authorized",
+            "default": false
           },
-          "primary_code": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Primary Code"
-          },
-          "gap": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Gap"
-          },
-          "candidates": {
-            "items": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "type": "array",
-            "title": "Candidates",
-            "default": []
+          "auth_url": {
+            "type": "string",
+            "title": "Auth Url",
+            "default": ""
           }
         },
         "type": "object",
         "required": [
-          "session_id",
-          "trace_id",
-          "status"
+          "session_id"
         ],
-        "title": "CreateSessionResponse"
+        "title": "CreateSessionResponse",
+        "description": "`POST /session` only creates the session row and returns its id --\nthe graph does not run yet (D30: real live push). A new session has\nno guest token yet, so `authorized` is False and `auth_url` is where\nthe client sends the guest to log in (phone + OTP at Silpo's own\npage); `GET /session/{id}/events` comes after that."
       },
       "HTTPValidationError": {
         "properties": {
