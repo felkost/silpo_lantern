@@ -58,6 +58,16 @@ RecoveryStatus = Literal[
     "written",
     "verified",
     "unverified",
+    # Terminal, and NOT an error: the cart is blocked by something this
+    # system has no action for. Every proposal it can build closes a cost
+    # gap by adding products, so a cart with no cost gap (or one where the
+    # gate rejected every candidate) has nothing to consent to. Measured
+    # need, from the first live run: a real cart blocked by
+    # `timeslot.not_available` and `product.offer.stock.max` still reached
+    # the planner, which invented three drinks that could not have cleared
+    # either blocker -- and the write path would have executed one and
+    # issued a `verified` receipt for it.
+    "no_action_available",
 ]
 
 

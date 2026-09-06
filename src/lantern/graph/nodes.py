@@ -229,6 +229,16 @@ def make_plan_node(planner_call: Callable[[RecoveryState], SearchIntent]) -> Nod
     """
 
     def plan_node(state: RecoveryState) -> Dict[str, Any]:
+        # Every proposal this pipeline can build closes a cost gap by adding
+        # products, so with no gap there is nothing to plan -- and asking the
+        # planner anyway is what produced three invented drinks for a cart
+        # blocked by a missing delivery slot and an out-of-stock line, on the
+        # first live run. Checked before `planner_call`, not after, because
+        # the call costs money and its output would be discarded.
+        diagnosis = state.get("diagnosis")
+        if diagnosis is None or diagnosis.gap is None:
+            return {"status": "no_action_available"}
+
         intent = planner_call(state)
         return {"search_intent": intent, "status": "planned"}
 
@@ -307,6 +317,14 @@ def make_explain_node(explainer_call: Callable[[Any], ExplainerOutput]) -> Node:
     """
 
     def explain_node(state: RecoveryState) -> Dict[str, Any]:
+        # A gap can exist and still leave nothing to offer: the Evidence
+        # Gate drops candidates missing write identity, over stock, or off
+        # the weighted step. Announcing `awaiting_consent` with an empty
+        # list asks the guest to approve nothing, and the API dutifully
+        # emitted `consent_required` for it -- an empty consent screen.
+        if not state["candidates"]:
+            return {"status": "no_action_available"}
+
         explained = []
         for proposal in state["candidates"]:
             output = explainer_call(proposal)

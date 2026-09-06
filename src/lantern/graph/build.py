@@ -103,10 +103,16 @@ def _add_node(graph: Any, name: str, node: Any) -> None:
 
 def _continue_or_end(state: RecoveryState) -> str:
     """The one routing rule shared by every fail-safe exit point before
-    the write segment: a node that set `status="aborted"` ends the graph
+    the write segment: a node that reached a terminal status ends the graph
     immediately; anything else continues to the next step.
+
+    `no_action_available` is terminal but not a failure -- the cart is
+    simply blocked by something no proposal here can clear. It ends the
+    graph for the same reason `aborted` does: every node after this point
+    exists to build, authorize or perform a write.
     """
-    return "end" if state["status"] == "aborted" else "continue"
+    terminal = ("aborted", "no_action_available")
+    return "end" if state["status"] in terminal else "continue"
 
 
 def build_recovery_graph(
@@ -232,7 +238,14 @@ def build_recovery_graph(
         "collect_and_gate", _continue_or_end, {"end": END, "continue": "rank"}
     )
     graph.add_edge("rank", "explain")
-    graph.add_edge("explain", "write_guard")
+    # Conditional, not a plain edge: without this an `explain` that found
+    # nothing to offer would still travel to `write_guard` and park on its
+    # `interrupt_before` pause, leaving a session waiting for consent to an
+    # empty list -- and the next `/events` call would resume into a guard
+    # refusal instead of simply having ended.
+    graph.add_conditional_edges(
+        "explain", _continue_or_end, {"end": END, "continue": "write_guard"}
+    )
     graph.add_conditional_edges(
         "write_guard", _continue_or_end, {"end": END, "continue": "write_and_readback"}
     )
