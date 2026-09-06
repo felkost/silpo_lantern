@@ -93,19 +93,37 @@ def compute_per_tool_schema_hashes(tools_raw: List[Dict[str, Any]]) -> Dict[str,
     while no write allowlist exists to make 'which tool moved' matter" —
     that condition ends once a Write Guard exists: the guard must detect
     drift in `silpo_add_or_update_cart_products` specifically, not treat
-    every unrelated tool's release note as equally disqualifying. Same
-    canonicalisation as `compute_schema_hash` (one object, not the whole
-    array), applied per tool, over the RAW dict before any SDK parsing —
-    for the same measured reason (`test_schema_hash_survives_typed_
-    roundtrip.py`): a round-tripped `Tool` does not reproduce the wire
-    bytes.
+    every unrelated tool's release note as equally disqualifying.
+
+    Unlike `compute_schema_hash`, this one canonicalises each tool through
+    the SDK model before hashing, because the two answer different
+    questions. The whole-array hash is a tripwire against a historical raw
+    capture, so it must stay on the wire bytes. This one is compared
+    reviewed-against-live by the Write Guard, and the live side always
+    arrives already round-tripped — `mcp.session._list_tools_async` can
+    only obtain tools as typed `Tool` objects, the SDK exposing no hook for
+    the raw JSON-RPC bytes underneath.
+
+    Hashing the caller's dicts as-given made the canonicalisation a
+    property of whichever `fetch` callable happened to be wired in, so a
+    baseline generated from the raw fixture and a live listing could never
+    compare equal even with an identical schema — measured: all 39 hashes
+    differ by canonicalisation alone. That refused a legitimate write on
+    this project's first real consent. Doing the conversion here gives
+    every producer and consumer of these hashes one space by construction.
     """
+    canonical = [
+        mcp_types.Tool.model_validate(tool).model_dump(
+            mode="json", by_alias=True, exclude_none=True
+        )
+        for tool in tools_raw
+        if "name" in tool
+    ]
     return {
         tool["name"]: hashlib.sha256(
             json.dumps(tool, ensure_ascii=False, indent=2).encode("utf-8")
         ).hexdigest()
-        for tool in tools_raw
-        if "name" in tool
+        for tool in canonical
     }
 
 
