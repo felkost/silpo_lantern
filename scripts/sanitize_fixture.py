@@ -26,6 +26,27 @@ from scripts.secret_scan import PATTERNS  # noqa: E402
 from src.lantern.mcp.sanitizer import sanitize_payload  # noqa: E402
 
 
+def unwrap_call_tool_result(raw: Dict[str, Any]) -> Dict[str, Any]:
+    """`capture_fixture.py` saves the raw `CallToolResult` exactly as the SDK
+    returns it — `{meta, content, structuredContent, isError}` — not the cart
+    body directly. None of those envelope keys are in `ALLOWED_KEYS`, so
+    sanitizing the envelope as-is silently produces an empty payload (found
+    2026-09-06 running this script for the first time, against a real
+    capture — this path was never exercised before the OAuth login unblocked
+    it). `content[0].text` is the actual body, as a JSON string that must be
+    parsed first. A raw file that is already the bare body (no `content`
+    key) passes through unchanged, so this stays safe against either shape.
+    """
+    content = raw.get("content")
+    if not content or not isinstance(content, list):
+        return raw
+    first = content[0]
+    if not isinstance(first, dict) or "text" not in first:
+        return raw
+    body: Dict[str, Any] = json.loads(first["text"])
+    return body
+
+
 def build_envelope(
     fixture_id: str,
     source_schema_hash: str,
@@ -71,10 +92,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     raw = json.loads(args.raw_path.read_text(encoding="utf-8"))
+    body = unwrap_call_tool_result(raw)
     envelope = build_envelope(
         fixture_id=args.fixture_id,
         source_schema_hash=args.source_schema_hash,
-        payload=sanitize_payload(raw),
+        payload=sanitize_payload(body),
     )
 
     findings = find_secret_shaped_matches(envelope)

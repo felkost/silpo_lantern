@@ -71,6 +71,12 @@ def _parse_validation(raw: Mapping[str, Any]) -> Validation:
     code = raw.get("message")
     if code is None:
         raise CartShapeError("validation entry missing wire field 'message'")
+    # `level` and `type` are read the same fail-loud way as `message` — a
+    # bare KeyError here would escape this module's own contract, which is
+    # that a malformed payload raises CartShapeError naming the key.
+    for required in ("level", "type"):
+        if required not in raw:
+            raise CartShapeError(f"validation entry missing wire field {required!r}")
     return Validation(
         level=raw["level"],
         type=raw["type"],

@@ -16,6 +16,18 @@
   },
   "fixtures": [
     {
+      "fixture_id": "cart_blocked_order_cost_min",
+      "origin": "recorded",
+      "path": "datasets/fixtures/sanitized/cart_blocked_order_cost_min.json",
+      "provenance": "live capture 2026-09-06, silpo_get_shopping_cart_by_id; identifiers pseudonymised, address dropped"
+    },
+    {
+      "fixture_id": "cart_probe_exists",
+      "origin": "recorded",
+      "path": "datasets/fixtures/sanitized/cart_probe_exists.json",
+      "provenance": "live capture 2026-09-06, silpo_get_my_shopping_cart; documents that this tool returns no cart body"
+    },
+    {
       "fixture_id": "gap_below_threshold",
       "origin": "synthetic",
       "path": "datasets/fixtures/synthetic/gap_below_threshold.json"
