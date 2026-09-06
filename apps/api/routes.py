@@ -24,6 +24,7 @@ directly, so the offline test suite can substitute a fake builder via
 client or make a live MCP call.
 """
 
+import asyncio
 import json
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -53,8 +54,15 @@ def _config(thread_id: str) -> Dict[str, Any]:
     return {"configurable": {"thread_id": thread_id}}
 
 
-def _get_graph(request: Request) -> Any:
-    return request.app.state.graph_builder()
+async def _get_graph(request: Request) -> Any:
+    # `graph_builder()` is sync and, on its first (caching) call, reaches
+    # `mcp.session.list_tools_raw`, which opens its OWN event loop via
+    # `asyncio.run`. Calling it directly from this async route would run
+    # that inside uvicorn's already-running loop -- measured: raises
+    # "asyncio.run() cannot be called from a running event loop". A worker
+    # thread gives it a loop-free thread to open its own loop in, same fix
+    # as the sync repository pool already relies on.
+    return await asyncio.to_thread(request.app.state.graph_builder)
 
 
 def _version_tuple(request: Request) -> Dict[str, str]:
@@ -90,7 +98,7 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
     `POST /session/{id}/consent` (resumes into the write pipeline to a
     `receipt`/`error` outcome).
     """
-    graph = _get_graph(request)
+    graph = await _get_graph(request)
     config = _config(session_id)
 
     # Bind THIS guest's own credential for the whole run. Every MCP call
@@ -209,7 +217,7 @@ async def submit_consent(
     refusal, or a verified/unverified receipt) is observed by the client's
     next call to `GET /session/{id}/events`, which resumes the graph.
     """
-    graph = _get_graph(request)
+    graph = await _get_graph(request)
     config = _config(session_id)
     snapshot = await graph.aget_state(config)
     state: RecoveryState = snapshot.values
