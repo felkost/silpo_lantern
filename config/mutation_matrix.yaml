@@ -1,0 +1,31 @@
+# Boundary/mutation matrix (plan section 12.1.1 step 5, in scope at G3 per
+# amendment A8/D6). Each row names a scenario `scripts/generate_boundary_fixtures.py`
+# must produce at least one fixture for, given a seed. Fixtures built from
+# this matrix are `origin: synthetic` or `origin: mutated` (D-G3-06) — no
+# recorded-coverage claim is made; that provenance gap is recorded in
+# `datasets/fixtures/manifest.json`.
+scenarios:
+  - id: gap_below_threshold
+    description: "productsTotal well below minOrderCost — a clear order.cost.min block"
+    origin: synthetic
+  - id: gap_at_threshold_borderline
+    description: "gap under GAP_EPSILON — reads borderline, never auto-fixed"
+    origin: synthetic
+  - id: gap_above_threshold_clears
+    description: "productsTotal already clears minOrderCost — zero validations"
+    origin: synthetic
+  - id: money_as_minor_units_string
+    description: "productsTotal arrives as a JSON string, not a float"
+    origin: synthetic
+  - id: null_delivery_cost
+    description: "calculation.delivery.total is null, not zero (DR-05)"
+    origin: mutated
+  - id: zero_delivery_cost
+    description: "calculation.delivery.total is 0 — genuinely free, distinct from null"
+    origin: mutated
+  - id: unknown_validation_code
+    description: "a validation code not in the registry (D9-shaped)"
+    origin: mutated
+  - id: unavailable_item_zero_price
+    description: "a line item with price:0 and an explicit stock/error signal (DR-08)"
+    origin: mutated

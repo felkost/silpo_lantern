@@ -1,6 +1,6 @@
 """Plan section 21.2 (G1 deliverable): the golden-case JSON Schema must be
 well-formed before G8 populates the first 15 cases against it (R4,
-docs/g1-g2-stage-spec.md).
+the G1+G2 stage spec).
 """
 
 import json

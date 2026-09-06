@@ -1,0 +1,35 @@
+{
+  "_provenance": "G0-02, decision D12 (2026-09-06 live evidence lab run). Numbers copied here as a tracked fixture per go/no-go criterion 2 — never read from the gitignored local evidence directory (D-G3-08/G3-F18).",
+  "id": "4e83e418-a6b1-4187-b961-f8c9fb4ba2f5",
+  "deliveryType": "NovaPoshta",
+  "calculation": {
+    "total": 533.89,
+    "totalAfterDiscounts": 488.96,
+    "subTotal": 812.39,
+    "subDiscount": 278.5,
+    "productsTotal": 404.89,
+    "delivery": { "total": 129 },
+    "validations": [
+      {
+        "level": "error",
+        "type": "order",
+        "message": "order.cost.min",
+        "context": { "orderCostMin": 599 }
+      },
+      {
+        "level": "info",
+        "type": "order",
+        "message": "order.payment_types.disabled",
+        "context": { "reason": "not_available_for_total" }
+      }
+    ]
+  },
+  "shipments": [
+    {
+      "id": "4e83e418-a6b1-4187-b961-f8c9fb4ba2f5",
+      "companyId": "1ec88c5d-a050-669c-8467-570a157f3e31",
+      "branchId": "1ee7fab3-7713-6a0c-b802-8d149aac137a",
+      "products": []
+    }
+  ]
+}

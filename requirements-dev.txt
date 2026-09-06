@@ -17,3 +17,9 @@ pytest-asyncio==1.4.0
 # 4.1.10 instead of accepting whatever "latest" resolved to.
 deepeval==4.1.10
 Jinja2==3.1.6
+# G3: mypy --strict stub packages for the two runtime deps
+# src/lantern/policies/loader.py newly imports (PyYAML, jsonschema — both
+# already pinned in requirements.txt). Dated stub releases matched to the
+# pinned runtime versions (jsonschema==4.26.0) rather than "latest".
+types-PyYAML==6.0.12.20260906
+types-jsonschema==4.26.0.20260518

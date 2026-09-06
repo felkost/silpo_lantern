@@ -1,7 +1,7 @@
 """Live, local-only capture of one MCP tool call's raw response, for
 `scripts/sanitize_fixture.py` to turn into a committable fixture. Never run
 in CI (plan section 21.3) — needs a completed one-time phone+OTP login
-(`DiskTokenStorage`, R1 in docs/g1-g2-stage-spec.md) before it can do
+(`DiskTokenStorage`, R1 in the G1+G2 stage spec) before it can do
 anything at all.
 
 Uses the raw `mcp` SDK directly (`ClientSession` + `streamablehttp_client`),

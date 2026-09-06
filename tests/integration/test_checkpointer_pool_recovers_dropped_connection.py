@@ -1,4 +1,4 @@
-"""F8/D-G1-02 (docs/g1-g2-stage-spec.md): the checkpointer is built over an
+"""F8/D-G1-02: the checkpointer is built over an
 `AsyncConnectionPool`, not a single held connection, precisely because a
 single connection has no way to survive Neon's own idle-suspend behavior or
 a transient network blip. Simulates a dropped connection underneath the pool

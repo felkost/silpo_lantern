@@ -1,0 +1,42 @@
+{
+  "expected_outcome": {},
+  "fixture_id": "zero_delivery_cost",
+  "generator_version": "1.0.0",
+  "origin": "mutated",
+  "payload": {
+    "calculation": {
+      "delivery": {
+        "total": 0
+      },
+      "productsTotal": 100.0,
+      "subDiscount": 0,
+      "subTotal": 133.89,
+      "total": 133.89,
+      "totalAfterDiscounts": 133.89,
+      "validations": []
+    },
+    "deliveryType": "NovaPoshta",
+    "id": "synthetic-zero_delivery_cost",
+    "shipments": [
+      {
+        "branchId": "branch-1",
+        "companyId": "company-1",
+        "id": "synthetic-zero_delivery_cost",
+        "products": [
+          {
+            "name": "Synthetic item",
+            "price": 100.0,
+            "productId": "product-7200",
+            "quantity": 1,
+            "stock": 10
+          }
+        ]
+      }
+    ]
+  },
+  "seed": 20260907,
+  "source_schema_hash": "synthetic-cart-wire-shape-v1",
+  "transformations": [
+    "calculation.delivery.total is 0 — genuinely free, distinct from null"
+  ]
+}

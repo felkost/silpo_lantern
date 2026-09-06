@@ -3,7 +3,7 @@
 # letting pip pick them (mcp fixed at 1.29.0, everything else unconstrained),
 # then verified with `pip check` (0 broken requirements) and a full local
 # gate run inside a real venv built from this exact file — not asserted from
-# memory. See insights.md for the two real mistakes this project already
+# memory. A dated internal log records the two real mistakes this project already
 # made by skipping that verification once.
 #
 # mcp stays pinned to 1.29.0 deliberately, not bumped to whatever is latest:

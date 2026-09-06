@@ -1,6 +1,6 @@
 """DR-02 (plan section 10): time is normalized to UTC internally, displayed
-via ZoneInfo("Europe/Kyiv"). Declared failing per plan section 21.3 —
-implemented at G3.
+via ZoneInfo("Europe/Kyiv"). Implemented at G3
+(`src/lantern/domain/normalizer.py`).
 
 Evidence: `[I5]` section 8.3 — a cart's `timeslot.start` of
 "2026-08-13T06:30:00+00:00" is 09:30 in Kyiv (summer, UTC+3). A conversion
@@ -11,13 +11,10 @@ expired slot as still live.
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-import pytest
+from src.lantern.domain.normalizer import to_kyiv_display
 
 
-@pytest.mark.xfail(strict=True, reason="Time normalizer not implemented until G3")
 def test_utc_timeslot_displays_correctly_in_kyiv_time():
-    from src.lantern.domain.normalizer import to_kyiv_display  # noqa: F401
-
     utc_start = datetime.fromisoformat("2026-08-13T06:30:00+00:00")
     displayed = to_kyiv_display(utc_start)
 

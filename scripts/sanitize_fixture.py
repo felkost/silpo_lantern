@@ -1,4 +1,4 @@
-"""F7 (docs/g1-g2-stage-spec.md): CLI wrapper around
+"""F7: CLI wrapper around
 `src.lantern.mcp.sanitizer.sanitize_payload` — reads a raw captured MCP
 payload (from `scripts/capture_fixture.py`, never committed), wraps the
 sanitized result in the fixture envelope schema, and refuses to write if the

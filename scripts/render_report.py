@@ -4,7 +4,7 @@ the public repository.
 This page is deliberately NOT a stage-by-stage build log: no list of files
 written, no decision or amendment ledger, no test-pass counts, no gate
 names. Its only job is to show a reader who has never seen the internal
-plan **how the system's components interact** (seven diagrams, inlined as
+plan **how the system's components interact** (nine diagrams, inlined as
 SVG so the page needs no network connection) and **why that interaction is
 expected to produce a positive, measurable outcome for the guest and the
 business**. Everything about how the project got here — decisions, plan
@@ -13,7 +13,7 @@ by this script.
 
 Diagram prose is kept at roughly CEFR B1: short sentences, common words, one
 worked example per diagram. The diagrams themselves follow
-`docs/diagram-conventions.md` (Arial 12/14, one five-colour layer system,
+this project's fixed diagram conventions (Arial 12/14, one five-colour layer system,
 UML message and pseudostate conventions).
 
 Usage: python scripts/render_report.py
@@ -174,7 +174,36 @@ runs. The registry marks it as unknown. The Write Guard still allows only the re
 tools, so the new tool cannot be called until a person reviews it.</div>
 <div class="diagram">{{ tools_list_svg }}</div>
 
-<h2>8. Why this is expected to help, not just work</h2>
+<h2>8. Domain Core models</h2>
+<p>This diagram shows the plain data objects that carry one recovery from a raw cart
+to a receipt. A cart holds validations, and each validation that blocks checkout wraps
+into a blocker. The domain core reads a cart and produces a diagnosis: an exact gap in
+money, never a guess. That diagnosis later feeds a proposal with real evidence, and a
+consent record that only a guarded write step is allowed to use.</p>
+<p>None of these objects call the network. They only hold data and compute numbers, so
+every rule about them can be tested without a live server.</p>
+<div class="example"><b>Example.</b> A cart is short by 194.11 UAH of the store's
+minimum order sum. The diagnosis object stores exactly that number as a normal
+decimal, computed once, by code — never restated by the language model later in the
+flow.</div>
+<div class="diagram">{{ domain_class_svg }}</div>
+
+<h2>9. Diagnose activity</h2>
+<p>This diagram shows what happens to one cart as it moves through the domain core. A
+cart that does not match the expected shape stops early with a named error — the
+system never guesses at a broken input. A cart that resolves cleanly moves on to
+compute its gap; one rare case, where no threshold can be found at all, is still shown
+to the guest instead of silently failing, just marked as unverified rather than a
+confident number.</p>
+<p>Every path that reaches the end shows every validation the cart carries — including
+ones the shopping app's own screen never displays.</p>
+<div class="example"><b>Example.</b> A cart carries two blocking conditions but the
+app's screen shows only one. Because the disclosure step reads all of them from the
+same normalized diagnosis, the guest sees both reasons at once, not one followed by a
+surprise second block after the first is fixed.</div>
+<div class="diagram">{{ domain_activity_svg }}</div>
+
+<h2>10. Why this is expected to help, not just work</h2>
 <p>The mechanism above targets a specific, observed gap: the retailer's own MCP server
 already returns more structured detail about why a cart is blocked than the shopping
 app's screen displays. A cart can carry two independent blocking conditions and the
@@ -188,7 +217,7 @@ their cart was blocked and fixed it in one step spent less time and fewer action
 doing it than one navigating a generic "add more items" prompt with no further
 detail.</p>
 
-<h2>9. Measured outcome</h2>
+<h2>11. Measured outcome</h2>
 {% if metrics %}
 <table>
 <tr><th>Metric</th><th>Value</th><th>n</th></tr>
@@ -240,6 +269,8 @@ def render() -> Path:
         langgraph_svg=_inline_svg("langgraph_structure"),
         mcp_adapter_svg=_inline_svg("mcp_adapter_component"),
         tools_list_svg=_inline_svg("tools_list_sequence"),
+        domain_class_svg=_inline_svg("domain_core_class"),
+        domain_activity_svg=_inline_svg("diagnose_activity"),
         metrics=_load_metrics(),
         generated_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
     )

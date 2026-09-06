@@ -1,0 +1,42 @@
+{
+  "expected_outcome": {},
+  "fixture_id": "gap_above_threshold_clears",
+  "generator_version": "1.0.0",
+  "origin": "synthetic",
+  "payload": {
+    "calculation": {
+      "delivery": {
+        "total": 33.89
+      },
+      "productsTotal": 1561.46,
+      "subDiscount": 0,
+      "subTotal": 133.89,
+      "total": 133.89,
+      "totalAfterDiscounts": 133.89,
+      "validations": []
+    },
+    "deliveryType": "NovaPoshta",
+    "id": "synthetic-gap_above_threshold_clears",
+    "shipments": [
+      {
+        "branchId": "branch-1",
+        "companyId": "company-1",
+        "id": "synthetic-gap_above_threshold_clears",
+        "products": [
+          {
+            "name": "Synthetic item",
+            "price": 100.0,
+            "productId": "product-6731",
+            "quantity": 1,
+            "stock": 10
+          }
+        ]
+      }
+    ]
+  },
+  "seed": 20260907,
+  "source_schema_hash": "synthetic-cart-wire-shape-v1",
+  "transformations": [
+    "productsTotal already clears minOrderCost — zero validations"
+  ]
+}

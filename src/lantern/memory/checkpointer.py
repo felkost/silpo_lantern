@@ -2,7 +2,7 @@
 `AsyncPostgresSaver` built over an `AsyncConnectionPool`, not
 `from_conn_string`'s single held connection — a single connection has no
 reconnect path and no defense against Neon's own idle-suspend behavior
-(measured live by the sdk-prober; see docs/g1-g2-stage-spec.md section 2).
+(measured live by the sdk-prober; see the G1+G2 stage spec).
 """
 
 from contextlib import asynccontextmanager
@@ -12,7 +12,7 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 
-# F14/R7 (docs/g1-g2-stage-spec.md): Neon free tier's own connection ceiling
+# F14/R7: Neon free tier's own connection ceiling
 # is already a named risk in the plan itself (section 9/IV-02). Kept small
 # and explicit here rather than left as an unstated guess — not load-tested
 # against real concurrent-session counts yet.

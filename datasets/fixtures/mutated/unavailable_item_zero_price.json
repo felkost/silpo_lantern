@@ -1,0 +1,51 @@
+{
+  "expected_outcome": {},
+  "fixture_id": "unavailable_item_zero_price",
+  "generator_version": "1.0.0",
+  "origin": "mutated",
+  "payload": {
+    "calculation": {
+      "delivery": {
+        "total": 33.89
+      },
+      "productsTotal": 100.0,
+      "subDiscount": 0,
+      "subTotal": 133.89,
+      "total": 133.89,
+      "totalAfterDiscounts": 133.89,
+      "validations": [
+        {
+          "context": {
+            "productId": "product-8319"
+          },
+          "level": "error",
+          "message": "product.offer.stock.max",
+          "type": "product"
+        }
+      ]
+    },
+    "deliveryType": "NovaPoshta",
+    "id": "synthetic-unavailable_item_zero_price",
+    "shipments": [
+      {
+        "branchId": "branch-1",
+        "companyId": "company-1",
+        "id": "synthetic-unavailable_item_zero_price",
+        "products": [
+          {
+            "name": "Synthetic item",
+            "price": 0,
+            "productId": "product-8319",
+            "quantity": 1,
+            "stock": 0
+          }
+        ]
+      }
+    ]
+  },
+  "seed": 20260907,
+  "source_schema_hash": "synthetic-cart-wire-shape-v1",
+  "transformations": [
+    "a line item with price:0 and an explicit stock/error signal (DR-08)"
+  ]
+}

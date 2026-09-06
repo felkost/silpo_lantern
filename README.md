@@ -14,15 +14,22 @@ this project.
 
 ## Status
 
-Infrastructure stage complete. The API starts, runs its database migrations and opens a
-pooled LangGraph checkpointer against Postgres; the MCP adapter has a dynamic `tools/list`
-registry with drift detection, a typed error hierarchy and OAuth token storage; the
-fixture pipeline and its schemas exist. The domain rules, the agent graph and the recovery
-UI are the next stages — the write path is deliberately unreachable until the Write Guard
-is built.
+Infrastructure and domain core complete. The API starts, runs its database migrations
+and opens a pooled LangGraph checkpointer against Postgres; the MCP adapter has a
+dynamic `tools/list` registry with drift detection, a typed error hierarchy and OAuth
+token storage; the fixture pipeline and its schemas exist.
 
-One step needs a human: the Silpo MCP session requires a one-time phone+OTP login before
-any live read or fixture capture can run.
+The domain core is built and tested against a real cart read from the live Silpo MCP
+server: the normalizer (money as `Decimal`, coordinates as `float`, `null` never
+coerced to zero), the domain rules, the diagnosis with an exact gap computed by code
+rather than by a model, the policy registry with a fail-safe for validation codes it
+does not recognise, and the read-only disclosure layer including the delivery-channel
+comparison. It does no I/O at all — an architecture test enforces that, and the whole
+of it runs offline.
+
+The agent graph, the planner and the recovery UI are the next stages. The write path is
+deliberately unreachable until the Write Guard is built: no code in this repository can
+change a cart today.
 
 ## Problem
 
@@ -90,8 +97,10 @@ populated by later stages.
 
 Recovery completion rate, median time-to-recovery vs. the app, actions-to-recovery,
 disclosure rate, and a hard 0% gate on unauthorized writes / false recovery — reported
-with sample size, never as a bare number. See section 5 of
-[`docs/reports/index.html`](docs/reports/index.html) for current status.
+with sample size, never as a bare number. None of them are measured yet; that begins
+once the agent runs end to end. See
+[`docs/reports/index.html`](docs/reports/index.html), which explains how the parts
+interact and why that is expected to help.
 
 ## Privacy
 

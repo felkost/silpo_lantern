@@ -1,0 +1,73 @@
+# Policy registry (plan section 1.5, amendment A8): validation_code -> rule,
+# source, version, test_id, confidence. Six confirmed codes, seeded from
+# amendment A8's direct count of `mcp-reference-v2.md` section 1's table
+# (six rows, despite that document's own title claiming seven). D9's two
+# live-observed codes are quarantined, never aliased to a similarly-named
+# confirmed code (DR-06's fail-safe) — see decision D9.
+entries:
+  - code: order.cost.min
+    rule: "DR-03: blocks checkout; gap = minOrderCost - productsTotal"
+    source: "plan section 10; decisions D8, D12"
+    version: "1.0"
+    test_id: DR-03
+    confidence: confirmed
+    status: active
+
+  - code: product.offer.stock.max
+    rule: "DR-08: stock-limited line item; propose an allowed quantity, never treat as not_found"
+    source: "plan section 5.2, 10"
+    version: "1.0"
+    test_id: DR-08
+    confidence: confirmed
+    status: active
+
+  - code: product.offer.not_found
+    rule: "DR-07: unavailable line item; outranks stock.max within the same productId group"
+    source: "plan section 5.2, 10"
+    version: "1.0"
+    test_id: DR-07
+    confidence: confirmed
+    status: active
+
+  - code: timeslot.not_available
+    rule: "DR-02: the selected delivery slot is no longer offered"
+    source: "plan section 5.2, 10"
+    version: "1.0"
+    test_id: DR-02
+    confidence: confirmed
+    status: active
+
+  - code: order.adult.is_not_confirmed
+    rule: "DR-13: age confirmation stays the guest's own action; explain and route only"
+    source: "plan section 5.2, 10"
+    version: "1.0"
+    test_id: DR-13
+    confidence: confirmed
+    status: active
+
+  - code: order.payment_types.disabled
+    rule: "Info-level disclosure only; never a blocker (DR-06 excludes info)"
+    source: "plan section 5.2, 10; live capture 2026-09-06"
+    version: "1.0"
+    test_id: DR-06
+    confidence: confirmed
+    status: active
+
+  # D9: observed live 2026-09-06, not in the plan's six-code registry.
+  # Quarantined until a documented release note or a re-run confirms
+  # whether this is a genuine rename or a distinct new code.
+  - code: product.offer.status.not_available
+    rule: "Unregistered — disclose and flag, never alias to product.offer.not_found"
+    source: "decision D9"
+    version: "0.0-quarantined"
+    test_id: G3-F1
+    confidence: unconfirmed
+    status: quarantined
+
+  - code: timeslot.not_found
+    rule: "Unregistered — disclose and flag, never alias to timeslot.not_available"
+    source: "decision D9"
+    version: "0.0-quarantined"
+    test_id: G3-F1
+    confidence: unconfirmed
+    status: quarantined

@@ -1,4 +1,4 @@
-"""D-G1-03/go-no-go (docs/g1-g2-stage-spec.md): "App starts" against the
+"""D-G1-03/go-no-go: "App starts" against the
 real Neon instance — migrations run, the checkpointer's pool opens, and the
 app still serves `/health` while its lifespan is live.
 """

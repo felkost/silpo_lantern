@@ -1,5 +1,5 @@
 """Redaction before every send to LangSmith (plan section 8.2, CLAUDE.md's
-observability invariant). F12 (docs/g1-g2-stage-spec.md, widened in round 2):
+observability invariant). F12 (widened in round 2):
 an MCP error's `.data` is dropped entirely — attacker/server-controlled
 free-form content with no legitimate reason to reach a third-party trace —
 and `.message` is scrubbed too, since round 2 found it exactly as untrusted
