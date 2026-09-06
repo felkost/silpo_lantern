@@ -24,3 +24,8 @@ sqlalchemy==2.0.52
 httpx==0.28.1
 python-dotenv==1.2.3
 PyYAML==6.0.3
+# Already installed transitively via mcp>=1.29.0 (mcp requires jsonschema>=4.20.0);
+# pinned directly here because the fixture-validation pipeline (plan section 12.1.1)
+# depends on it too, and a future mcp bump must not silently drop it out from under
+# that unrelated part of the codebase (stage spec D-G1-05, round 2 correction).
+jsonschema==4.26.0

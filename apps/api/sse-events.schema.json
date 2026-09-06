@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lantern.local/schemas/sse-event.json",
+  "title": "SSE event envelope",
+  "description": "Plan section 21.2 (G1 deliverable). Envelope shape only (id/event/data/retry per the SSE spec) — exact `event` names are finalized once G4's graph nodes exist to emit them; `event` stays an open string enum until then, not invented ahead of the nodes it names.",
+  "type": "object",
+  "required": ["event", "data"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Monotonic per-session event id, for client reconnect/Last-Event-ID."
+    },
+    "event": {
+      "type": "string",
+      "description": "Node/state name this event reports — enumerated once G4's graph nodes exist (plan section 6.1's step names: read, diagnose, plan, consent, write, readback, receipt)."
+    },
+    "data": {
+      "type": "object",
+      "description": "Node-specific typed payload; shape finalized per event name at G4."
+    },
+    "retry": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Client reconnect delay in milliseconds, per the SSE spec."
+    }
+  },
+  "additionalProperties": false
+}
