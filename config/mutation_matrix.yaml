@@ -1,7 +1,6 @@
-# Boundary/mutation matrix (plan section 12.1.1 step 5, in scope at G3 per
-# amendment A8/D6). Each row names a scenario `scripts/generate_boundary_fixtures.py`
+# Boundary/mutation matrix. Each row names a scenario `scripts/generate_boundary_fixtures.py`
 # must produce at least one fixture for, given a seed. Fixtures built from
-# this matrix are `origin: synthetic` or `origin: mutated` (D-G3-06) — no
+# this matrix are `origin: synthetic` or `origin: mutated` — no
 # recorded-coverage claim is made; that provenance gap is recorded in
 # `datasets/fixtures/manifest.json`.
 scenarios:
@@ -24,7 +23,7 @@ scenarios:
     description: "calculation.delivery.total is 0 — genuinely free, distinct from null"
     origin: mutated
   - id: unknown_validation_code
-    description: "a validation code not in the registry (D9-shaped)"
+    description: "a validation code not in the registry"
     origin: mutated
   - id: unavailable_item_zero_price
     description: "a line item with price:0 and an explicit stock/error signal (DR-08)"

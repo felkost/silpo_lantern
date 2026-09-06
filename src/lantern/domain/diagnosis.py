@@ -1,9 +1,8 @@
-"""DR-03, DR-04, DR-06, DR-07, DR-08, DR-09, DR-11: gap arithmetic, the
-surcharge label, blocker classification and dedupe, and the canonical
-before/after diff. Pure code — DR-09's own rule ("Gap і totals обчислює
-код; LLM лише пояснює і ранжує") means nothing here ever takes a
-pre-computed total or gap as an input argument; every number is derived
-from a `Cart`.
+"""Gap arithmetic, the surcharge label, blocker classification and
+dedupe, and the canonical before/after diff. Pure code — the rule
+("Gap і totals обчислює код; LLM лише пояснює і ранжує") means nothing
+here ever takes a pre-computed total or gap as an input argument; every
+number is derived from a `Cart`.
 """
 
 from decimal import Decimal
@@ -22,26 +21,25 @@ from src.lantern.domain.models import (
 from src.lantern.domain.normalizer import to_money
 from src.lantern.policies.loader import PolicyRegistry
 
-# D-G3-10 (amended): a declared POLICY CONSTANT, not a measured value.
+# A declared POLICY CONSTANT, not a measured value.
 # The only thing actually established is that the declared test needs
 # epsilon > 0.01; 1.00 was the author's choice at kickoff. What would
 # calibrate it: the minimum observed product price from a live
 # `silpo_find_products_batch` sweep (blocked on the OAuth login same as
-# every other live measurement — see this stage's risk R7).
+# every other live measurement).
 # ponytail: policy constant pending calibration against a live price floor.
 GAP_EPSILON = Decimal("1.00")
 
-# DR-06: blockers are error-level or an allowlisted warning; info never
-# blocks (G3-F3).
+# Blockers are error-level or an allowlisted warning; info never blocks.
 _BLOCKING_LEVELS = {"error", "warning"}
 
-# DR-04: the only UI-confirmed surcharge label (plan section 10 — the 9 UAH
-# self-pickup service fee). Every other channel gets the neutral wording.
+# The only UI-confirmed surcharge label (the 9 UAH self-pickup service
+# fee). Every other channel gets the neutral wording.
 _SERVICE_FEE_DELIVERY_TYPE = "SelfPickup"
 
 
 class Gap(Decimal):
-    """DR-03's gap value. A return type only — never stored as a model
+    """The gap value. A return type only — never stored as a model
     field and never assigned to a variable that outlives its own
     construction call, because arithmetic on a `Decimal` subclass returns
     a plain `Decimal` and silently drops any extra attribute (measured:
@@ -61,8 +59,8 @@ class Gap(Decimal):
 
 
 def compute_order_cost_min_gap(min_order_cost: Money, products_total: Money) -> Gap:
-    """DR-03: gap = minOrderCost - productsTotal, never against `total` or
-    `totalAfterDiscounts` (amendment A2 — a units-confusion bug, not a
+    """gap = minOrderCost - productsTotal, never against `total` or
+    `totalAfterDiscounts` (a units-confusion bug, not a
     server inconsistency, but the fail-closed comparison stays cheap
     defense-in-depth). A gap under `GAP_EPSILON` reads as borderline,
     never an automatic pass."""
@@ -73,9 +71,9 @@ def compute_order_cost_min_gap(min_order_cost: Money, products_total: Money) -> 
 def compute_surcharge(
     total: Money, products_total: Money, delivery_type: str
 ) -> tuple[Money, Literal["service_fee", "difference"]]:
-    """DR-04: surcharge = total - productsTotal. Labelled "service fee"
-    only for SelfPickup, the one channel plan section 10 records as
-    UI-confirmed (9 UAH); every other channel gets neutral wording so an
+    """surcharge = total - productsTotal. Labelled "service fee"
+    only for SelfPickup, the one channel confirmed in the UI (9 UAH);
+    every other channel gets neutral wording so an
     unconfirmed number is never presented as an official fee."""
     amount = total - products_total
     label: Literal["service_fee", "difference"] = (
@@ -87,9 +85,9 @@ def compute_surcharge(
 def classify_line_item(
     price: Money, stock: Optional[int], error_code: Optional[str]
 ) -> LineItemClassification:
-    """DR-08: `price == 0` alone never decides availability — the prior
+    """`price == 0` alone never decides availability — the prior
     hypothesis that unavailable items are excluded from the sum was
-    disproven on live data (`[I5]` section 13.1). Availability needs an
+    disproven on live data. Availability needs an
     explicit signal: a known error code, or a positive stock count."""
     if error_code is not None:
         return LineItemClassification(is_available=False, reason=error_code)
@@ -99,17 +97,17 @@ def classify_line_item(
 
 
 def sum_line_items(line_items: Iterable[Mapping[str, object]]) -> Money:
-    """DR-08: Sigma(price * quantity) == productsTotal, including
+    """Sigma(price * quantity) == productsTotal, including
     zero-priced (unavailable) items — they are not excluded from the sum
-    on the live server (`[I6]` section 2). `quantity` is read explicitly
+    on the live server. `quantity` is read explicitly
     so an implementation cannot pass by accident on a fixture where every
-    quantity happens to be 1 (G3-F4b)."""
+    quantity happens to be 1."""
     total = Decimal("0")
     for item in line_items:
         price = item["price"]
         quantity = item.get("quantity", 1)
         # `assert` would be stripped under `python -O`, silently turning a
-        # money-type violation into a `float`-arithmetic bug (G3-F6) instead
+        # money-type violation into a `float`-arithmetic bug instead
         # of a loud failure — raised explicitly so the invariant survives
         # optimization.
         if not isinstance(price, Decimal):
@@ -123,7 +121,7 @@ def sum_line_items(line_items: Iterable[Mapping[str, object]]) -> Money:
 def _resolve_product_ref(
     product_id: Optional[str], products: Sequence[LineItem]
 ) -> str:
-    """G3-F19: a validation's `productId` that matches no line item in the
+    """A validation's `productId` that matches no line item in the
     cart becomes the explicit string "unresolved" — never `None`, and
     never a crash from a renderer that assumes every blocker resolves to
     a real product."""
@@ -135,7 +133,7 @@ def _resolve_product_ref(
 
 
 def _dedupe_key(validation: Validation) -> str:
-    """DR-07: dedupe groups by `productId` alone when present — the
+    """Dedupe groups by `productId` alone when present — the
     priority rule ("not_found outranks stock.max") only makes sense
     across *different* codes describing the *same* product, so grouping
     by `(code, productId)` instead (an earlier, wrong draft of this
@@ -144,7 +142,7 @@ def _dedupe_key(validation: Validation) -> str:
 
     A validation without a `productId` (both live order-level codes
     observed so far carry none) is its own unmergeable group — merging
-    two unrelated order-level blockers would hide one of them (G3-F10)."""
+    two unrelated order-level blockers would hide one of them."""
     product_id = validation.context.get("productId")
     if product_id is None:
         return f"__no_product_id__:{id(validation)}"
@@ -156,13 +154,13 @@ _STOCK_MAX_CODE = "product.offer.stock.max"
 
 
 def diagnose(cart: Cart, registry: PolicyRegistry) -> Diagnosis:
-    """DR-06/07/09: the deterministic diagnosis. Never accepts a
-    pre-computed total or gap as an argument (DR-09) — every number comes
+    """The deterministic diagnosis. Never accepts a
+    pre-computed total or gap as an argument — every number comes
     from `cart` itself."""
     blockers: list[Blocker] = []
     disclosures: list[Validation] = []
 
-    # DR-07: group by productId (see _dedupe_key's docstring for why not
+    # Group by productId (see _dedupe_key's docstring for why not
     # (code, productId)) — within a group, not_found outranks stock_max.
     grouped: dict[str, list[Validation]] = {}
     for validation in cart.validations:
@@ -237,8 +235,8 @@ def diagnose(cart: Cart, registry: PolicyRegistry) -> Diagnosis:
 
 
 def canonical_diff(before: Cart, after: Cart) -> CartDiff:
-    """DR-11: the canonical before/after diff. Asserts its own totals
-    invariant internally (G3-F13) — a diff that silently understates the
+    """The canonical before/after diff. Asserts its own totals
+    invariant internally — a diff that silently understates the
     real delta raises rather than returning a wrong-but-plausible value."""
     before_by_id = {p.product_id: p for p in before.products}
     after_by_id = {p.product_id: p for p in after.products}

@@ -1,4 +1,4 @@
-"""G3-F14: the same seed produces byte-identical output across two
+"""The same seed produces byte-identical output across two
 separate runs — a local `random.Random(seed)` instance, never the global
 `random` module, so global state left over from another test cannot make
 this generator order-dependent.

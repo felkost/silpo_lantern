@@ -1,14 +1,18 @@
-"""D-G3-08/G3-F18/CLAUDE.md invariant: "A tracked file may only reference
-tracked files." A README pointing at a gitignored spec, or a code comment
+"""A tracked file may only reference tracked files.
+A README pointing at a gitignored spec, or a code comment
 citing `insights.md` by date, leads a fresh cloner nowhere. Scans every
 git-tracked file's text for a path matching the `docs/*` gitignore rule
 (excluding the one public exception, `docs/reports/index.html`), or a bare
 mention of the other gitignored process files
 (`handoff.md`, `insights.md`).
 
-Stable ids (`D-G1-04`, `F7`, `D12`) are the correct way to cite a decision
-or finding from tracked code — this test does not flag those, only literal
-paths into files a fresh clone will not have.
+Historically this project treated a stable id (`D-G1-04`, `F7`, `D12`) as an
+acceptable citation from tracked code, since it names a decision rather than a
+literal path. Practice has moved past that: a bare id is just as unresolvable
+to a fresh clone as a path is, and G4's own cleanup removed the ones that had
+crept in — this test still does not flag a bare id (checking every possible
+citation pattern this way would be unreliably broad), but new code should
+prefer a self-contained comment over a citation of either kind.
 """
 
 import re

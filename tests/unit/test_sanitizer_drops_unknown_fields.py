@@ -1,8 +1,8 @@
-"""F7: allow-list at the key level — anything not
+"""Allow-list at the key level — anything not
 explicitly reviewed is dropped, never passed through by default (safer than
 a deny-list, which only protects against PII shapes someone already thought
-of). The concrete field list here is a first cut built from the G0 evidence
-lab's own documented cart-snapshot fields (notebooks/evidence_lab.ipynb) for
+of). The concrete field list here is a first cut built from documented
+cart-snapshot fields (notebooks/evidence_lab.ipynb) for
 the non-PII, product-level data; it is a **required human review** step
 before any real captured payload is sanitized and committed — not a claim
 that this list is complete for every field the live server can return.
@@ -14,8 +14,8 @@ from src.lantern.mcp.sanitizer import sanitize_payload
 def test_keeps_only_allowlisted_keys() -> None:
     raw = {"productId": "p1", "name": "Молоко", "price": 39.99, "unexpected_field": "x"}
     sanitized = sanitize_payload(raw)
-    # `productId` survives but pseudonymised — plan section 12.1.1 step 3
-    # requires stable identifiers replaced, not passed through.
+    # `productId` survives but pseudonymised — stable identifiers are
+    # replaced, not passed through.
     assert sanitized == {
         "productId": "test_product_001",
         "name": "Молоко",
@@ -56,7 +56,7 @@ def test_an_empty_payload_stays_empty() -> None:
 
 
 def test_identifiers_are_pseudonymised_with_referential_integrity() -> None:
-    """Plan section 12.1.1 step 3: stable identifiers are replaced with
+    """Stable identifiers are replaced with
     local `test_*` values "зі збереженням посилальної цілісності" — the
     same original id must land on the same replacement everywhere in one
     payload, or a validation's `productId` stops pointing at its line item.
@@ -94,8 +94,8 @@ def test_identifiers_are_pseudonymised_with_referential_integrity() -> None:
 
 def test_validation_context_keeps_the_load_bearing_threshold() -> None:
     """`context` is not allow-listed wholesale, but `orderCostMin` is the
-    field DR-03's whole gap depends on — a fixture that drops it cannot
-    exercise the hero rule at all."""
+    field the whole gap calculation depends on — a fixture that drops it
+    cannot exercise the hero rule at all."""
     raw = {
         "validations": [
             {

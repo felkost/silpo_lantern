@@ -1,9 +1,9 @@
 """Loads `registry.yaml`, validated against `registry.schema.json`.
 `PolicyRegistry.lookup` is exact-match only — no substring, prefix, or
-case-folded comparison, ever (G3-F17): a lookup shortcut that matched
+case-folded comparison, ever: a lookup shortcut that matched
 `product.offer.status.not_available` against the registered
-`product.offer.not_found` would silently misclassify D9's quarantined code
-as the confirmed one, exactly the alias DR-06's fail-safe exists to
+`product.offer.not_found` would silently misclassify a quarantined code
+as the confirmed one, exactly the alias the fail-safe exists to
 prevent.
 """
 
@@ -27,7 +27,7 @@ class PolicyRegistrySchemaError(ValueError):
 
 class PolicyRegistry:
     """Exact-match `code -> PolicyEntry` lookup. A miss returns `None`,
-    which `diagnosis.diagnose()` treats as DR-06's fail-safe: disclosed,
+    which `diagnosis.diagnose()` treats as the fail-safe: disclosed,
     never planned against, never aliased."""
 
     def __init__(self, entries: dict[str, PolicyEntry]) -> None:

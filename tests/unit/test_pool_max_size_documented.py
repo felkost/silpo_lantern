@@ -1,7 +1,6 @@
-"""F14 (round 2): the checkpointer's
+"""The checkpointer's
 `AsyncConnectionPool` size is an explicit, documented constant — not left as
-an unstated guess — and stays under Neon free tier's own connection ceiling
-(already a named risk in the plan itself, section 9/IV-02).
+an unstated guess — and stays under Neon free tier's own connection ceiling.
 """
 
 from src.lantern.memory.checkpointer import (

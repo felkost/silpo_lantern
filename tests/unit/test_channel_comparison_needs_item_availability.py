@@ -1,8 +1,8 @@
-"""D10/D-G3-05/G3-F8: a channel reads `clears_now` only when item
+"""A channel reads `clears_now` only when item
 availability was actually checked (all True) — a row missing that check
 (`item_availability=None`), or where any item is unavailable, is
 `needs_check`, never presented as an actionable recommendation on price
-alone. Reproduces D12's own live confirmation that a price-clearing
+alone. Reproduces a live confirmation that a price-clearing
 channel (SelfPickup, gap -205.89) had never had its items checked there.
 """
 

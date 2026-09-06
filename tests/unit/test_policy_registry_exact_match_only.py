@@ -1,4 +1,4 @@
-"""G3-F17: lookup is exact-match only — no substring, prefix, or
+"""Lookup is exact-match only — no substring, prefix, or
 case-folded comparison. An injection-shaped string that merely contains or
 resembles a registered code must never match it.
 """

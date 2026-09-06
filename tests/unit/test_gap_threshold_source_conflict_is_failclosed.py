@@ -1,8 +1,8 @@
-"""D-G3-03/G3-F2: two threshold sources for order.cost.min
+"""Two threshold sources for order.cost.min
 (`validation.context.orderCostMin` vs. `Cart.min_order_cost` from slots)
-must not silently disagree. This stage's `diagnose()` prefers the
-validation's own context when present, matching D-G3-03's stated priority;
-the fall-back-to-slots and disagreement-is-unverified paths are exercised
+must not silently disagree. `diagnose()` prefers the
+validation's own context when present; the fall-back-to-slots and
+disagreement-is-unverified paths are exercised
 via the normalizer/diagnosis boundary in
 `test_multivalued_min_order_cost_is_unverified.py`.
 """

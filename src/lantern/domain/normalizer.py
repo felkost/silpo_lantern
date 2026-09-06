@@ -1,4 +1,4 @@
-"""DR-01, DR-02, DR-05: normalize a raw MCP cart payload into `Cart`. No
+"""Normalize a raw MCP cart payload into `Cart`. No
 I/O — the caller (an `infra`-layer adapter) is responsible for calling
 `silpo_get_shopping_cart_by_id` and unwrapping `CallToolResult.content[0].text`
 (a JSON string) into a dict before this module ever sees it
@@ -27,17 +27,16 @@ MoneyInput = Union[str, int, float, None]
 
 class CartShapeError(ValueError):
     """A raw payload does not match the measured cart shape. Raised naming
-    the missing/invalid key rather than defaulting it (DR-01/DR-05's
-    fail-closed requirement) — a caller that wants a diagnosis on
-    malformed input gets a loud, specific failure, never a silently wrong
-    `Cart`."""
+    the missing/invalid key rather than defaulting it — a caller that
+    wants a diagnosis on malformed input gets a loud, specific failure,
+    never a silently wrong `Cart`."""
 
 
 def to_money(value: MoneyInput) -> Optional[Money]:
-    """DR-01: money is `Decimal`, never `float` — a raw JSON float is
+    """Money is `Decimal`, never `float` — a raw JSON float is
     routed through `str()` first so its literal decimal digits are kept
     rather than the value's binary floating-point approximation. `None`
-    stays `None` (DR-05: `deliveryCost: null` is "not applicable", not
+    stays `None` (`deliveryCost: null` is "not applicable", not
     zero) — a caller that wants zero must pass zero explicitly."""
     if value is None:
         return None
@@ -48,12 +47,12 @@ def to_money(value: MoneyInput) -> Optional[Money]:
 
 
 def to_kyiv_display(value: datetime) -> datetime:
-    """DR-02: display conversion only — the value stays UTC-aware
+    """Display conversion only — the value stays UTC-aware
     internally; the caller applies `.astimezone(ZoneInfo("Europe/Kyiv"))`
     for rendering. A naive `datetime` is rejected rather than assumed
     UTC: `fromisoformat` on an offset-less string returns naive silently,
     and treating an already-expired slot as still live is the worst
-    possible failure direction here (`[I5]` section 8.3)."""
+    possible failure direction here."""
     if value.tzinfo is None:
         raise CartShapeError(f"naive datetime is not accepted: {value!r}")
     return value
@@ -66,7 +65,7 @@ def _require(mapping: Mapping[str, Any], key: str, context: str) -> Any:
 
 
 def _parse_validation(raw: Mapping[str, Any]) -> Validation:
-    # D-G3-02: the wire field is `message`, never `code` — the live payload
+    # The wire field is `message`, never `code` — the live payload
     # has no `code` field at all.
     code = raw.get("message")
     if code is None:
@@ -119,10 +118,10 @@ def normalize_cart(raw: Mapping[str, Any]) -> Cart:
     not the `CallToolResult` envelope, and not the whole
     `{success, cart, loyalty}` response body.
 
-    Only `calculation.productsTotal` is hard-required — the one field
-    DR-01/DR-05's own fail-closed guarantee actually depends on. `id` is
-    read leniently (`test_dr_01_money_is_decimal.py`'s own minimal fixture,
-    a locked pre-G3 contract, carries no `id` at all) because a missing
+    Only `calculation.productsTotal` is hard-required — the one field the
+    fail-closed guarantee actually depends on. `id` is
+    read leniently (`test_dr_01_money_is_decimal.py`'s own minimal fixture
+    carries no `id` at all) because a missing
     cart id is a data-completeness question for a caller to decide on, not
     a shape this normalizer cannot make sense of."""
     cart_id = raw.get("id", "")
@@ -151,9 +150,9 @@ def normalize_cart(raw: Mapping[str, Any]) -> Cart:
     timeslot_start, timeslot_end = _parse_timeslot(raw.get("timeslot"))
 
     min_order_cost_raw = raw.get("minOrderCost")
-    # D-G3-03: minOrderCost sometimes arrives as a per-slot list. A single
+    # minOrderCost sometimes arrives as a per-slot list. A single
     # value is used directly; disagreement inside the list itself is left
-    # to diagnosis.py's threshold arbitration (G3-F2b) rather than resolved
+    # to diagnosis.py's threshold arbitration rather than resolved
     # here, so the normalizer never silently picks one.
     min_order_cost: Optional[Money]
     if isinstance(min_order_cost_raw, list):

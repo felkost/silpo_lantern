@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://lantern.local/schemas/policy-registry.json",
   "title": "Policy registry",
-  "description": "plan section 1.5: validation_code -> rule, source, version, test_id, confidence. Amendment A8 seeds six confirmed codes; D9 adds two quarantined ones.",
+  "description": "validation_code -> rule, source, version, test_id, confidence. Six confirmed codes; two additional quarantined ones.",
   "type": "object",
   "required": ["entries"],
   "properties": {

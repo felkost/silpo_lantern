@@ -1,10 +1,9 @@
-"""Domain Core models (plan section 1.5, section 21.2): Cart, Validation,
+"""Domain Core models: Cart, Validation,
 Blocker, Diagnosis, EvidenceTuple, CartDiff, ActionProposal, ConsentRecord,
 Receipt. Pure Pydantic — no I/O, matching this project's layering rule
 (`tests/unit/test_layering.py`, `domain` may only import `kernel`).
 
-`PolicyEntry` lives here rather than in `src/lantern/policies/loader.py`
-(measured at kickoff verification, round 1 finding V4): a
+`PolicyEntry` lives here rather than in `src/lantern/policies/loader.py`: a
 cross-module forward reference from `Blocker.policy` to a type defined in a
 sibling module raised `PydanticUserError` at construction time, and the
 naive fix (importing the sibling module) produced a real `ImportError` from
@@ -13,7 +12,7 @@ a circular import once `diagnosis.py` needed `Cart`/`Diagnosis` back. Both
 nothing architecturally and removes the cycle entirely.
 
 `Gap` (the `Decimal` subclass diagnosis.py returns) never appears as a field
-type on any model here — also measured (same section): a bare `Decimal`
+type on any model here: a bare `Decimal`
 subclass has no `__get_pydantic_core_schema__`, so Pydantic cannot build a
 schema for it (`PydanticSchemaGenerationError`), and even a working subclass
 loses its own subtype identity under ordinary arithmetic (`g + Decimal("1")`
@@ -30,11 +29,11 @@ from pydantic import BaseModel, ConfigDict
 
 Money = Decimal
 
-# DR-13: checkout, payment, and age confirmation stay the guest's own
-# actions (plan section 10) — no `ActionProposal` may ever name one of
-# these as its `tool_name`. A frozenset, not a comment, so the rule has an
-# artefact a test can check against (`tests/unit/test_dr_13_guest_only_actions.py`)
-# rather than only living in prose that a future edit can silently violate.
+# Checkout, payment, and age confirmation stay the guest's own actions —
+# no `ActionProposal` may ever name one of these as its `tool_name`. A
+# frozenset, not a comment, so the rule has an artefact a test can check
+# against (`tests/unit/test_dr_13_guest_only_actions.py`) rather than only
+# living in prose that a future edit can silently violate.
 GUEST_ONLY_ACTIONS: frozenset[str] = frozenset(
     {
         "silpo_checkout",
@@ -45,14 +44,11 @@ GUEST_ONLY_ACTIONS: frozenset[str] = frozenset(
 
 
 class PolicyEntry(BaseModel):
-    """One row of the policy registry (plan section 1.5): validation code
-    -> rule, source, version, test_id, confidence. `status` distinguishes
-    D9's two live-observed-but-unregistered codes (`quarantined`) from the
-    six confirmed ones (`active`) — a quarantined entry is never used to
-    authorize anything, only to disclose that the code is known but not
-    yet reviewed (CLAUDE.md section 4, "a new or changed validation code is
-    quarantined until reviewed").
-    """
+    """One row of the policy registry: validation code -> rule, source,
+    version, test_id, confidence. `status` distinguishes live-observed-but-
+    unregistered codes (`quarantined`) from confirmed ones (`active`) — a
+    quarantined entry is never used to authorize anything, only to
+    disclose that the code is known but not yet reviewed."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -68,7 +64,7 @@ class PolicyEntry(BaseModel):
 class Validation(BaseModel):
     """One entry of a cart's `calculation.validations` array. `code` is
     populated from the wire field `message` — the live payload has no
-    `code` field at all (D-G3-02) — by `normalizer.py`, the one place this
+    `code` field at all — by `normalizer.py`, the one place this
     rename happens.
     """
 
@@ -86,8 +82,7 @@ class LineItem(BaseModel):
     2026-09-06). `company_id`/`branch_id` are
     optional and carried per-item rather than assumed from a single
     shipment, because a multi-shipment cart splitting across branches is
-    unmeasured (only a one-shipment cart has been captured so far — risk
-    R1's residual)."""
+    unmeasured (only a one-shipment cart has been captured so far)."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -102,10 +97,9 @@ class LineItem(BaseModel):
 
 
 class Cart(BaseModel):
-    """`extra="allow"` (plan section 1.5): unknown fields are kept but are
+    """`extra="allow"`: unknown fields are kept but are
     never trusted as write arguments — only the Write Guard's own
-    allowlisted, explicitly-typed arguments authorize a write (CLAUDE.md
-    section 4)."""
+    allowlisted, explicitly-typed arguments authorize a write."""
 
     model_config = ConfigDict(extra="allow", frozen=True)
 
@@ -130,11 +124,11 @@ class Cart(BaseModel):
 
 
 class Blocker(BaseModel):
-    """A validation the diagnosis has classified as blocking (DR-06:
-    error or allowlisted warning). `product_ref` is the validation's own
+    """A validation the diagnosis has classified as blocking (error or
+    allowlisted warning). `product_ref` is the validation's own
     `productId` when one exists and resolves against `Cart.products`, or
-    the literal string `"unresolved"` when the id is absent or dangling
-    (G3-F19) — never `None`, so a renderer never has to special-case a
+    the literal string `"unresolved"` when the id is absent or dangling —
+    never `None`, so a renderer never has to special-case a
     missing value versus one that failed to resolve."""
 
     model_config = ConfigDict(frozen=True)
@@ -160,7 +154,7 @@ class Diagnosis(BaseModel):
 
 
 class LineItemClassification(BaseModel):
-    """DR-08: whether a line item is a genuine candidate. `is_available`
+    """Whether a line item is a genuine candidate. `is_available`
     is never set from `price == 0` alone — see `diagnosis.classify_line_item`."""
 
     model_config = ConfigDict(frozen=True)
@@ -170,9 +164,9 @@ class LineItemClassification(BaseModel):
 
 
 class EvidenceTuple(BaseModel):
-    """DR-10's Evidence Gate input shape: all four fields are required and
+    """Evidence Gate input shape: all four fields are required and
     non-optional by construction, so an incomplete evidence tuple cannot
-    be built at all — the gate logic itself is G4's job, but the shape
+    be built at all — the gate logic is a separate concern, but the shape
     that makes "no evidence" unrepresentable belongs here."""
 
     model_config = ConfigDict(frozen=True)
@@ -185,7 +179,7 @@ class EvidenceTuple(BaseModel):
 
 
 class CartDiff(BaseModel):
-    """DR-11's canonical before/after diff."""
+    """Canonical before/after diff."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -196,15 +190,15 @@ class CartDiff(BaseModel):
 
 
 class ActionProposal(BaseModel):
-    """Plan section 11's consent sentence — "Додати товар X, кількість Y,
+    """The consent sentence — "Додати товар X, кількість Y,
     очікувана сума Z" — needs a name and quantity typed on the model
     itself, not buried inside `canonical_args`; `product_name`/`quantity`
-    are X and Y, `expected_delta` is Z (D-G3-14). `canonical_args` stays a
+    are X and Y, `expected_delta` is Z. `canonical_args` stays a
     dict for forward compatibility with tools beyond the hero write, but
-    its key set is pinned for the one tool this stage's tests exercise:
+    its key set is pinned for the one tool exercised so far:
     `{productId: str, quantity: int, addQuantity: bool}` for
     `silpo_add_or_update_cart_products`, with `addQuantity` always present
-    and explicit (plan section 11, D11's measured idempotency finding)."""
+    and explicit (idempotency requires it, never left to a default)."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -215,15 +209,20 @@ class ActionProposal(BaseModel):
     expected_delta: Money
     canonical_args: dict[str, Any]
     evidence: list[EvidenceTuple]
+    # The explainer node's own rendered UA sentence for the
+    # consent screen — empty until `explain` runs, attached via
+    # `model_copy(update=...)` since this model is frozen. Default keeps
+    # every existing construction site unbroken.
+    guest_text_uk: str = ""
 
 
 class ConsentRecord(BaseModel):
     """Mirrors `src/lantern/memory/migrations/0003_consents.sql` column for
-    column (D-G3-12) — that table is already merged and integration-tested
-    against live Neon, so it is the shape that wins over the plan's own
-    prose, which names `cart_id`/`prompt_version`/`policy_version` fields
-    the migration does not have. `owner` is the migration's column name,
-    kept rather than the plan's `user_id_hash`, for the same reason."""
+    column — that table is already merged and integration-tested against
+    live Neon, so it is the shape that wins over field names like
+    `cart_id`/`prompt_version`/`policy_version` that the migration does
+    not have. `owner` is the migration's column name, kept rather than
+    `user_id_hash`, for the same reason."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -239,10 +238,10 @@ class ConsentRecord(BaseModel):
 
 
 class Receipt(BaseModel):
-    """Mirrors `0005_receipts.sql` (D-G3-12). `verified=False` is DR-12's
-    "unverified, never a successful receipt" outcome — G5+G6 decides when
-    to set it, this stage only defines the shape that makes the false case
-    representable rather than assumed away."""
+    """Mirrors `0005_receipts.sql`. `verified=False` is the
+    "unverified, never a successful receipt" outcome — a later stage
+    decides when to set it; this defines the shape that makes the false
+    case representable rather than assumed away."""
 
     model_config = ConfigDict(frozen=True)
 

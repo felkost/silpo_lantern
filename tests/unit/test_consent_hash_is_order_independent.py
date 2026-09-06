@@ -1,5 +1,5 @@
-"""D-G3-13/G3-F24: `args_hash` must not change when only dict key order
-changes (or CLAUDE.md's "re-read state = consent state" check would break
+"""`args_hash` must not change when only dict key order
+changes (or the "re-read state = consent state" check would break
 on a resume where the same logical args happen to serialize in a different
 order), and must change when a value actually changes.
 """

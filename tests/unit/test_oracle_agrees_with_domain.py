@@ -1,7 +1,7 @@
-"""G3-F15: the independent oracle (`tests/unit/oracle.py`) and the domain
+"""The independent oracle (`tests/unit/oracle.py`) and the domain
 implementation must agree on the gap for the same raw cart — checked
-against the tracked D12 fixture and the boundary generator's own output,
-not by re-reading either implementation.
+against the tracked live-cart fixture and the boundary generator's own
+output, not by re-reading either implementation.
 """
 
 import json

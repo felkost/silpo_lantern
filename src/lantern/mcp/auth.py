@@ -1,15 +1,14 @@
 """Silpo MCP OAuth: persistent token storage and the manual-login contract.
-Ported from the donor's `silpo_mcp_auth.py` (BACKGROUND_MATERIALS.md) —
-SDK reconnaissance confirmed `TokenStorage` is still a structural
-`typing.Protocol` with the same four async methods in the installed
-`mcp==1.29.0`, no adaptation needed on the port itself.
+Ported from the donor project's `silpo_mcp_auth.py` — SDK reconnaissance
+confirmed `TokenStorage` is still a structural `typing.Protocol` with the
+same four async methods in the installed `mcp==1.29.0`, no adaptation
+needed on the port itself.
 
-`build_redirect_handler` is new (F10, the G1+G2 stage spec): the donor's
-`redirect_handler` always raised the same `SilpoMcpAuthRequiredError`,
-whether or not a token had ever existed. A previously-valid token being
-rejected mid-session is a different, previously-unflagged failure — it must
-surface distinctly rather than as an opaque "never logged in" during a live
-demo.
+`build_redirect_handler` is new: the donor's `redirect_handler` always
+raised the same `SilpoMcpAuthRequiredError`, whether or not a token had
+ever existed. A previously-valid token being rejected mid-session is a
+different, previously-unflagged failure — it must surface distinctly
+rather than as an opaque "never logged in" during a live demo.
 """
 
 import json
@@ -75,10 +74,10 @@ class DiskTokenStorage:
 def build_redirect_handler(
     storage: DiskTokenStorage,
 ) -> Callable[[str], Awaitable[None]]:
-    """F10: distinguish "never logged in" from "was logged in, now
-    rejected" using one measurable fact — whether a token was ever written
-    to this storage — rather than an invented behavioural signal from the
-    OAuth flow itself.
+    """Distinguish "never logged in" from "was logged in, now rejected"
+    using one measurable fact — whether a token was ever written to this
+    storage — rather than an invented behavioural signal from the OAuth
+    flow itself.
     """
 
     async def redirect_handler(authorization_url: str) -> None:

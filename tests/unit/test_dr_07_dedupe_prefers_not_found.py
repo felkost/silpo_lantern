@@ -1,7 +1,7 @@
-"""DR-07 (plan section 10): not_found outranks stock.max for the same
+"""DR-07: not_found outranks stock.max for the same
 product.
 
-The plan words the rule as "dedupe by code + productId", but grouping
+The rule is "dedupe by code + productId", but grouping
 *literally* by that pair is what an earlier draft did and it made the
 priority unreachable: two different codes are two different groups by
 construction, so `not_found` never got the chance to outrank anything.
@@ -10,8 +10,8 @@ inside the group — see `diagnosis._dedupe_key`'s own docstring. The first
 test below is what caught the wrong version (it returned 2 blockers, not 1).
 
 Both live order-level codes carry no productId at all, so a codeless
-validation is never merged with another codeless one (G3-F10). The
-dangling-productId case (G3-F19) has its own file,
+validation is never merged with another codeless one. The
+dangling-productId case has its own file,
 `test_dangling_product_id_is_explicit.py`.
 """
 

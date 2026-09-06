@@ -1,21 +1,16 @@
-"""D-G1-08: the MCP registry's wall-clock TTL is an
-addition beyond plan section 9.1's event-driven invalidation list, not a
-restatement of it. Uses an injectable clock so the test is deterministic
-(agentic-tdd-and-gate: "Deterministic. If a fixture needs a timestamp, inject
-it.").
+"""The MCP registry's wall-clock TTL is an
+addition beyond the event-driven invalidation list, not a
+restatement of it. Uses an injectable clock so the test is deterministic:
+if a fixture needs a timestamp, inject it.
 """
 
-from mcp import types as mcp_types
+from typing import Any, Dict, List
 
 from src.lantern.mcp.client import ToolRegistry
 
 
-def _list_tools_result(*names: str) -> mcp_types.ListToolsResult:
-    return mcp_types.ListToolsResult(
-        tools=[
-            mcp_types.Tool(name=name, inputSchema={"type": "object"}) for name in names
-        ]
-    )
+def _list_tools_raw(*names: str) -> List[Dict[str, Any]]:
+    return [{"name": name, "inputSchema": {"type": "object"}} for name in names]
 
 
 class _FakeClock:
@@ -32,9 +27,9 @@ class _FakeClock:
 def test_returns_cached_result_within_ttl() -> None:
     calls = []
 
-    def fetch() -> mcp_types.ListToolsResult:
+    def fetch() -> list:
         calls.append(1)
-        return _list_tools_result("tool_a")
+        return _list_tools_raw("tool_a")
 
     clock = _FakeClock()
     registry = ToolRegistry(fetch=fetch, ttl_seconds=900, now=clock)
@@ -48,9 +43,9 @@ def test_returns_cached_result_within_ttl() -> None:
 def test_refetches_after_ttl_expires() -> None:
     calls = []
 
-    def fetch() -> mcp_types.ListToolsResult:
+    def fetch() -> list:
         calls.append(1)
-        return _list_tools_result("tool_a")
+        return _list_tools_raw("tool_a")
 
     clock = _FakeClock()
     registry = ToolRegistry(fetch=fetch, ttl_seconds=900, now=clock)
@@ -65,9 +60,9 @@ def test_refetches_after_ttl_expires() -> None:
 def test_force_refresh_ignores_ttl() -> None:
     calls = []
 
-    def fetch() -> mcp_types.ListToolsResult:
+    def fetch() -> list:
         calls.append(1)
-        return _list_tools_result("tool_a")
+        return _list_tools_raw("tool_a")
 
     clock = _FakeClock()
     registry = ToolRegistry(fetch=fetch, ttl_seconds=900, now=clock)
@@ -81,9 +76,9 @@ def test_force_refresh_ignores_ttl() -> None:
 def test_invalidate_forces_next_get_to_refetch() -> None:
     calls = []
 
-    def fetch() -> mcp_types.ListToolsResult:
+    def fetch() -> list:
         calls.append(1)
-        return _list_tools_result("tool_a")
+        return _list_tools_raw("tool_a")
 
     clock = _FakeClock()
     registry = ToolRegistry(fetch=fetch, ttl_seconds=900, now=clock)

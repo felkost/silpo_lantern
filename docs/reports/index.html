@@ -1470,7 +1470,284 @@ surprise second block after the first is fixed.</div>
       <text x="818" y="901" fill="#24242e" font-size="12">Final</text>
     </svg></div>
 
-<h2>10. Why this is expected to help, not just work</h2>
+<h2>10. Planner, Evidence Gate, ranking</h2>
+<p>This diagram shows what happens after the diagnosis: the planner proposes search
+terms for products that could close the gap, never a price or a product id — those are
+structurally absent from what it is allowed to return. Every candidate the search turns
+up is checked against the same call's own typed response before it can reach the
+guest; a candidate with no verified price or that is marked unavailable is dropped, not
+guessed at. What survives is ranked by the smallest top-up that clears the gap, not the
+largest.</p>
+<div class="example"><b>Example.</b> A search returns five products; two have no
+verified price in the same response and are dropped immediately. Of the remaining
+three, the guest sees the cheapest way to clear the block first, not whichever result
+came back first.</div>
+<div class="diagram"><svg viewBox="0 0 900 1120" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g4-activity-title g4-activity-desc">
+      <title id="g4-activity-title">G4 planner-to-ranking activity diagram</title>
+      <desc id="g4-activity-desc">Activity diagram from a completed diagnosis through the planner, the deterministic product search, the Evidence Gate, and ranking to the explainer, ending in awaiting_consent. The candidates-empty branch and a budget-exceeded condition both exit to an explicit Aborted state rather than a successful outcome.</desc>
+      <defs><style>text{font-family:Arial,Helvetica,"Liberation Sans","DejaVu Sans",sans-serif;}</style>
+        <marker id="arrow-ink" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#24242e"/></marker>
+        <marker id="arrow-muted" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6b7280"/></marker>
+      </defs>
+      <rect width="100%" height="100%" fill="#ffffff"/>
+
+      <!-- ============ ZONE ============ -->
+      <rect x="40" y="40" width="820" height="940" rx="8" fill="#f7f7fa" stroke="#9ca3af" stroke-width="1"/>
+      <rect x="60" y="28" width="360" height="20" rx="2" fill="#ffffff"/>
+      <text x="240" y="42" fill="#6b7280" font-size="12" font-weight="700" text-anchor="middle">src/lantern/graph/ + domain/ &middot; G4 READ-PATH</text>
+
+      <!-- ============ ARROWS ============ -->
+
+      <!-- start -> plan -->
+      <line x1="480" y1="94" x2="480" y2="140" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+
+      <!-- plan -> collect_options -->
+      <line x1="480" y1="220" x2="480" y2="268" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+
+      <!-- collect_options -> Evidence Gate -->
+      <line x1="480" y1="348" x2="480" y2="396" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+
+      <!-- Evidence Gate -> decision -->
+      <line x1="480" y1="476" x2="480" y2="516" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+
+      <!-- decision -> Aborted (empty, left) -->
+      <path d="M 426,552 Q 200,552 200,568 V 596" fill="none" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow-muted)"/>
+      <rect x="120" y="560" width="90" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="165" y="572" fill="#6b7280" font-size="12" text-anchor="middle">0 survivors</text>
+
+      <!-- decision -> rank (>=1 survivor, straight down) -->
+      <line x1="480" y1="588" x2="480" y2="628" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="492" y="596" width="110" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="547" y="608" fill="#24242e" font-size="12" text-anchor="middle">1-3 survivors</text>
+
+      <!-- rank -> explain -->
+      <line x1="480" y1="708" x2="480" y2="756" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+
+      <!-- explain -> final -->
+      <line x1="480" y1="836" x2="480" y2="872" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+
+      <!-- ============ NODES ============ -->
+
+      <!-- Initial pseudostate -->
+      <circle cx="480" cy="80" r="14" fill="#24242e"/>
+      <text x="480" y="66" fill="#6b7280" font-size="12" text-anchor="middle">diagnosis + channel comparison ready</text>
+
+      <!-- Plan (LLM node, application layer) -->
+      <rect x="370" y="140" width="220" height="80" rx="14" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1"/>
+      <text x="480" y="174" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Plan</text>
+      <text x="480" y="194" fill="#24242e" font-size="12" text-anchor="middle">LLM &middot; structured SearchIntent</text>
+
+      <!-- Collect options (deterministic, application layer) -->
+      <rect x="370" y="268" width="220" height="80" rx="14" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1"/>
+      <text x="480" y="302" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Collect options</text>
+      <text x="480" y="322" fill="#24242e" font-size="12" text-anchor="middle">find_products_batch(search_terms)</text>
+
+      <!-- Evidence Gate (pure, domain layer, DR-10) -->
+      <rect x="370" y="396" width="220" height="80" rx="14" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <text x="480" y="430" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Evidence Gate</text>
+      <text x="480" y="450" fill="#24242e" font-size="12" text-anchor="middle">gate_candidates() &middot; DR-10</text>
+
+      <!-- Decision: candidates survive gate? -->
+      <path d="M 480,516 L 534,552 L 480,588 L 426,552 Z" fill="#ffffff" stroke="#24242e" stroke-width="1.2"/>
+      <text x="480" y="548" fill="#24242e" font-size="12" text-anchor="middle">candidates</text>
+      <text x="480" y="564" fill="#24242e" font-size="12" text-anchor="middle">survive gate?</text>
+
+      <!-- Aborted (exception/abnormal state, dashed, application layer — RecoveryState.status) -->
+      <rect x="100" y="596" width="200" height="80" rx="14" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1.2" stroke-dasharray="5,4"/>
+      <text x="200" y="628" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Aborted</text>
+      <text x="200" y="646" fill="#24242e" font-size="12" text-anchor="middle">empty gate OR budget</text>
+      <text x="200" y="662" fill="#24242e" font-size="12" text-anchor="middle">exceeded (§4.1)</text>
+
+      <!-- Rank (pure, domain layer) -->
+      <rect x="370" y="628" width="220" height="80" rx="14" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <text x="480" y="662" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Rank</text>
+      <text x="480" y="682" fill="#24242e" font-size="12" text-anchor="middle">rank_candidates() &middot; min top-up first</text>
+
+      <!-- Explain (LLM node, application layer) -->
+      <rect x="370" y="756" width="220" height="80" rx="14" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1"/>
+      <text x="480" y="790" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Explain</text>
+      <text x="480" y="810" fill="#24242e" font-size="12" text-anchor="middle">LLM &middot; sets guest_text_uk</text>
+
+      <!-- Final pseudostate -->
+      <circle cx="480" cy="888" r="16" fill="none" stroke="#24242e" stroke-width="1.5"/>
+      <circle cx="480" cy="888" r="9" fill="#24242e"/>
+      <text x="480" y="926" fill="#6b7280" font-size="12" text-anchor="middle">awaiting_consent &middot; 1-3 evidenced,</text>
+      <text x="480" y="944" fill="#6b7280" font-size="12" text-anchor="middle">explained proposals</text>
+
+      <!-- ============ LEGEND ============ -->
+      <line x1="40" y1="1012" x2="860" y2="1012" stroke="#d1d5db" stroke-width="0.8"/>
+      <text x="40" y="1034" fill="#6b7280" font-size="12" font-weight="700" letter-spacing="0.10em">LEGEND</text>
+
+      <rect x="40" y="1052" width="18" height="14" rx="2" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1"/>
+      <text x="66" y="1063" fill="#24242e" font-size="12">Application (graph node)</text>
+
+      <rect x="290" y="1052" width="18" height="14" rx="2" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <text x="316" y="1063" fill="#24242e" font-size="12">Domain (pure)</text>
+
+      <rect x="460" y="1052" width="18" height="14" rx="2" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1.2" stroke-dasharray="4,3"/>
+      <text x="486" y="1063" fill="#24242e" font-size="12">Exception / fail-safe state</text>
+
+      <path d="M 700,1052 L 730,1059 L 700,1066 L 670,1059 Z" fill="#ffffff" stroke="#24242e" stroke-width="1.2"/>
+      <text x="740" y="1063" fill="#24242e" font-size="12">Decision</text>
+    </svg>
+</div>
+
+<h2>11. LLM tool-choice, from a real trace</h2>
+<p>This sequence diagram is drawn from an actual captured run of the recovery graph
+against a live cart, not a hand-drawn guess at the design. It shows the two points
+where a language model is involved — proposing search terms, and narrating one
+accepted candidate — and what each one is and is not allowed to see: the planner
+receives only a tool's name and its JSON Schema, never its raw description text; the
+product name reaching the narration step is wrapped as inert data it cannot mistake
+for an instruction.</p>
+<div class="example"><b>Example.</b> The same live run that produced this diagram found
+three real candidate products and, separately, uncovered a genuine bug in how one
+delivery channel's failure was handled — the kind of gap a hand-drawn diagram cannot
+surface, since it only draws what the design intends, not what happened.</div>
+<div class="diagram"><svg viewBox="0 0 1160 1060" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g4-seq-title g4-seq-desc">
+      <title id="g4-seq-title">G4 LLM tool-choice sequence</title>
+      <desc id="g4-seq-desc">Sequence diagram drawn from a real captured LangGraph trace (2026-09-06, session g4-live): the Recovery Agent reads the cart and compares delivery channels through Silpo MCP, asks the domain core to diagnose the block, calls the planner LLM with a reviewed tool view (name and JSON Schema only, never a raw tool description) to get a SearchIntent carrying no price or product id, searches the live catalogue through Silpo MCP, runs the result through the Evidence Gate and ranking in the domain core, and finally calls the explainer LLM once per surviving ActionProposal inside a loop, with the product name quoted as inert data, to produce the guest-facing sentence.</desc>
+      <defs>
+        <marker id="arrow-filled" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#24242e"/></marker>
+        <marker id="arrow-open" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polyline points="0 0, 8 3.5, 0 7" fill="none" stroke="#6b7280" stroke-width="1.2"/></marker>
+        <style>text{font-family:Arial,Helvetica,"Liberation Sans","DejaVu Sans",sans-serif;}</style>
+      </defs>
+      <rect width="100%" height="100%" fill="#ffffff"/>
+
+      <!-- ============ LIFELINES ============ -->
+      <line x1="150" y1="200" x2="150" y2="890" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+      <line x1="460" y1="200" x2="460" y2="890" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+      <line x1="770" y1="200" x2="770" y2="890" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+      <line x1="1040" y1="200" x2="1040" y2="890" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+
+      <!-- ============ ACTIVATION BAR (Recovery Agent, whole flow) ============ -->
+      <rect x="144" y="248" width="12" height="596" fill="#e8ecf5" stroke="#6b7280" stroke-width="0.8"/>
+
+      <!-- ============ MESSAGES ============ -->
+
+      <!-- 1. Recovery Agent -> Silpo MCP: read + compare channels -->
+      <line x1="156" y1="248" x2="1034" y2="248" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="500" y="216" width="240" height="16" rx="2" fill="#ffffff"/>
+      <text x="620" y="228" fill="#24242e" font-size="12" text-anchor="middle">1 · READ CART + COMPARE CHANNELS</text>
+
+      <!-- 2. Silpo MCP --> Recovery Agent (return) -->
+      <line x1="1034" y1="292" x2="160" y2="292" stroke="#6b7280" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-open)"/>
+      <rect x="500" y="260" width="240" height="16" rx="2" fill="#ffffff"/>
+      <text x="620" y="272" fill="#6b7280" font-size="12" text-anchor="middle">2 · CART + CHANNEL SNAPSHOTS</text>
+
+      <!-- 3. Recovery Agent -> Domain Core: diagnose -->
+      <line x1="156" y1="336" x2="764" y2="336" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="380" y="304" width="160" height="16" rx="2" fill="#ffffff"/>
+      <text x="460" y="316" fill="#24242e" font-size="12" text-anchor="middle">3 · DIAGNOSE(cart)</text>
+
+      <!-- 4. Domain Core --> Recovery Agent (return) -->
+      <line x1="764" y1="380" x2="160" y2="380" stroke="#6b7280" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-open)"/>
+      <rect x="380" y="348" width="160" height="16" rx="2" fill="#ffffff"/>
+      <text x="460" y="360" fill="#6b7280" font-size="12" text-anchor="middle">4 · DIAGNOSIS + GAP</text>
+
+      <!-- 5. Recovery Agent -> LLM: plan(tool view) -->
+      <line x1="156" y1="424" x2="1034" y2="424" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="490" y="392" width="260" height="16" rx="2" fill="#ffffff"/>
+      <text x="620" y="404" fill="#24242e" font-size="12" text-anchor="middle">5 · PLAN(diagnosis, tool view)</text>
+      <rect x="490" y="440" width="260" height="16" rx="2" fill="#ffffff"/>
+      <text x="620" y="452" fill="#6b7280" font-size="12" text-anchor="middle" font-style="italic">name + JSON Schema only — never a raw description</text>
+
+      <!-- 6. LLM --> Recovery Agent: SearchIntent -->
+      <line x1="1034" y1="480" x2="160" y2="480" stroke="#6b7280" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-open)"/>
+      <rect x="480" y="488" width="280" height="16" rx="2" fill="#ffffff"/>
+      <text x="620" y="500" fill="#6b7280" font-size="12" text-anchor="middle">6 · SEARCH INTENT (terms only, no price/id)</text>
+
+      <!-- 7. Recovery Agent -> Silpo MCP: find_products_batch -->
+      <line x1="156" y1="536" x2="1034" y2="536" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="500" y="504" width="240" height="16" rx="2" fill="#ffffff"/>
+      <text x="620" y="516" fill="#24242e" font-size="12" text-anchor="middle">7 · FIND PRODUCTS BATCH</text>
+
+      <!-- 8. Silpo MCP --> Recovery Agent: raw candidates -->
+      <line x1="1034" y1="580" x2="160" y2="580" stroke="#6b7280" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-open)"/>
+      <rect x="500" y="548" width="240" height="16" rx="2" fill="#ffffff"/>
+      <text x="620" y="560" fill="#6b7280" font-size="12" text-anchor="middle">8 · PRICE + AVAILABILITY + ID</text>
+
+      <!-- 9. Recovery Agent -> Domain Core: evidence gate + rank -->
+      <line x1="156" y1="624" x2="764" y2="624" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="330" y="592" width="260" height="16" rx="2" fill="#ffffff"/>
+      <text x="460" y="604" fill="#24242e" font-size="12" text-anchor="middle">9 · EVIDENCE GATE + RANK</text>
+
+      <!-- 10. Domain Core --> Recovery Agent: action proposals -->
+      <line x1="764" y1="668" x2="160" y2="668" stroke="#6b7280" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-open)"/>
+      <rect x="330" y="636" width="260" height="16" rx="2" fill="#ffffff"/>
+      <text x="460" y="648" fill="#6b7280" font-size="12" text-anchor="middle">10 · RANKED ACTION PROPOSALS</text>
+
+      <!-- ============ LOOP fragment: per surviving ActionProposal ============ -->
+      <rect x="140" y="700" width="904" height="140" fill="none" stroke="#9ca3af" stroke-width="1"/>
+      <path d="M 140,700 h48 v14 l-8,8 h-40 z" fill="#f7f7fa" stroke="#9ca3af" stroke-width="1"/>
+      <text x="152" y="712" fill="#24242e" font-size="12" font-weight="700">LOOP</text>
+      <text x="300" y="712" fill="#6b7280" font-size="12" font-style="italic">[per surviving ActionProposal]</text>
+
+      <!-- 11. Recovery Agent -> LLM: explain(proposal) -->
+      <line x1="156" y1="752" x2="1034" y2="752" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="480" y="720" width="280" height="16" rx="2" fill="#ffffff"/>
+      <text x="620" y="732" fill="#24242e" font-size="12" text-anchor="middle">11 · EXPLAIN(proposal)</text>
+      <rect x="480" y="768" width="280" height="16" rx="2" fill="#ffffff"/>
+      <text x="620" y="780" fill="#6b7280" font-size="12" text-anchor="middle" font-style="italic">product name quoted as &lt;product_data&gt;</text>
+
+      <!-- 12. LLM --> Recovery Agent: guest text -->
+      <line x1="1034" y1="808" x2="160" y2="808" stroke="#6b7280" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-open)"/>
+      <rect x="500" y="816" width="240" height="16" rx="2" fill="#ffffff"/>
+      <text x="620" y="828" fill="#6b7280" font-size="12" text-anchor="middle">12 · GUEST TEXT (UA)</text>
+
+      <!-- ============ ACTOR BOXES ============ -->
+
+      <!-- Recovery Agent (application) -->
+      <rect x="50" y="110" width="200" height="90" rx="6" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1"/>
+      <rect x="62" y="122" width="44" height="16" rx="2" fill="transparent" stroke="#2c5fc9" stroke-width="0.8"/>
+      <text x="84" y="134" fill="#24242e" font-size="12" text-anchor="middle">APP</text>
+      <text x="150" y="163" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Recovery Agent</text>
+      <text x="150" y="183" fill="#24242e" font-size="12" text-anchor="middle">LangGraph nodes</text>
+
+      <!-- Domain Core (domain) -->
+      <rect x="360" y="110" width="200" height="90" rx="6" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <rect x="372" y="122" width="56" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
+      <text x="400" y="134" fill="#24242e" font-size="12" text-anchor="middle">DOMAIN</text>
+      <text x="460" y="163" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Domain Core</text>
+      <text x="460" y="183" fill="#24242e" font-size="12" text-anchor="middle">diagnose · gate · rank</text>
+
+      <!-- LLM (external, OpenRouter) -->
+      <rect x="670" y="110" width="200" height="90" rx="6" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
+      <rect x="682" y="122" width="40" height="16" rx="2" fill="transparent" stroke="#c9ba5e" stroke-width="0.8"/>
+      <text x="702" y="134" fill="#24242e" font-size="12" text-anchor="middle">EXT</text>
+      <text x="770" y="163" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">LLM</text>
+      <text x="770" y="183" fill="#24242e" font-size="12" text-anchor="middle">OpenRouter · planner/explainer</text>
+
+      <!-- Silpo MCP (external) -->
+      <rect x="940" y="110" width="200" height="90" rx="6" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
+      <rect x="952" y="122" width="40" height="16" rx="2" fill="transparent" stroke="#c9ba5e" stroke-width="0.8"/>
+      <text x="972" y="134" fill="#24242e" font-size="12" text-anchor="middle">EXT</text>
+      <text x="1040" y="163" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Silpo MCP</text>
+      <text x="1040" y="183" fill="#24242e" font-size="12" text-anchor="middle">mcp.silpo.ua</text>
+
+      <!-- ============ LEGEND ============ -->
+      <line x1="20" y1="920" x2="1140" y2="920" stroke="#d1d5db" stroke-width="0.8"/>
+      <text x="20" y="942" fill="#6b7280" font-size="12" font-weight="700" letter-spacing="0.10em">LEGEND</text>
+
+      <rect x="20" y="960" width="18" height="14" rx="2" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1"/>
+      <text x="46" y="971" fill="#24242e" font-size="12">Application layer</text>
+
+      <rect x="230" y="960" width="18" height="14" rx="2" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <text x="256" y="971" fill="#24242e" font-size="12">Domain layer</text>
+
+      <rect x="420" y="960" width="18" height="14" rx="2" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
+      <text x="446" y="971" fill="#24242e" font-size="12">External actor / service</text>
+
+      <line x1="640" y1="967" x2="680" y2="967" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <text x="690" y="971" fill="#24242e" font-size="12">Synchronous call (UML)</text>
+
+      <line x1="920" y1="967" x2="960" y2="967" stroke="#6b7280" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-open)"/>
+      <text x="972" y="971" fill="#24242e" font-size="12">Reply (UML)</text>
+
+      <text x="20" y="1000" fill="#6b7280" font-size="12">Drawn from a captured trace: LangSmith session "lantern", trace id starting 01a077e4, 2026-09-06T18:13Z (tags: g4-live-evidence-gate, criterion-8).</text>
+    </svg></div>
+
+<h2>12. Why this is expected to help, not just work</h2>
 <p>The mechanism above targets a specific, observed gap: the retailer's own MCP server
 already returns more structured detail about why a cart is blocked than the shopping
 app's screen displays. A cart can carry two independent blocking conditions and the
@@ -1484,7 +1761,7 @@ their cart was blocked and fixed it in one step spent less time and fewer action
 doing it than one navigating a generic "add more items" prompt with no further
 detail.</p>
 
-<h2>11. Measured outcome</h2>
+<h2>13. Measured outcome</h2>
 
 <p class="pending">Not yet measured. This section will report recovery completion
 rate, median time-to-recovery versus the app, and disclosure rate — each with its
@@ -1492,5 +1769,5 @@ sample size, never as a bare percentage — once moderated before/after testing 
 them.</p>
 
 
-<p class="meta">Regenerated 2026-09-06T11:05:32+00:00. No external network resources.</p>
+<p class="meta">Regenerated 2026-09-06T18:22:41+00:00. No external network resources.</p>
 </body></html>

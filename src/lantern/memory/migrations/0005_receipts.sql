@@ -1,8 +1,7 @@
--- Plan section 6.1 step 10: "Receipt: «було→стало», фактичні суми,
--- усунені/нові блокери, checkoutWebLink." `verified` records whether the
--- mandatory read-back after a write actually succeeded (CLAUDE.md
--- invariant: an unreachable read-back produces `unverified`, never a
--- successful receipt — DR-12).
+-- A receipt records before/after state, actual sums, resolved/new blockers,
+-- and the checkout web link. `verified` records whether the mandatory
+-- read-back after a write actually succeeded: an unreachable read-back
+-- produces `unverified`, never a successful receipt.
 CREATE TABLE IF NOT EXISTS receipts (
     action_id UUID PRIMARY KEY,
     session_id UUID NOT NULL REFERENCES sessions (session_id),

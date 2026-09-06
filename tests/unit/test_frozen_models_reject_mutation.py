@@ -1,4 +1,4 @@
-"""G3-F25 (round 2, W2): `mypy --strict` does not reject an assignment to a
+"""`mypy --strict` does not reject an assignment to a
 `frozen=True` Pydantic field — it is a runtime-only guarantee. Every
 domain model must actually raise on mutation, checked here rather than
 trusted from the `frozen=True` config alone.

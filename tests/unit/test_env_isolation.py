@@ -1,4 +1,4 @@
-"""Non-regression test for a defect found at G1+G2 stage close: `import
+"""Non-regression test for a real defect: `import
 deepeval` calls `load_dotenv()`, and because deepeval ships a pytest plugin
 it was imported on every run. The whole `.env` therefore reached
 `os.environ` before collection, with two consequences:

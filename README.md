@@ -14,22 +14,32 @@ this project.
 
 ## Status
 
-Infrastructure and domain core complete. The API starts, runs its database migrations
-and opens a pooled LangGraph checkpointer against Postgres; the MCP adapter has a
-dynamic `tools/list` registry with drift detection, a typed error hierarchy and OAuth
-token storage; the fixture pipeline and its schemas exist.
+Infrastructure, domain core, and the LangGraph read/plan/rank path are complete. The
+API starts, runs its database migrations and opens a pooled LangGraph checkpointer
+against Postgres; the MCP adapter has a dynamic `tools/list` registry with drift
+detection and schema-hash quarantine, a typed error hierarchy and OAuth token storage;
+the fixture pipeline and its schemas exist.
 
 The domain core is built and tested against a real cart read from the live Silpo MCP
-server: the normalizer (money as `Decimal`, coordinates as `float`, `null` never
-coerced to zero), the domain rules, the diagnosis with an exact gap computed by code
-rather than by a model, the policy registry with a fail-safe for validation codes it
-does not recognise, and the read-only disclosure layer including the delivery-channel
+server: the normalizer, the domain rules, the diagnosis with an exact gap computed by
+code rather than by a model, the policy registry with a fail-safe for validation codes
+it does not recognise, and the read-only disclosure layer including the delivery-channel
 comparison. It does no I/O at all — an architecture test enforces that, and the whole
 of it runs offline.
 
-The agent graph, the planner and the recovery UI are the next stages. The write path is
+The agent graph now runs end to end through `read → diagnose → compare_channels → plan
+→ collect_and_gate → rank → explain`, reaching a terminal `awaiting_consent` state with
+real, Evidence-Gated candidates — proven both offline (fixture-driven tests) and live,
+against a real Silpo cart. The planner and explainer are real LLM calls (OpenRouter);
+a 28-prompt evaluation picked the cheapest explainer candidate that clears a
+Ukrainian-language quality bar with zero critical errors. The write path is
 deliberately unreachable until the Write Guard is built: no code in this repository can
-change a cart today.
+change a cart today, and no LLM output can reach a write tool even after that guard
+exists — a planner's structured output has no field a candidate's price or id could be
+smuggled through.
+
+The recovery UI, live production wiring of the MCP fetchers into an API route, and the
+Write Guard itself are the next stages.
 
 ## Problem
 

@@ -1,15 +1,14 @@
 """Live, local-only capture of one MCP tool call's raw response, for
 `scripts/sanitize_fixture.py` to turn into a committable fixture. Never run
-in CI (plan section 21.3) — needs a completed one-time phone+OTP login
-(`DiskTokenStorage`, R1 in the G1+G2 stage spec) before it can do
-anything at all.
+in CI — needs a completed one-time phone+OTP login (`DiskTokenStorage`)
+before it can do anything at all.
 
 Uses the raw `mcp` SDK directly (`ClientSession` + `streamablehttp_client`),
 matching this project's own MCP client (`src/lantern/mcp/client.py`) — not
 the donor's `langchain_mcp_adapters` wrapper, which this project does not
 depend on (confirmed: `langchain-mcp-adapters` is not in requirements.txt;
 that wrapper exists to turn MCP tools into LangChain tools for an
-LLM-tool-calling loop, a G4 concern this stage does not touch).
+LLM-tool-calling loop this project does not need).
 
 Not yet run live — the first run is the human OAuth step this script exists
 to require. Signatures below are measured against the installed

@@ -1,6 +1,6 @@
-"""G3-F21: `Gap` must never be a Pydantic field type anywhere in `domain/`
+"""`Gap` must never be a Pydantic field type anywhere in `domain/`
 — it has no `__get_pydantic_core_schema__` and loses its own subclass
-identity under ordinary arithmetic (measured at kickoff verification).
+identity under ordinary arithmetic (measured directly).
 An AST scan, not a single example, because a future addition could
 reintroduce the mistake in a module this test doesn't otherwise import.
 """

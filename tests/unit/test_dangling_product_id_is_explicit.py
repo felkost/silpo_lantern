@@ -1,4 +1,4 @@
-"""G3-F19: a validation's productId that matches no line item in the cart
+"""A validation's productId that matches no line item in the cart
 becomes the explicit string "unresolved", never None and never a crash.
 """
 

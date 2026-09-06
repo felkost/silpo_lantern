@@ -1,12 +1,11 @@
-"""DR-08 (plan section 10): a price:0 line item is not automatically "free"
+"""DR-08: a price:0 line item is not automatically "free"
 or "unavailable" — check the code, stock, and context; without proof of
-suitability, it is not a candidate. Implemented at G3
-(`src/lantern/domain/diagnosis.py`).
+suitability, it is not a candidate (`src/lantern/domain/diagnosis.py`).
 
-Evidence: `[I6]` section 2 — `Sigma(price x quantity)` exactly equals
+`Sigma(price x quantity)` exactly equals
 `productsTotal`; unavailable items are not excluded from the sum, they get
-`price: 0`. `[I5]` section 13.1 records the author's own prior hypothesis
-("unavailable items are excluded from the sum") being disproven by this
+`price: 0`. An earlier hypothesis
+("unavailable items are excluded from the sum") was disproven by this
 same arithmetic check on live data — the corrected rule below is the one
 that survived that check.
 """

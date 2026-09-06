@@ -1,6 +1,6 @@
-"""A5 (kickoff audit): the declared DR-01 fixture feeds money as a string,
-but the live payload gives a JSON float (`productsTotal: 404.89`,
-decision D12). `to_money` must accept both, always converting via
+"""The declared DR-01 fixture feeds money as a string,
+but the live payload gives a JSON float (`productsTotal: 404.89`).
+`to_money` must accept both, always converting via
 `Decimal(str(v))` so the float's literal decimal digits are kept rather
 than its binary floating-point approximation.
 """

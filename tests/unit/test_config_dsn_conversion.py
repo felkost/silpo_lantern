@@ -1,6 +1,6 @@
-"""D-G1-01 / F1 / F15: the checkpointer needs a bare
+"""The checkpointer needs a bare
 `postgresql://` DSN, but `DATABASE_URL` stays in its SQLAlchemy-dialect form
-(`postgresql+psycopg://`) as the single source of truth (D15). One pure
+(`postgresql+psycopg://`) as the single source of truth. One pure
 conversion function is the only place that translates between the two, so the
 checkpointer and the SQLAlchemy engine can never silently drift onto two
 different connection strings.
@@ -24,7 +24,7 @@ def test_preserves_query_parameters() -> None:
 
 
 def test_rejects_a_dsn_already_missing_the_dialect_suffix() -> None:
-    """F15: fail loud rather than silently pass through a DSN shape the
+    """Fail loud rather than silently pass through a DSN shape the
     checkpointer would reject anyway with a less diagnosable error.
     """
     with pytest.raises(ValueError):

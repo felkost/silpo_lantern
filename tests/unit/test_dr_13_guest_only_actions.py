@@ -1,4 +1,4 @@
-"""DR-13 (plan section 10): checkout, payment, and age confirmation stay
+"""DR-13: checkout, payment, and age confirmation stay
 the guest's own actions. `GUEST_ONLY_ACTIONS` gives the rule a real
 artefact a test can check against, rather than only living in a comment.
 """
@@ -26,7 +26,7 @@ def test_action_proposal_naming_a_guest_only_tool_is_detectable() -> None:
         canonical_args={},
         evidence=[],
     )
-    # The model itself doesn't forbid construction (that's a G4/G5+G6
+    # The model itself doesn't forbid construction (that's a later
     # authorization-time check) — but the shape makes the violation
     # detectable by a simple membership test, which is what this rule
     # actually needs downstream.

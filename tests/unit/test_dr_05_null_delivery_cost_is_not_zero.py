@@ -1,5 +1,5 @@
-"""DR-05 (plan section 10): deliveryCost:null is "not applicable", never
-coerced to zero. G3-F5.
+"""DR-05: deliveryCost:null is "not applicable", never
+coerced to zero.
 """
 
 from src.lantern.domain.normalizer import normalize_cart

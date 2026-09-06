@@ -1,4 +1,4 @@
-"""G3-F6: money arithmetic never uses `float` — `to_money` is the only
+"""Money arithmetic never uses `float` — `to_money` is the only
 conversion path (always via `Decimal(str(v))`), and `sum_line_items`
 requires its inputs to already be `Decimal`, asserting rather than
 silently coercing a `float` that could reintroduce binary rounding error.

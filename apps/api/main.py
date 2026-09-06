@@ -1,15 +1,15 @@
-"""FastAPI app entrypoint (D-G1-03, the G1+G2 stage spec). `GET /health`
-is liveness only — no I/O — so it stays a free, offline contract test
-(confirmed: a bare `TestClient(app).get(...)`, without `with`, never runs
-`lifespan` in this FastAPI/Starlette version — the health check's own
-network-free guarantee does not depend on the lifespan below being absent).
+"""FastAPI app entrypoint. `GET /health` is liveness only — no I/O — so it
+stays a free, offline contract test (confirmed: a bare
+`TestClient(app).get(...)`, without `with`, never runs `lifespan` in this
+FastAPI/Starlette version — the health check's own network-free guarantee
+does not depend on the lifespan below being absent).
 
 The MCP client is deliberately **not** wired into this lifespan yet: no
-route exists this stage that consumes a live MCP session, and the OAuth
-token doesn't exist until a human completes the one-time phone+OTP login
-(R1, the G1+G2 stage spec) — starting the app would otherwise fail
-before it could even serve `/health`. It becomes lifespan-managed once G3+
-adds the first route that needs it.
+route exists yet that consumes a live MCP session, and the OAuth token
+doesn't exist until a human completes the one-time phone+OTP login —
+starting the app would otherwise fail before it could even serve
+`/health`. It becomes lifespan-managed once a future stage adds the first
+route that needs it.
 """
 
 import asyncio

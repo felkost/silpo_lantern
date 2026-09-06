@@ -6,8 +6,8 @@ Two measured reasons this lives here rather than in the shell:
   Bash setup: the Neon DSN contains `&` in its query string, which bash
   interprets rather than assigning, so `DATABASE_URL` silently never reaches
   the environment.
-- Until G1+G2 close, the variable arrived by accident anyway — `deepeval`'s
-  pytest plugin called `load_dotenv()` on import. That is now disabled
+- Previously the variable arrived by accident anyway — `deepeval`'s pytest
+  plugin called `load_dotenv()` on import. That is now disabled
   (`pyproject.toml`), so the loading has to be deliberate.
 
 This runs at collection time, before each test module's module-level
