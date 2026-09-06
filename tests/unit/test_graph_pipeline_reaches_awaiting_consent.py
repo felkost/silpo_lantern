@@ -65,10 +65,19 @@ _FIND_PRODUCTS_RESPONSE = {
             "query": "Молоко «Галичина» 2,5%",
             "products": [
                 {
+                    # G5+G6 (D-G5-03): `id`/`companyId`/`branchId` are the
+                    # write tool's own argument fields — required here
+                    # since the offline fixture went end-to-end.
+                    "id": "11111111-1111-1111-1111-111111111111",
                     "name": "Молоко «Галичина» 2,5%",
                     "slug": "moloko-halychyna",
                     "price": 39.99,
+                    "stock": 600,
+                    "weighted": False,
+                    "step": 1,
                     "available": True,
+                    "companyId": "22222222-2222-2222-2222-222222222222",
+                    "branchId": "33333333-3333-3333-3333-333333333333",
                     "externalProductId": 795319,
                 }
             ],
@@ -140,9 +149,16 @@ def test_pipeline_reaches_awaiting_consent_with_a_real_candidate() -> None:
     assert proposal.expected_delta == Decimal("39.99")
     assert proposal.guest_text_uk != ""
     assert proposal.canonical_args == {
-        "productId": "795319",
-        "quantity": 1,
-        "addQuantity": False,
+        "shoppingCartId": "cart-1",
+        "products": [
+            {
+                "productId": "11111111-1111-1111-1111-111111111111",
+                "companyId": "22222222-2222-2222-2222-222222222222",
+                "branchId": "33333333-3333-3333-3333-333333333333",
+                "quantity": 1,
+                "addQuantity": False,
+            }
+        ],
     }
 
 

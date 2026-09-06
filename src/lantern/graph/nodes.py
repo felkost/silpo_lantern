@@ -273,7 +273,8 @@ def make_collect_and_gate_node(
         proposals = build_action_proposals(
             raw_candidates=raw_candidates,
             evidence=evidence,
-            quantity=intent.quantity_hint,
+            quantity_increment=intent.quantity_hint,
+            cart=cart,
         )
         return {
             "candidates": proposals,
