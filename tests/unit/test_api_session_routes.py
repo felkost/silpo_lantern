@@ -23,7 +23,14 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from apps.api import routes as routes_module
-from src.lantern.domain.models import ActionProposal, Cart, Diagnosis, EvidenceTuple
+from src.lantern.domain.disclosure import DisclosureReport
+from src.lantern.domain.models import (
+    ActionProposal,
+    Cart,
+    Diagnosis,
+    EvidenceTuple,
+    Validation,
+)
 
 _NOW = datetime(2026, 9, 7, 12, 0, 0, tzinfo=timezone.utc)
 
@@ -68,6 +75,23 @@ def _diagnosis() -> Diagnosis:
         gap_is_borderline=False,
         primary_code="order.cost.min",
         threshold_source="validation_context",
+    )
+
+
+def _disclosure() -> DisclosureReport:
+    """G7: `diagnose_node` always returns `disclosure` alongside
+    `diagnosis` (`nodes.py:143-146`) -- carries one non-blocker validation
+    so `test_events_streams_the_read_pipeline_node_by_node` below can
+    assert the SSE frame actually lists it."""
+    return DisclosureReport(
+        blockers=[],
+        disclosures=[
+            Validation(
+                level="info", type="paymentTypes", code="order.payment_types.disabled"
+            )
+        ],
+        gap=Decimal("194.11"),
+        gap_is_borderline=False,
     )
 
 
@@ -131,6 +155,8 @@ def _awaiting_consent_state() -> Dict[str, Any]:
         "error": None,
         "cart": Cart(cart_id="cart-1", products_total=Decimal("404.89")),
         "diagnosis": _diagnosis(),
+        "disclosure": _disclosure(),
+        "channel_comparison": [],
         "candidates": [_proposal()],
         "consent_action_id": None,
         "consent": None,
@@ -152,7 +178,16 @@ def _consented_state() -> Dict[str, Any]:
 def _read_pipeline_chunks() -> List[Dict[str, Any]]:
     return [
         {"read": {"cart": Cart(cart_id="cart-1", products_total=Decimal("404.89"))}},
-        {"diagnose": {"diagnosis": _diagnosis(), "status": "diagnosed"}},
+        {
+            "diagnose": {
+                "diagnosis": _diagnosis(),
+                "disclosure": _disclosure(),
+                "status": "diagnosed",
+            }
+        },
+        # G7: the diagnosis SSE frame is emitted on THIS chunk, not
+        # "diagnose" -- `channel_comparison` only exists here.
+        {"compare_channels": {"channel_snapshots": [], "channel_comparison": []}},
         {"explain": {"candidates": [_proposal()], "status": "awaiting_consent"}},
         {"__interrupt__": ()},
     ]
@@ -217,6 +252,13 @@ def test_events_streams_the_read_pipeline_node_by_node(
     assert '"primary_code": "order.cost.min"' in body
     assert '"gap": "194.11"' in body
     assert '"session_id": "s1"' in body
+    # G7 (D-G7-03): the disclosure layer and channel comparison must reach
+    # this frame -- an adversarial audit of the G7 plan found the naive
+    # fix (emit on the `diagnose` chunk) ships `channels: []` because
+    # `channel_comparison` does not exist until the LATER
+    # `compare_channels` chunk arrives.
+    assert '"order.payment_types.disabled"' in body
+    assert '"channels": []' in body  # this fixture's own comparison is empty
     # First call for this session: a fresh state was passed, not None.
     assert graph.astream_inputs[0] is not None
 

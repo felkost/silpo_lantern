@@ -1,6 +1,15 @@
 """D-G5-05: `ToolRegistry.tool_schema_hashes` returns per-tool
 (reviewed_hash, live_hash, is_quarantined) -- the exact shape the Write
 Guard needs -- distinct from the whole-array `schema_hash` drift tripwire.
+
+G7 (D-G7-08): points at `tools_list_2026-09-07.json`, not the
+`...-09-05` fixture -- a live write attempt (G7 stage plan section 4)
+found `silpo_add_or_update_cart_products`'s description had drifted from
+the 09-05 snapshot (clarifying prose only, confirmed structurally
+identical `inputSchema`), and `reviewed_tools.json` was regenerated from
+this newer live capture (`scripts/g5_regenerate_live_tool_hashes.py`,
+author-run). The 09-05 file is untouched: several docs quote it verbatim
+by exact date/path for OTHER tools this drift did not touch.
 """
 
 import json
@@ -11,7 +20,7 @@ from src.lantern.config import PROJECT_ROOT
 from src.lantern.mcp.client import ToolRegistry, compute_per_tool_schema_hashes
 
 FIXTURE_PATH = (
-    PROJECT_ROOT / "tests" / "contract" / "fixtures" / "tools_list_2026-09-05.json"
+    PROJECT_ROOT / "tests" / "contract" / "fixtures" / "tools_list_2026-09-07.json"
 )
 
 

@@ -11,7 +11,7 @@ every sanitized fixture still needs a human review pass before commit: does
 an allowed field's *value* look like free text that could carry PII.
 """
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 # Product/pricing-level fields only — no address, contact, or free-text
 # fields. Extend this list only after reviewing what a real capture
@@ -69,6 +69,27 @@ ALLOWED_KEYS = frozenset(
         "success",
         "exists",
         "shoppingCartId",
+        # G7 (D-G7-07): widened for `find_products_batch`/`time_slots`/
+        # `delivery_types`/the write response — sanitizing any of these
+        # with the pre-G7 list silently produced `{}` (the same failure
+        # mode this file's own 2026-09-06 note already records for the
+        # cart shape). `queries`/`query` (search echo), `step`/`available`/
+        # `externalProductId` (find_products_batch's own product shape),
+        # `slots`/`deliveryCostMap` (time_slots), `options` (delivery_types),
+        # `summary` (the write response's `{success, summary, products}`).
+        # `id` is here for the same reason `productId`/`shoppingCartId`
+        # already are — kept only so it can reach the pseudonymisation
+        # step in `_PSEUDONYMISED_KEYS` below, never passed through raw.
+        "id",
+        "queries",
+        "query",
+        "step",
+        "available",
+        "externalProductId",
+        "slots",
+        "deliveryCostMap",
+        "options",
+        "summary",
     }
 )
 
@@ -86,6 +107,13 @@ _PSEUDONYMISED_KEYS = {
     "branchId": "test_branch",
     "cartId": "test_cart",
     "shoppingCartId": "test_cart",
+    # G7 (D-G7-07): `id` is a bare identifier used across several response
+    # shapes (cart id, shipment id, a find_products_batch product's own
+    # id) -- pseudonymised like the others, never allow-listed raw. The
+    # alias map is keyed by VALUE, so an `id` that happens to equal a
+    # `shoppingCartId`/`productId` value elsewhere in the same payload
+    # lands on the same replacement automatically.
+    "id": "test_id",
 }
 
 # `context` is a free-form object the server fills as it likes, so it is not
@@ -104,7 +132,9 @@ _ALLOWED_CONTEXT_KEYS = frozenset(
 )
 
 
-def sanitize_payload(raw: Dict[str, Any]) -> Dict[str, Any]:
+def sanitize_payload(
+    raw: Dict[str, Any], aliases: Optional[Dict[str, str]] = None
+) -> Dict[str, Any]:
     """Keeps only allow-listed keys, recursing into nested dicts and lists
     of dicts so a product list's own PII-shaped fields (a customer note, for
     instance) are dropped too, not just the top level.
@@ -112,8 +142,20 @@ def sanitize_payload(raw: Dict[str, Any]) -> Dict[str, Any]:
     Stable identifiers are pseudonymised rather than passed through or
     dropped, so the fixture keeps its internal references without carrying
     real ids.
+
+    `aliases`: G7 (D-G7-07). Defaults to a fresh map, same as before --
+    but a caller sanitizing several responses that belong to ONE bundle
+    (a cart read, its own write response, a catalogue lookup) must pass
+    the SAME dict across every call, mutated in place. Without this, the
+    same real cart id gets a different alias in each response --
+    referential integrity held within one payload and broke across a
+    multi-call bundle, and `authorize_write` then refuses on "cart id
+    changed since consent was granted" for a reason that looks like a
+    graph bug, not a sanitization one.
     """
-    return _sanitize_dict(raw, aliases={})
+    if aliases is None:
+        aliases = {}
+    return _sanitize_dict(raw, aliases=aliases)
 
 
 def _sanitize_dict(raw: Dict[str, Any], aliases: Dict[str, str]) -> Dict[str, Any]:

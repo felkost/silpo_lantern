@@ -1,4 +1,4 @@
-# recovery_planner — v1
+# recovery_planner — v2
 
 **Model:** `google/gemini-3.8-flash` (config/models.yaml) — chosen for
 reliable structured output and tool-choice at a low price. Its own
@@ -55,7 +55,6 @@ carry no `product_id`/`price`/`availability`-shaped field:
 ```json
 {
   "search_terms": ["молоко", "хліб"],
-  "quantity_hint": 1,
   "note": ""
 }
 ```
@@ -65,6 +64,15 @@ clearing the gap in the guest's own existing branch/delivery context —
 never article codes invented by the model (an `externalProductId` is a real
 fact from a live catalogue lookup, not something to guess at here).
 
+**v2 drops `quantity_hint`.** How many units close a gap is arithmetic
+(gap divided by price, rounded to catalogue `step`, bounded by stock), and
+`CLAUDE.md` reserves arithmetic for code — `build_action_proposals` has
+derived quantity this way, ignoring `quantity_hint`, since G5+G6 (four live
+runs showed the model always returned 1, which under-proposed against a
+real gap). `SearchIntent.quantity_hint` carried the field and the note
+explaining why nothing read it until this version; v2 is the deliberate
+removal, not a silent cleanup riding on an unrelated change.
+
 ## Content
 
 ```
@@ -73,9 +81,7 @@ short search terms for products that could help clear the blocking gap —
 relevant to what the guest's cart already contains, in the same branch and
 delivery context. Prefer terms close to items already in the cart (e.g. if
 the cart has dairy, suggest another dairy item) over generic filler.
-Suggest the minimum plausible quantity — never suggest more than needed to
-plausibly clear the gap. Output only the SearchIntent JSON — no prose, no
-explanation, no markdown.
+Output only the SearchIntent JSON — no prose, no explanation, no markdown.
 
 Diagnosis: {diagnosis_json}
 Disclosure: {disclosure_json}
@@ -84,7 +90,5 @@ Available tools (for your own awareness only — you do not call them; a
 later step does): {planner_tool_view_json}
 ```
 
-**Version notes:** v1. No live model has been run against this text yet —
-the first live use is still ahead, after which this file gains a
-"measured" section with real token counts and any prompt revision the
-live run's own output shows is needed.
+**Version notes:** v2 (G7). Drops `quantity_hint` from both the schema and
+this text — see the output-contract note above. No other change from v1.

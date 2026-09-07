@@ -12,7 +12,10 @@
       "productsTotal well below minOrderCost — a clear order.cost.min block"
     ],
     "GD": [],
-    "RG": []
+    "RG": [],
+    "replay": [
+      "the full hero flow (read -> ... -> receipt), including a second consent+write round (D42), replayed offline against the REAL compiled graph -- no MCP/LLM/Postgres call"
+    ]
   },
   "fixtures": [
     {
@@ -72,6 +75,12 @@
       "origin": "recorded",
       "path": "datasets/fixtures/sanitized/cart_multi_item_diverse.json",
       "provenance": "live capture 2026-09-06, 11-item diverse cart (D16); identifiers pseudonymised, address dropped"
+    },
+    {
+      "fixture_id": "replay_hero_order_cost_min",
+      "origin": "synthetic",
+      "path": "datasets/fixtures/replay/hero_order_cost_min.json",
+      "provenance": "G7: replays the REAL compiled graph offline (tests/e2e/test_replay_hero_bundle.py) -- built from the same synthetic cart tests/unit/test_write_path_interrupt_and_resume.py uses, not a live capture. A live-recorded bundle is scripts/record_replay_bundle.py's job, pending the author's go-ahead for a live MCP write."
     }
   ],
   "generated_at": "2026-09-06T11:15:20.576549+00:00",

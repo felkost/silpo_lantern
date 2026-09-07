@@ -16,24 +16,19 @@ class SearchIntent(BaseModel):
     `collect_options` never trusts a price or an id from here, because
     none exists to trust.
 
-    `quantity_hint` is NO LONGER CONSULTED by anything. It decided how
+    `quantity_hint` was removed at G7 (`planner_v2.md`). It decided how
     many units each proposal offered until four live runs showed what that
     meant in practice: the model returned 1 every time, so a 208.10 gap
     was answered with a 9.34 drink and the guest could consent to a write
     that could not unblock their cart. How many units close a gap is
-    arithmetic, and `CLAUDE.md` reserves arithmetic for code, so
-    `build_action_proposals` now derives it from the gap and the price.
-
-    The field is still declared, and the planner prompt still asks for it,
-    because removing it changes `planner_v1.md`'s content and a changed
-    prompt needs a new version -- which belongs in a deliberate version
-    bump, not as a side effect of a bug fix.
+    arithmetic, and `CLAUDE.md` reserves arithmetic for code —
+    `build_action_proposals` derives it from the gap and the price and
+    never read this field even while it was declared.
     """
 
     model_config = ConfigDict(frozen=True)
 
     search_terms: List[str] = Field(min_length=1, max_length=5)
-    quantity_hint: int = Field(default=1, ge=1, le=10)
     note: str = ""
 
 

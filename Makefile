@@ -8,7 +8,7 @@ lint:
 	mypy src apps
 
 test:
-	pytest -q tests/unit tests/contract
+	pytest -q tests/unit tests/contract tests/e2e
 
 # D-G1-04: needs a real Neon Postgres (DATABASE_URL
 # in the environment) — never part of `make gate`/CI, which has no reachable

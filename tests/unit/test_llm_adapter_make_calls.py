@@ -31,7 +31,7 @@ class _FakeLLM:
 def test_planner_call_sends_system_and_human_messages_and_returns_the_llm_result() -> (
     None
 ):
-    canned = SearchIntent(search_terms=["молоко"], quantity_hint=1)
+    canned = SearchIntent(search_terms=["молоко"])
     fake_llm = _FakeLLM(canned)
     state = new_recovery_state(
         session_id="s1", trace_id="t1", now=datetime.now(timezone.utc)

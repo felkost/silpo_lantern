@@ -107,7 +107,7 @@ _DELIVERY_TYPES_RESPONSE: Dict[str, Any] = {
 
 
 def _fake_planner(state: Any) -> SearchIntent:
-    return SearchIntent(search_terms=["Молоко «Галичина» 2,5%"], quantity_hint=1)
+    return SearchIntent(search_terms=["Молоко «Галичина» 2,5%"])
 
 
 def _fake_explainer(proposal: Any) -> ExplainerOutput:

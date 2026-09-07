@@ -38,6 +38,16 @@ from src.lantern.graph.tool_view import (
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 _PROMPTS_DIR = Path(__file__).resolve().parent.parent / "prompts"
 
+# G7 (D-G7-02): the single source for which prompt file version is live.
+# Previously duplicated as a bare string literal in three places
+# (`build.py`'s and `production.py`'s version tuples, and the
+# `load_prompt_content(...)` call below) that could drift from each other
+# with nothing to notice -- `test_declared_stage_artifacts.py`-style test
+# now asserts `build.py`'s and `production.py`'s tuples agree, and both
+# import the constant instead of retyping it.
+PLANNER_PROMPT_VERSION = "planner_v2"
+EXPLAINER_PROMPT_VERSION = "explainer_v1"
+
 
 class StructuredLLM(Protocol):
     """Duck-typed: anything with `.invoke(messages) -> T` — a real
@@ -87,7 +97,7 @@ def _dump(value: Any) -> str:
 def render_planner_prompt(
     state: RecoveryState, tool_view: List[PlannerVisibleTool]
 ) -> str:
-    template = load_prompt_content("planner_v1")
+    template = load_prompt_content(PLANNER_PROMPT_VERSION)
     return template.format(
         diagnosis_json=_dump(state["diagnosis"]),
         disclosure_json=_dump(state["disclosure"]),
@@ -102,7 +112,7 @@ def render_explainer_prompt(proposal: ActionProposal) -> str:
     """The product name reaches this prompt only inside a `<product_data>`
     block (`tool_view.quote_product_text_as_data`) — never as bare text an
     injected instruction could blend into."""
-    template = load_prompt_content("explainer_v1")
+    template = load_prompt_content(EXPLAINER_PROMPT_VERSION)
     summary = {
         "product_name": quote_product_text_as_data(proposal.product_name),
         "quantity": str(proposal.quantity),

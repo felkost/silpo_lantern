@@ -29,6 +29,10 @@ from src.lantern.graph.nodes import (
     make_write_guard_node,
     rank_node,
 )
+from src.lantern.graph.llm_adapter import (
+    EXPLAINER_PROMPT_VERSION,
+    PLANNER_PROMPT_VERSION,
+)
 from src.lantern.graph.schemas import ExplainerOutput, SearchIntent
 from src.lantern.graph.state import RecoveryState
 from src.lantern.memory.repository import IdempotencyState
@@ -195,9 +199,9 @@ def build_recovery_graph(
         "schema_hash": tools_schema_hash,
         "policy_registry_version": policy_registry_version(),
         "planner_model_id": planner_model_id,
-        "planner_prompt_version": "planner_v1",
+        "planner_prompt_version": PLANNER_PROMPT_VERSION,
         "explainer_model_id": explainer_model_id,
-        "explainer_prompt_version": "explainer_v1",
+        "explainer_prompt_version": EXPLAINER_PROMPT_VERSION,
     }
     traced_planner_call = traced_llm_call(
         "planner", planner_call, redact_planner_input, version_tuple, trace_tags
