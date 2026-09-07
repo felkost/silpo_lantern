@@ -69,6 +69,40 @@ def redact_explainer_input(kwargs: Mapping[str, Any]) -> Dict[str, Any]:
     }
 
 
+def redact_write_input(kwargs: Mapping[str, Any]) -> Dict[str, Any]:
+    """What the WRITE call traces (D-G5-13). Every identifier in
+    `canonical_args` is dropped: the cart id and the product ids identify a
+    real person's real basket, and a third-party trace is exactly the place
+    they must not appear. What a reviewer needs is that a write happened,
+    against which tool, with how many lines and at what quantity -- the
+    money and the identity are already in the receipt row, which stays in
+    this project's own database.
+
+    Deliberately not `dict(kwargs)` on the fallback path, unlike the two
+    LLM redactors above: those summarise inputs that carry no identifiers
+    worth hiding, while an unrecognised shape here would leak the raw
+    arguments verbatim. An unexpected shape traces its own shape, nothing
+    more.
+    """
+    args = kwargs.get("args")
+    tool_name = kwargs.get("tool_name")
+    if not isinstance(args, Mapping):
+        return {"tool_name": tool_name, "args": "<unrecognised shape, not traced>"}
+
+    products = args.get("products")
+    lines = products if isinstance(products, list) else []
+    return {
+        "tool_name": tool_name,
+        "product_count": len(lines),
+        "quantities": [
+            line.get("quantity") for line in lines if isinstance(line, Mapping)
+        ],
+        "add_quantity": [
+            line.get("addQuantity") for line in lines if isinstance(line, Mapping)
+        ],
+    }
+
+
 def traced_llm_call(
     name: str,
     fn: Callable[..., T],

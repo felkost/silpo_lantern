@@ -35,6 +35,7 @@ from src.lantern.memory.repository import IdempotencyState
 from src.lantern.observability.tracer import (
     redact_explainer_input,
     redact_planner_input,
+    redact_write_input,
     traced_llm_call,
 )
 from src.lantern.policies.loader import DEFAULT_REGISTRY_PATH, PolicyRegistry
@@ -203,6 +204,13 @@ def build_recovery_graph(
     traced_explainer_call = traced_llm_call(
         "explainer", explainer_call, redact_explainer_input, version_tuple, trace_tags
     )
+    # D-G5-13: the write gets a span of its own, through the same wrapper.
+    # Without this the one call that changes a guest's cart was the only
+    # step in the graph leaving no trace at all -- found by the pre-merge
+    # audit, after the live runs had already happened.
+    traced_call_write_tool = traced_llm_call(
+        "write", call_write_tool, redact_write_input, version_tuple, trace_tags
+    )
 
     read_node = make_read_node(fetch_my_cart, fetch_cart_by_id)
     diagnose_node = make_diagnose_node(registry)
@@ -216,7 +224,7 @@ def build_recovery_graph(
         load_consent, fetch_my_cart, fetch_cart_by_id, tool_schema_hashes, now
     )
     write_and_readback_node = make_write_and_readback_node(
-        call_write_tool, fetch_cart_by_id, claim_and_consume, mark_action, now
+        traced_call_write_tool, fetch_cart_by_id, claim_and_consume, mark_action, now
     )
     persist_receipt_node = make_persist_receipt_node(save_receipt)
 

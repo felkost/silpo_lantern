@@ -1,10 +1,15 @@
 """Closes the Definition-of-Done requirement that a server/release/schema
 hash and app/prompt/policy/model versions appear in the trace: `build.py`
 constructs `version_tuple` from its own `tools_schema_hash` parameter and
-passes it to `traced_llm_call` for BOTH the planner and explainer calls —
-this test proves that wiring end to end without needing live tracing
-enabled, by spying on `traced_llm_call` itself rather than on a real
-LangSmith run.
+passes it to `traced_llm_call` for every traced call — this test proves
+that wiring end to end without needing live tracing enabled, by spying on
+`traced_llm_call` itself rather than on a real LangSmith run.
+
+The set of traced calls is asserted exactly, not by membership: it grew
+from two to three when the write got a span of its own (D-G5-13), and it
+had been two for a whole stage during which the one call that changes a
+guest's cart was the only step emitting nothing. An exact set is what
+makes the next such omission fail here instead of going unnoticed.
 """
 
 from datetime import datetime, timezone
@@ -24,7 +29,7 @@ def _noop_explainer(proposal: Any) -> ExplainerOutput:
     return ExplainerOutput(action_id="a1", guest_text_uk="x")
 
 
-def test_tools_schema_hash_reaches_both_the_planner_and_explainer_trace() -> None:
+def test_tools_schema_hash_reaches_every_traced_call() -> None:
     calls: List[Dict[str, Any]] = []
 
     def spy_traced_llm_call(name, fn, process_inputs, version_tuple=None, tags=None):
@@ -50,7 +55,7 @@ def test_tools_schema_hash_reaches_both_the_planner_and_explainer_trace() -> Non
         )
 
     names = {c["name"] for c in calls}
-    assert names == {"planner", "explainer"}
+    assert names == {"planner", "explainer", "write"}
     for call in calls:
         assert call["version_tuple"]["schema_hash"] == "abc123def456"
         assert call["version_tuple"]["policy_registry_version"] != ""
