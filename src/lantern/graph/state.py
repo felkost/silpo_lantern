@@ -39,6 +39,15 @@ from src.lantern.graph.schemas import SearchIntent
 # Starting values for calibration, not yet a measured value: declared
 # policy constants, revisited once live runs give real usage numbers.
 MAX_CYCLES = 12
+# How many consent+write rounds one session may run. A second round exists
+# because the amount a write actually moves cannot be known in advance:
+# measured live, the catalogue advertised 96.49 for a product the cart then
+# priced at 86.84, leaving the guest 2.98 short of the threshold after a
+# write that was correct in every other respect. Three is a starting value
+# like the constants above, not a measured one -- each round costs a
+# planner call, an explainer call and several MCP reads, and asks the guest
+# to consent again.
+MAX_WRITE_ROUNDS = 3
 MAX_MCP_ATTEMPTS = 30
 MAX_TOKENS = 60_000
 ACTIVE_EXECUTION_SECONDS = 90
@@ -84,6 +93,7 @@ class RecoveryState(TypedDict):
     status: RecoveryStatus
     error: Optional[str]
     cycles_used: int
+    write_rounds_used: int
     mcp_attempts_used: int
     tokens_used: int
     deadline: datetime
@@ -134,6 +144,7 @@ def new_recovery_state(
         status="reading",
         error=None,
         cycles_used=0,
+        write_rounds_used=0,
         mcp_attempts_used=0,
         tokens_used=0,
         deadline=now + timedelta(seconds=ACTIVE_EXECUTION_SECONDS),

@@ -274,4 +274,12 @@ class Receipt(BaseModel):
     expected_delta: Optional[Money] = None
     actual_delta: Optional[Money] = None
     trace_id: Optional[str] = None
+    # A verified write and a recovered cart are different facts, and a
+    # live run proved it: the write landed exactly as consented, the
+    # receipt read `receipt`, and the guest's cart was still blocked by
+    # 2.98 UAH because the cart applied a lower price than the catalogue
+    # advertised. `status` describes the write; these two describe whether
+    # the guest actually got what they asked for.
+    blocker_cleared: bool = False
+    remaining_gap: Optional[Money] = None
     created_at: datetime

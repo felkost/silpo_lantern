@@ -6,6 +6,7 @@ into `unverified` rather than letting the exception escape.
 from decimal import Decimal
 
 from src.lantern.domain.models import Cart, LineItem, Validation
+from src.lantern.graph.nodes import _recovery_outcome
 from src.lantern.safety.write_guard import finalize_write_outcome
 
 _RESPONSE = {"success": True, "summary": "ok", "products": []}
@@ -209,3 +210,42 @@ def test_identity_matches_but_the_cart_priced_it_differently_is_a_receipt() -> N
     assert outcome.actual_delta == Decimal("8.41")
     assert "expected 9.34" in outcome.reason
     assert "actual 8.41" in outcome.reason
+
+
+def test_a_verified_write_that_leaves_the_cart_blocked_says_so() -> None:
+    """The distinction a live run forced: the write landed exactly as
+    consented and `status` read `receipt`, while the guest's cart was still
+    blocked by 2.98 because the cart priced the product below what the
+    catalogue advertised. `status` answers "did the write do what we
+    agreed"; `blocker_cleared`/`remaining_gap` answer "can I check out now",
+    and only the second is what the guest asked.
+    """
+    still_blocked = _cart(
+        "596.02",
+        products=[
+            LineItem(
+                product_id="p1",
+                name="Tea",
+                quantity=Decimal("1"),
+                price=Decimal("86.84"),
+            )
+        ],
+        validations=[
+            Validation(
+                level="error",
+                type="order",
+                code="order.cost.min",
+                context={"orderCostMin": 599},
+            )
+        ],
+    )
+
+    cleared, remaining = _recovery_outcome(still_blocked, "order.cost.min")
+    assert cleared is False
+    assert remaining == Decimal("2.98")
+
+    unblocked = _cart("606.21", products=still_blocked.products, validations=[])
+    assert _recovery_outcome(unblocked, "order.cost.min") == (True, None)
+
+    # An unreachable read-back proves nothing, so it never reads as cleared.
+    assert _recovery_outcome(None, "order.cost.min") == (False, None)

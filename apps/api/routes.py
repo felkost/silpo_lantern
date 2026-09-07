@@ -172,6 +172,31 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
                 },
             )
 
+        def _receipt_line(receipt: Any, fallback_status: str) -> str:
+            return _sse_line(
+                "receipt",
+                {
+                    **base,
+                    "status": receipt.status if receipt else fallback_status,
+                    "reason": receipt.reason if receipt else None,
+                    "actual_delta": (
+                        str(receipt.actual_delta)
+                        if receipt and receipt.actual_delta is not None
+                        else None
+                    ),
+                    # A verified write is not a recovered cart: a live run
+                    # produced a correct write that left the guest 2.98
+                    # short of the threshold. The client is told which of
+                    # the two it got.
+                    "blocker_cleared": bool(receipt and receipt.blocker_cleared),
+                    "remaining_gap": (
+                        str(receipt.remaining_gap)
+                        if receipt and receipt.remaining_gap is not None
+                        else None
+                    ),
+                },
+            )
+
         def _options_line(candidates: Any) -> str:
             return _sse_line(
                 "options",
@@ -190,6 +215,7 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
                 },
             )
 
+        emitted_receipt = False
         if should_advance:
             async for chunk in graph.astream(
                 resume_input, config, stream_mode="updates"
@@ -210,6 +236,15 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
                         yield _diagnosis_line(partial["diagnosis"])
                     if node_name == "explain" and partial.get("candidates"):
                         yield _options_line(partial["candidates"])
+                    if partial.get("receipt") is not None:
+                        # Emitted per node, not only from the final state:
+                        # a session may run more than one consent+write
+                        # round, and every round's receipt belongs to the
+                        # guest who consented to it.
+                        emitted_receipt = True
+                        yield _receipt_line(
+                            partial["receipt"], partial.get("status", "")
+                        )
                     if partial.get("status") == "aborted":
                         yield _sse_line(
                             "error", {**base, "error": partial.get("error")}
@@ -230,21 +265,8 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
         final_status = final_state.get("status")
         if final_status == "awaiting_consent":
             yield _sse_line("consent_required", base)
-        elif final_status in ("verified", "unverified"):
-            receipt = final_state.get("receipt")
-            yield _sse_line(
-                "receipt",
-                {
-                    **base,
-                    "status": receipt.status if receipt else final_status,
-                    "reason": receipt.reason if receipt else None,
-                    "actual_delta": (
-                        str(receipt.actual_delta)
-                        if receipt and receipt.actual_delta is not None
-                        else None
-                    ),
-                },
-            )
+        elif final_status in ("verified", "unverified") and not emitted_receipt:
+            yield _receipt_line(final_state.get("receipt"), final_status)
 
     return StreamingResponse(stream(), media_type="text/event-stream")
 

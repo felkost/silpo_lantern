@@ -288,9 +288,16 @@ def test_t15_resume_from_a_fresh_process_reads_consent_from_neon() -> None:
     fresh_graph.update_state(config, {"consent_action_id": proposal.action_id})
     final_state = fresh_graph.invoke(None, config)
 
-    assert final_state["status"] == "verified"
-    assert final_state["receipt"] is not None
-    assert final_state["receipt"].status == "receipt"
+    # The write verified, and the saved receipt records it. `status` is no
+    # longer "verified" at the end: this fixture's cart is still far below
+    # the 599 threshold after the write, so the graph correctly offers a
+    # second consent+write round and parks on the interrupt again.
+    assert backend.receipts[-1].status == "receipt"
+    assert backend.receipts[-1].blocker_cleared is False
+    assert final_state["status"] == "awaiting_consent"
+    assert final_state["consent_action_id"] is None
+    assert backend.receipts[-1] is not None
+    assert backend.receipts[-1].status == "receipt"
     assert len(backend.write_calls) == 1
 
 
@@ -336,8 +343,15 @@ def test_t15b_crash_after_write_before_readback_reconciles_on_resume() -> None:
     final_state = fresh_graph.invoke(None, config)
 
     assert len(backend.write_calls) == 1  # still exactly one write, ever
-    assert final_state["status"] == "verified"
-    assert final_state["receipt"].status == "receipt"
+    # The write verified, and the saved receipt records it. `status` is no
+    # longer "verified" at the end: this fixture's cart is still far below
+    # the 599 threshold after the write, so the graph correctly offers a
+    # second consent+write round and parks on the interrupt again.
+    assert backend.receipts[-1].status == "receipt"
+    assert backend.receipts[-1].blocker_cleared is False
+    assert final_state["status"] == "awaiting_consent"
+    assert final_state["consent_action_id"] is None
+    assert backend.receipts[-1].status == "receipt"
     assert backend.journal[("owner-1", "cart-1", proposal.action_id)] == "confirmed"
 
 

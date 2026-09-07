@@ -291,8 +291,9 @@ def save_receipt(pool: ConnectionPool, receipt: Receipt) -> None:
             """
             INSERT INTO receipts
                 (action_id, session_id, owner, before_state, after_state, verified,
-                 status, reason, expected_delta, actual_delta, trace_id)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                 status, reason, expected_delta, actual_delta, trace_id,
+                 blocker_cleared, remaining_gap)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (action_id) DO UPDATE SET
                 before_state = EXCLUDED.before_state,
                 after_state = EXCLUDED.after_state,
@@ -301,7 +302,9 @@ def save_receipt(pool: ConnectionPool, receipt: Receipt) -> None:
                 reason = EXCLUDED.reason,
                 expected_delta = EXCLUDED.expected_delta,
                 actual_delta = EXCLUDED.actual_delta,
-                trace_id = EXCLUDED.trace_id
+                trace_id = EXCLUDED.trace_id,
+                blocker_cleared = EXCLUDED.blocker_cleared,
+                remaining_gap = EXCLUDED.remaining_gap
             """,
             (
                 receipt.action_id,
@@ -323,6 +326,12 @@ def save_receipt(pool: ConnectionPool, receipt: Receipt) -> None:
                     else None
                 ),
                 receipt.trace_id,
+                receipt.blocker_cleared,
+                (
+                    str(receipt.remaining_gap)
+                    if receipt.remaining_gap is not None
+                    else None
+                ),
             ),
         )
 

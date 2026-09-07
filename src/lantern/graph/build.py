@@ -115,6 +115,14 @@ def _continue_or_end(state: RecoveryState) -> str:
     return "end" if state["status"] in terminal else "continue"
 
 
+def _another_round_or_end(state: RecoveryState) -> str:
+    """`persist_receipt_node` signals a further round by clearing the spent
+    consent and returning the state to `diagnosed`; anything terminal ends
+    the graph.
+    """
+    return "retry" if state["status"] == "diagnosed" else "end"
+
+
 def build_recovery_graph(
     fetch_my_cart: Callable[[], Mapping[str, Any]],
     fetch_cart_by_id: Callable[[str], Mapping[str, Any]],
@@ -250,7 +258,14 @@ def build_recovery_graph(
         "write_guard", _continue_or_end, {"end": END, "continue": "write_and_readback"}
     )
     graph.add_edge("write_and_readback", "persist_receipt")
-    graph.add_edge("persist_receipt", END)
+    # The write path can loop back for a second consent+write round when
+    # the receipt shows the blocker survived a correct write -- see
+    # `persist_receipt_node`, which is the only thing that decides it.
+    # `interrupt_before=["write_guard"]` still applies on every pass, so a
+    # further write is impossible without a further consent.
+    graph.add_conditional_edges(
+        "persist_receipt", _another_round_or_end, {"end": END, "retry": "diagnose"}
+    )
 
     # D-G5-08: static interrupt before the ONLY node that may authorize a
     # write (CLAUDE.md section 4). Measured (.venv probe): with no

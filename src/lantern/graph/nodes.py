@@ -37,7 +37,7 @@ from src.lantern.domain.channel_snapshot_builder import (
     build_item_availability_by_name,
     select_timeslot_for_find_products_batch,
 )
-from src.lantern.domain.diagnosis import diagnose
+from src.lantern.domain.diagnosis import compute_order_cost_min_gap, diagnose
 from src.lantern.domain.disclosure import (
     ChannelSnapshot,
     build_disclosure,
@@ -47,11 +47,15 @@ from src.lantern.domain.evidence_gate import (
     gate_candidates,
     raw_candidates_from_find_products_batch,
 )
-from src.lantern.domain.models import ConsentRecord, Receipt
+from src.lantern.domain.models import Cart, ConsentRecord, Money, Receipt
 from src.lantern.domain.normalizer import CartShapeError, normalize_cart
 from src.lantern.domain.rank import rank_candidates
 from src.lantern.graph.schemas import ExplainerOutput, SearchIntent
-from src.lantern.graph.state import RecoveryState, has_write_reserve
+from src.lantern.graph.state import (
+    MAX_WRITE_ROUNDS,
+    RecoveryState,
+    has_write_reserve,
+)
 from src.lantern.mcp.errors import McpAdapterError
 from src.lantern.memory.repository import IdempotencyState
 from src.lantern.policies.loader import PolicyRegistry
@@ -63,6 +67,38 @@ from src.lantern.safety.write_guard import authorize_write, finalize_write_outco
 # the installed SDK, not assumed — see
 # `tests/unit/test_graph_pipeline_reaches_awaiting_consent.py`).
 Node = Callable[[RecoveryState], Dict[str, Any]]
+
+
+def _recovery_outcome(
+    read_back_cart: Optional[Cart], primary_code: Optional[str]
+) -> Tuple[bool, Optional[Money]]:
+    """Did the write achieve what the guest wanted? Answered from the
+    independent read-back alone: the blocker is cleared when the cart no
+    longer carries `primary_code` at error level, and for an
+    `order.cost.min` block the shortfall that remains is recomputed from
+    the cart's own threshold.
+
+    An unreachable read-back proves nothing either way, so it counts as
+    not cleared -- the same fail-closed reading `finalize_write_outcome`
+    already applies to the write itself.
+    """
+    if read_back_cart is None or primary_code is None:
+        return False, None
+
+    still_blocking = [
+        validation
+        for validation in read_back_cart.validations
+        if validation.level == "error" and validation.code == primary_code
+    ]
+    if not still_blocking:
+        return True, None
+
+    threshold = still_blocking[0].context.get("orderCostMin")
+    if primary_code != "order.cost.min" or threshold is None:
+        return False, None
+    return False, compute_order_cost_min_gap(
+        Decimal(str(threshold)), read_back_cart.products_total
+    )
 
 
 def make_read_node(
@@ -480,6 +516,14 @@ def make_write_and_readback_node(
         )
         mark_action(state["owner"], cart.cart_id, consent.action_id, journal_next)
 
+        # "Verified write" and "cart recovered" are different questions,
+        # and a live run answered them differently: the write landed
+        # exactly as consented and the cart stayed blocked by 2.98 UAH.
+        # Recorded here so the receipt can answer the one the guest
+        # actually asked -- can I check out now?
+        primary_code = state["diagnosis"].primary_code if state["diagnosis"] else None
+        blocker_cleared, remaining_gap = _recovery_outcome(read_back_cart, primary_code)
+
         receipt = Receipt(
             action_id=consent.action_id,
             session_id=state["session_id"],
@@ -495,13 +539,21 @@ def make_write_and_readback_node(
             actual_delta=outcome.actual_delta,
             trace_id=state["trace_id"],
             created_at=now(),
+            blocker_cleared=blocker_cleared,
+            remaining_gap=remaining_gap,
         )
-        return {
+        updates: Dict[str, Any] = {
             "write_response": write_response,
             "receipt": receipt,
             "status": "verified" if outcome.status == "receipt" else "unverified",
             "mcp_attempts_used": state["mcp_attempts_used"] + 1,
         }
+        if read_back_cart is not None:
+            # The read-back cart becomes the current one, so a second round
+            # diagnoses what the write actually produced rather than the
+            # state it started from.
+            updates["cart"] = read_back_cart
+        return updates
 
     def write_and_readback_node(state: RecoveryState) -> Dict[str, Any]:
         consent = state["consent"]
@@ -580,6 +632,36 @@ def make_persist_receipt_node(save_receipt: Callable[[Receipt], None]) -> Node:
         if receipt is None:
             return {"status": "aborted", "error": "persist_receipt_node: no receipt"}
         save_receipt(receipt)
-        return {}
+
+        # A write can be correct and still leave the guest blocked: how much
+        # a write actually moves the cart cannot be known beforehand,
+        # because no catalogue endpoint exposes the price the cart will
+        # apply (measured live -- 96.49 advertised, 86.84 charged, 2.98
+        # short). Rather than guess a margin, the graph offers another
+        # round: re-diagnose the cart the write produced, propose against
+        # the remaining gap, and ask for consent again. Never a silent
+        # second write -- `interrupt_before` still stops at `write_guard`.
+        rounds_used = state.get("write_rounds_used", 0) + 1
+        if (
+            receipt.blocker_cleared
+            or state["status"] != "verified"
+            or rounds_used >= MAX_WRITE_ROUNDS
+        ):
+            return {"write_rounds_used": rounds_used}
+
+        return {
+            "write_rounds_used": rounds_used,
+            # Cleared so the next pass cannot reuse a consumed consent: the
+            # guard loads consent by this id, and the previous one is spent.
+            "consent_action_id": None,
+            "consent": None,
+            "candidates": [],
+            # Cleared with the consent: a receipt from the previous round
+            # left in place would be re-emitted as this round's outcome if
+            # the next one never reaches a write.
+            "receipt": None,
+            "write_response": None,
+            "status": "diagnosed",
+        }
 
     return persist_receipt_node
