@@ -1,0 +1,39 @@
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	read(read)
+	diagnose(diagnose)
+	compare_channels(compare_channels)
+	plan(plan)
+	collect_and_gate(collect_and_gate)
+	rank(rank)
+	explain(explain)
+	write_guard(write_guard<hr/><small><em>__interrupt = before</em></small>)
+	write_and_readback(write_and_readback)
+	persist_receipt(persist_receipt)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> read;
+	collect_and_gate -. &nbsp;end&nbsp; .-> __end__;
+	collect_and_gate -. &nbsp;continue&nbsp; .-> rank;
+	compare_channels --> plan;
+	diagnose -. &nbsp;end&nbsp; .-> __end__;
+	diagnose -. &nbsp;continue&nbsp; .-> compare_channels;
+	explain -. &nbsp;end&nbsp; .-> __end__;
+	explain -. &nbsp;continue&nbsp; .-> write_guard;
+	persist_receipt -. &nbsp;end&nbsp; .-> __end__;
+	persist_receipt -. &nbsp;retry&nbsp; .-> diagnose;
+	plan -. &nbsp;end&nbsp; .-> __end__;
+	plan -. &nbsp;continue&nbsp; .-> collect_and_gate;
+	rank --> explain;
+	read -. &nbsp;end&nbsp; .-> __end__;
+	read -. &nbsp;continue&nbsp; .-> diagnose;
+	write_and_readback --> persist_receipt;
+	write_guard -. &nbsp;end&nbsp; .-> __end__;
+	write_guard -. &nbsp;continue&nbsp; .-> write_and_readback;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc

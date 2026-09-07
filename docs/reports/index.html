@@ -1747,7 +1747,431 @@ surface, since it only draws what the design intends, not what happened.</div>
       <text x="20" y="1000" fill="#6b7280" font-size="12">Drawn from a captured trace: LangSmith session "lantern", trace id starting 01a077e4, 2026-09-06T18:13Z (tags: g4-live-evidence-gate, criterion-8).</text>
     </svg></div>
 
-<h2>12. Why this is expected to help, not just work</h2>
+<h2>12. The only path that can change a cart</h2>
+<p>This state machine shows what happens after the guest has been offered a change.
+The graph stops and waits: it cannot go further on its own. When consent arrives, the
+Write Guard either authorizes the change or refuses it, and a refusal ends the run with
+no cart touched at all. If the write is made, the system reads the cart again from the
+server, by a separate call, and only that second reading decides whether the result is
+a receipt or the dashed state that records "we could not confirm this".</p>
+<p>Why it matters: the two dashed states are the point of the design. A system that can
+only report success will report success when it is wrong. This one has somewhere honest
+to land.</p>
+<div class="example"><b>Example.</b> A guest approved adding one item worth 14.99 UAH to
+a cart that was 2.98 UAH below the shop's minimum. The write was made, the second
+reading showed 606.21 UAH against a 599 UAH minimum, the blocker was gone, and the
+checkout link appeared. Had that second reading not confirmed the change, the run would
+have ended in the dashed state instead, and the guest would have been told so.</div>
+<div class="diagram"><svg viewBox="0 0 980 790" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g5-state-title g5-state-desc">
+      <title id="g5-state-title">Write segment states and the consent interrupt</title>
+      <desc id="g5-state-desc">State machine of the recovery graph's write segment. The graph pauses in Awaiting consent at a static interrupt before the Write Guard. The guard either authorizes, moving to Consented, or refuses, moving to the dashed exception state Aborted with no write performed. From Consented the write call and an independent read-back run, reaching Written, which resolves to Verified when the read-back confirms the consented change or to the dashed exception state Unverified when it does not. A verified write whose receipt shows the blocker still standing returns the graph to diagnose for a further consent round, capped at three.</desc>
+      <defs>
+        <marker id="arrow-ink" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#24242e"/></marker>
+        <style>text{font-family:Arial,Helvetica,"Liberation Sans","DejaVu Sans",sans-serif;}</style>
+      </defs>
+      <rect width="100%" height="100%" fill="#ffffff"/>
+
+      <!-- ============ TRANSITIONS (drawn before states) ============ -->
+
+      <!-- initial pseudostate -> Awaiting consent (enters from the top) -->
+      <line x1="170" y1="68" x2="170" y2="114" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+
+      <!-- Awaiting consent -> Consented -->
+      <line x1="280" y1="170" x2="372" y2="170" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="288" y="146" width="84" height="16" rx="2" fill="#ffffff"/>
+      <text x="330" y="158" fill="#24242e" font-size="12" text-anchor="middle">AUTHORIZED</text>
+
+      <!-- Consented -> Written -->
+      <line x1="600" y1="170" x2="692" y2="170" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="612" y="146" width="68" height="16" rx="2" fill="#ffffff"/>
+      <text x="646" y="158" fill="#24242e" font-size="12" text-anchor="middle">WRITE</text>
+
+      <!-- Awaiting consent -> Aborted (guard refusal) -->
+      <line x1="170" y1="220" x2="170" y2="332" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="182" y="268" width="72" height="16" rx="2" fill="#ffffff"/>
+      <text x="218" y="280" fill="#24242e" font-size="12" text-anchor="middle">REFUSED</text>
+
+      <!-- Written -> Verified -->
+      <line x1="810" y1="220" x2="810" y2="332" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="822" y="268" width="88" height="16" rx="2" fill="#ffffff"/>
+      <text x="866" y="280" fill="#24242e" font-size="12" text-anchor="middle">CONFIRMED</text>
+
+      <!-- Written -> Unverified (own attach point, own horizontal lane at y=280) -->
+      <path d="M 750 220 L 750 272 Q 750 280 742 280 L 498 280 Q 490 280 490 288 L 490 332"
+            fill="none" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="560" y="240" width="112" height="16" rx="2" fill="#ffffff"/>
+      <text x="616" y="252" fill="#24242e" font-size="12" text-anchor="middle">UNCONFIRMED</text>
+
+      <!-- Terminal transitions: one final pseudostate under each outcome, so no
+           two runs share a lane and nothing converges -->
+      <line x1="170" y1="440" x2="170" y2="518" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="182" y="462" width="104" height="16" rx="2" fill="#ffffff"/>
+      <text x="234" y="474" fill="#24242e" font-size="12" text-anchor="middle">NO WRITE MADE</text>
+
+      <line x1="490" y1="440" x2="490" y2="518" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="502" y="462" width="140" height="16" rx="2" fill="#ffffff"/>
+      <text x="572" y="474" fill="#24242e" font-size="12" text-anchor="middle">RECEIPT: UNVERIFIED</text>
+
+      <line x1="750" y1="440" x2="750" y2="518" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="762" y="462" width="128" height="16" rx="2" fill="#ffffff"/>
+      <text x="826" y="474" fill="#24242e" font-size="12" text-anchor="middle">RECEIPT: VERIFIED</text>
+
+      <!-- Verified -> Awaiting consent: second round, routed around the outside -->
+      <path d="M 870 440 L 870 652 Q 870 660 862 660 L 32 660 Q 24 660 24 652 L 24 178 Q 24 170 32 170 L 52 170"
+            fill="none" stroke="#24242e" stroke-width="1.2" stroke-dasharray="6 4" marker-end="url(#arrow-ink)"/>
+      <rect x="330" y="636" width="252" height="16" rx="2" fill="#ffffff"/>
+      <text x="456" y="648" fill="#24242e" font-size="12" text-anchor="middle">BLOCKER REMAINS · RE-DIAGNOSE</text>
+
+      <!-- ============ PSEUDOSTATES ============ -->
+      <circle cx="170" cy="60" r="8" fill="#24242e"/>
+
+      <circle cx="170" cy="532" r="14" fill="none" stroke="#24242e" stroke-width="1.2"/>
+      <circle cx="170" cy="532" r="8" fill="#24242e"/>
+      <circle cx="490" cy="532" r="14" fill="none" stroke="#24242e" stroke-width="1.2"/>
+      <circle cx="490" cy="532" r="8" fill="#24242e"/>
+      <circle cx="750" cy="532" r="14" fill="none" stroke="#24242e" stroke-width="1.2"/>
+      <circle cx="750" cy="532" r="8" fill="#24242e"/>
+
+      <!-- ============ STATES ============ -->
+
+      <!-- Awaiting consent — external: the graph is stopped, waiting on a person -->
+      <rect x="60" y="120" width="220" height="100" rx="10" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1.4"/>
+      <rect x="72" y="132" width="52" height="16" rx="2" fill="transparent" stroke="#c9ba5e" stroke-width="0.8"/>
+      <text x="98" y="144" fill="#24242e" font-size="12" text-anchor="middle">STATE</text>
+      <text x="170" y="178" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Awaiting consent</text>
+      <text x="170" y="198" fill="#24242e" font-size="12" text-anchor="middle">interrupt_before · waits on guest</text>
+
+      <!-- Consented — safety: only the Write Guard may set this -->
+      <rect x="380" y="120" width="220" height="100" rx="10" fill="#9a85e1" stroke="#6440c9" stroke-width="1.4"/>
+      <rect x="392" y="132" width="52" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
+      <text x="418" y="144" fill="#24242e" font-size="12" text-anchor="middle">STATE</text>
+      <text x="490" y="178" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Consented</text>
+      <text x="490" y="198" fill="#24242e" font-size="12" text-anchor="middle">guard authorized · never an LLM</text>
+
+      <!-- Written — safety: the single write call site plus its read-back -->
+      <rect x="700" y="120" width="220" height="100" rx="10" fill="#9a85e1" stroke="#6440c9" stroke-width="1.4"/>
+      <rect x="712" y="132" width="52" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
+      <text x="738" y="144" fill="#24242e" font-size="12" text-anchor="middle">STATE</text>
+      <text x="810" y="178" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Written</text>
+      <text x="810" y="198" fill="#24242e" font-size="12" text-anchor="middle">write + independent read-back</text>
+
+      <!-- Aborted — exception state, dashed -->
+      <rect x="60" y="340" width="220" height="100" rx="10" fill="#9a85e1" stroke="#6440c9" stroke-width="1.4" stroke-dasharray="7 5"/>
+      <rect x="72" y="352" width="52" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
+      <text x="98" y="364" fill="#24242e" font-size="12" text-anchor="middle">STATE</text>
+      <text x="170" y="398" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Aborted</text>
+      <text x="170" y="418" fill="#24242e" font-size="12" text-anchor="middle">refusal reason recorded</text>
+
+      <!-- Unverified — exception state, dashed -->
+      <rect x="380" y="340" width="220" height="100" rx="10" fill="#9a85e1" stroke="#6440c9" stroke-width="1.4" stroke-dasharray="7 5"/>
+      <rect x="392" y="352" width="52" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
+      <text x="418" y="364" fill="#24242e" font-size="12" text-anchor="middle">STATE</text>
+      <text x="490" y="398" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Unverified</text>
+      <text x="490" y="418" fill="#24242e" font-size="12" text-anchor="middle">never a success receipt</text>
+
+      <!-- Verified — interface: what the guest is shown -->
+      <rect x="700" y="340" width="220" height="100" rx="10" fill="#91ccf1" stroke="#2e7dbf" stroke-width="1.4"/>
+      <rect x="712" y="352" width="52" height="16" rx="2" fill="transparent" stroke="#2e7dbf" stroke-width="0.8"/>
+      <text x="738" y="364" fill="#24242e" font-size="12" text-anchor="middle">STATE</text>
+      <text x="810" y="398" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Verified</text>
+      <text x="810" y="418" fill="#24242e" font-size="12" text-anchor="middle">blocker_cleared recorded</text>
+
+      <!-- ============ LEGEND ============ -->
+      <rect x="60" y="694" width="860" height="72" rx="8" fill="#f7f7fa" stroke="#9ca3af" stroke-width="0.8"/>
+      <text x="80" y="716" fill="#6b7280" font-size="12" font-weight="700">LEGEND</text>
+
+      <rect x="80" y="730" width="20" height="14" rx="3" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
+      <text x="108" y="742" fill="#24242e" font-size="12">External · waits on a person</text>
+
+      <rect x="300" y="730" width="20" height="14" rx="3" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <text x="328" y="742" fill="#24242e" font-size="12">Safety</text>
+
+      <rect x="400" y="730" width="20" height="14" rx="3" fill="#91ccf1" stroke="#2e7dbf" stroke-width="1"/>
+      <text x="428" y="742" fill="#24242e" font-size="12">Interface</text>
+
+      <rect x="520" y="730" width="20" height="14" rx="3" fill="#ffffff" stroke="#6440c9" stroke-width="1" stroke-dasharray="4 3"/>
+      <text x="548" y="742" fill="#24242e" font-size="12">Exception state</text>
+
+      <line x1="700" y1="737" x2="740" y2="737" stroke="#24242e" stroke-width="1.2" stroke-dasharray="6 4"/>
+      <text x="750" y="742" fill="#24242e" font-size="12">Second round · max 3</text>
+    </svg>
+</div>
+
+<h2>13. From consent to receipt</h2>
+<p>Here the same path is drawn as a conversation between the guest, the service, the
+retailer's server and the database. The guest approves one specific action by its
+identifier. The service does not accept any figure from the guest's browser: it
+recalculates the fingerprints of both the exact call and the cart itself. The guard
+re-reads the cart before authorizing, so the change is approved against the cart as it
+stands at that moment, not as it stood when the guest was reading.</p>
+<p>Why it matters: the write call answers with a success flag. That flag is recorded
+and believed for nothing. The independent read-back that follows is the only evidence
+the system accepts, and the branching frame at the bottom shows the two receipts it can
+produce.</p>
+<div class="example"><b>Example.</b> One live write expected the cart to grow by 96.49
+UAH, because that is the price the catalogue reported. The read-back showed 86.84 UAH:
+the cart applied a discount the catalogue does not publish. Nothing was wrong with the
+write — the right product arrived in the right quantity — so the receipt was issued,
+with the difference written on it rather than hidden.</div>
+<div class="diagram"><svg viewBox="0 0 1200 1030" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g5-seq-title g5-seq-desc">
+      <title id="g5-seq-title">Consent, write, read-back and receipt</title>
+      <desc id="g5-seq-desc">Sequence diagram of the write path, drawn from live runs on 2026-09-07. The guest approves one action by its id; the API recomputes both hashes server-side and never accepts one from the client. A second request resumes the graph from its consent interrupt. The Write Guard re-reads the cart through Silpo MCP and authorizes only if every binding still holds. The write call is issued once, and its own success field is believed for nothing: an independent read-back follows, and the alternative fragment shows the two outcomes it can produce. The Write Guard and the writing node share one lifeline here because five lifelines is this project's diagram budget; they are separate nodes in the code, and the refusal diagram shows the guard alone. The receipt reaches the guest on the same event stream opened by message two.</desc>
+      <defs>
+        <marker id="arrow-filled" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#24242e"/></marker>
+        <marker id="arrow-open" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polyline points="0 0, 8 3.5, 0 7" fill="none" stroke="#6b7280" stroke-width="1.2"/></marker>
+        <style>text{font-family:Arial,Helvetica,"Liberation Sans","DejaVu Sans",sans-serif;}</style>
+      </defs>
+      <rect width="100%" height="100%" fill="#ffffff"/>
+
+      <!-- ============ LIFELINES ============ -->
+      <line x1="120" y1="212" x2="120" y2="990" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+      <line x1="370" y1="212" x2="370" y2="990" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+      <line x1="620" y1="212" x2="620" y2="990" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+      <line x1="880" y1="212" x2="880" y2="990" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+      <line x1="1100" y1="212" x2="1100" y2="990" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+
+      <!-- ============ ACTIVATION BARS ============ -->
+      <rect x="364" y="252" width="12" height="712" fill="#e8ecf5" stroke="#6b7280" stroke-width="0.8"/>
+      <rect x="614" y="368" width="12" height="596" fill="#e8ecf5" stroke="#6b7280" stroke-width="0.8"/>
+
+      <!-- ============ MESSAGES ============ -->
+
+      <!-- 1 -->
+      <line x1="126" y1="252" x2="358" y2="252" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="150" y="220" width="196" height="16" rx="2" fill="#ffffff"/>
+      <text x="248" y="232" fill="#24242e" font-size="12" text-anchor="middle">1 · POST /consent {action_id}</text>
+      <rect x="130" y="264" width="240" height="16" rx="2" fill="#ffffff"/>
+      <text x="250" y="276" fill="#6b7280" font-size="12" text-anchor="middle" font-style="italic">both hashes recomputed server-side</text>
+
+      <!-- 2 -->
+      <line x1="126" y1="312" x2="358" y2="312" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="152" y="288" width="192" height="16" rx="2" fill="#ffffff"/>
+      <text x="248" y="300" fill="#24242e" font-size="12" text-anchor="middle">2 · GET /events (SSE)</text>
+
+      <!-- 3 -->
+      <line x1="382" y1="368" x2="608" y2="368" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="396" y="336" width="200" height="16" rx="2" fill="#ffffff"/>
+      <text x="496" y="348" fill="#24242e" font-size="12" text-anchor="middle">3 · RESUME AT WRITE_GUARD</text>
+
+      <!-- 4 -->
+      <line x1="632" y1="424" x2="874" y2="424" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="662" y="392" width="184" height="16" rx="2" fill="#ffffff"/>
+      <text x="754" y="404" fill="#24242e" font-size="12" text-anchor="middle">4 · RE-READ THE CART</text>
+
+      <!-- 5 -->
+      <line x1="874" y1="472" x2="632" y2="472" stroke="#6b7280" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-open)"/>
+      <rect x="656" y="440" width="196" height="16" rx="2" fill="#ffffff"/>
+      <text x="754" y="452" fill="#6b7280" font-size="12" text-anchor="middle">5 · CART AS IT STANDS NOW</text>
+
+      <!-- 6: self-message on the graph lifeline -->
+      <path d="M 632 520 L 700 520 L 700 552 L 634 552" fill="none" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="712" y="512" width="248" height="16" rx="2" fill="#ffffff"/>
+      <text x="836" y="524" fill="#24242e" font-size="12" text-anchor="middle">6 · AUTHORIZE_WRITE (Write Guard)</text>
+      <rect x="712" y="540" width="264" height="16" rx="2" fill="#ffffff"/>
+      <text x="844" y="552" fill="#6b7280" font-size="12" text-anchor="middle" font-style="italic">allowlist · hashes · owner · TTL · budget</text>
+
+      <!-- 7 -->
+      <line x1="632" y1="608" x2="874" y2="608" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="640" y="576" width="228" height="16" rx="2" fill="#ffffff"/>
+      <text x="754" y="588" fill="#24242e" font-size="12" text-anchor="middle">7 · ADD_OR_UPDATE_CART_PRODUCTS</text>
+
+      <!-- 8 -->
+      <line x1="874" y1="656" x2="632" y2="656" stroke="#6b7280" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-open)"/>
+      <rect x="676" y="624" width="156" height="16" rx="2" fill="#ffffff"/>
+      <text x="754" y="636" fill="#6b7280" font-size="12" text-anchor="middle">8 · {success: true}</text>
+      <rect x="640" y="668" width="228" height="16" rx="2" fill="#ffffff"/>
+      <text x="754" y="680" fill="#6b7280" font-size="12" text-anchor="middle" font-style="italic">believed for nothing on its own</text>
+
+      <!-- 9 -->
+      <line x1="632" y1="716" x2="874" y2="716" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="652" y="692" width="204" height="16" rx="2" fill="#ffffff"/>
+      <text x="754" y="704" fill="#24242e" font-size="12" text-anchor="middle">9 · INDEPENDENT READ-BACK</text>
+
+      <!-- 10 -->
+      <line x1="874" y1="764" x2="632" y2="764" stroke="#6b7280" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-open)"/>
+      <rect x="668" y="732" width="172" height="16" rx="2" fill="#ffffff"/>
+      <text x="754" y="744" fill="#6b7280" font-size="12" text-anchor="middle">10 · CART AFTER THE WRITE</text>
+
+      <!-- ============ ALT FRAGMENT ============ -->
+      <rect x="560" y="796" width="600" height="168" rx="4" fill="none" stroke="#6b7280" stroke-width="1"/>
+      <path d="M 560 796 L 636 796 L 636 812 L 620 824 L 560 824 Z" fill="#f7f7fa" stroke="#6b7280" stroke-width="1"/>
+      <text x="588" y="814" fill="#24242e" font-size="12" font-weight="700">ALT</text>
+      <text x="648" y="814" fill="#24242e" font-size="12">[read-back matches the consented action by identity]</text>
+
+      <line x1="560" y1="880" x2="1160" y2="880" stroke="#6b7280" stroke-width="1" stroke-dasharray="6,5"/>
+      <text x="648" y="898" fill="#24242e" font-size="12">[else]</text>
+
+      <!-- 11 -->
+      <line x1="632" y1="852" x2="1094" y2="852" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="736" y="828" width="272" height="16" rx="2" fill="#ffffff"/>
+      <text x="872" y="840" fill="#24242e" font-size="12" text-anchor="middle">11 · RECEIPT · blocker_cleared · deltas</text>
+
+      <!-- 12 -->
+      <line x1="632" y1="936" x2="1094" y2="936" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="748" y="912" width="248" height="16" rx="2" fill="#ffffff"/>
+      <text x="872" y="924" fill="#24242e" font-size="12" text-anchor="middle">12 · UNVERIFIED · reason recorded</text>
+
+      <!-- ============ ACTORS ============ -->
+      <rect x="40" y="150" width="160" height="62" rx="10" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1.4"/>
+      <text x="120" y="176" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Guest</text>
+      <text x="120" y="196" fill="#24242e" font-size="12" text-anchor="middle">approves one action</text>
+
+      <rect x="290" y="150" width="160" height="62" rx="10" fill="#91ccf1" stroke="#2e7dbf" stroke-width="1.4"/>
+      <text x="370" y="176" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">apps/api</text>
+      <text x="370" y="196" fill="#24242e" font-size="12" text-anchor="middle">session · consent · SSE</text>
+
+      <rect x="540" y="150" width="160" height="62" rx="10" fill="#9a85e1" stroke="#6440c9" stroke-width="1.4"/>
+      <text x="620" y="176" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Write Guard</text>
+      <text x="620" y="196" fill="#24242e" font-size="12" text-anchor="middle">+ write node</text>
+
+      <rect x="800" y="150" width="160" height="62" rx="10" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1.4"/>
+      <text x="880" y="176" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Silpo MCP</text>
+      <text x="880" y="196" fill="#24242e" font-size="12" text-anchor="middle">mcp.silpo.ua</text>
+
+      <rect x="1020" y="150" width="160" height="62" rx="10" fill="#afa4de" stroke="#7c6bc4" stroke-width="1.4"/>
+      <text x="1100" y="176" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Neon</text>
+      <text x="1100" y="196" fill="#24242e" font-size="12" text-anchor="middle">consents · receipts</text>
+    </svg>
+</div>
+
+<h2>14. What the guard checks before it says yes</h2>
+<p>This diagram lists the reasons the system refuses to change a cart. The guard loads
+the guest's approval from the database, and lets the database decide whether it has
+expired, so a clock difference between machines cannot revive a stale approval or kill
+a fresh one. It then re-reads the cart and recalculates the fingerprints itself. Either
+every condition still holds and exactly one write is made, or nothing is written and
+the guest is told the reason.</p>
+<p>Why it matters: the guard holds no write tool of its own. It can say yes, and a
+separate step performs the change. That separation is what makes "the system never
+writes without approval" a property of one file, not a hope spread across many.</p>
+<div class="example"><b>Example.</b> During live testing a guest changed one item's
+quantity in the shop's own app while deciding whether to accept a proposal. The cart no
+longer matched the one the approval was given for, and the write was refused rather
+than overwriting the change the guest had just made by hand.</div>
+<div class="diagram"><svg viewBox="0 0 1200 1050" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g5-refuse-title g5-refuse-desc">
+      <title id="g5-refuse-title">Write Guard refusal paths</title>
+      <desc id="g5-refuse-desc">Sequence diagram of the checks the Write Guard runs before any cart is changed. It loads the consent from the database, where expiry is evaluated by the database clock rather than the application's, re-reads the cart from Silpo MCP so the write is authorized against the cart as it stands now, and recomputes both binding hashes itself. The alternative fragment shows the only two outcomes: one write is issued, or the run is refused with a stated reason and no write at all. The legend lists every refusal the guard can raise and marks the five observed against the live server on 2026-09-07.</desc>
+      <defs>
+        <marker id="arrow-filled" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#24242e"/></marker>
+        <marker id="arrow-open" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polyline points="0 0, 8 3.5, 0 7" fill="none" stroke="#6b7280" stroke-width="1.2"/></marker>
+        <style>text{font-family:Arial,Helvetica,"Liberation Sans","DejaVu Sans",sans-serif;}</style>
+      </defs>
+      <rect width="100%" height="100%" fill="#ffffff"/>
+
+      <!-- ============ LIFELINES ============ -->
+      <line x1="120" y1="212" x2="120" y2="840" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+      <line x1="370" y1="212" x2="370" y2="840" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+      <line x1="620" y1="212" x2="620" y2="840" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+      <line x1="880" y1="212" x2="880" y2="840" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+      <line x1="1100" y1="212" x2="1100" y2="840" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+
+      <!-- ============ ACTIVATION BARS ============ -->
+      <rect x="364" y="252" width="12" height="556" fill="#e8ecf5" stroke="#6b7280" stroke-width="0.8"/>
+      <rect x="614" y="308" width="12" height="484" fill="#e8ecf5" stroke="#6b7280" stroke-width="0.8"/>
+
+      <!-- ============ MESSAGES ============ -->
+
+      <!-- 1 -->
+      <line x1="126" y1="252" x2="358" y2="252" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="146" y="228" width="204" height="16" rx="2" fill="#ffffff"/>
+      <text x="248" y="240" fill="#24242e" font-size="12" text-anchor="middle">1 · GET /events · RESUME</text>
+
+      <!-- 2 -->
+      <line x1="382" y1="308" x2="608" y2="308" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="396" y="284" width="200" height="16" rx="2" fill="#ffffff"/>
+      <text x="496" y="296" fill="#24242e" font-size="12" text-anchor="middle">2 · RESUME AT WRITE_GUARD</text>
+
+      <!-- 3 -->
+      <line x1="632" y1="364" x2="1094" y2="364" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="740" y="340" width="264" height="16" rx="2" fill="#ffffff"/>
+      <text x="872" y="352" fill="#24242e" font-size="12" text-anchor="middle">3 · LOAD CONSENT BY action_id</text>
+
+      <!-- 4 -->
+      <line x1="1094" y1="412" x2="632" y2="412" stroke="#6b7280" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-open)"/>
+      <rect x="712" y="388" width="320" height="16" rx="2" fill="#ffffff"/>
+      <text x="872" y="400" fill="#6b7280" font-size="12" text-anchor="middle">4 · CONSENT + EXPIRED (database clock, not ours)</text>
+
+      <!-- 5 -->
+      <line x1="632" y1="468" x2="874" y2="468" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="648" y="444" width="212" height="16" rx="2" fill="#ffffff"/>
+      <text x="754" y="456" fill="#24242e" font-size="12" text-anchor="middle">5 · WHICH CART IS CURRENT?</text>
+
+      <!-- 6 -->
+      <line x1="874" y1="516" x2="632" y2="516" stroke="#6b7280" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-open)"/>
+      <rect x="646" y="492" width="216" height="16" rx="2" fill="#ffffff"/>
+      <text x="754" y="504" fill="#6b7280" font-size="12" text-anchor="middle">6 · CART ID + CONTENTS NOW</text>
+
+      <!-- 7: self-message -->
+      <path d="M 632 564 L 700 564 L 700 596 L 634 596" fill="none" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="712" y="556" width="284" height="16" rx="2" fill="#ffffff"/>
+      <text x="854" y="568" fill="#24242e" font-size="12" text-anchor="middle">7 · RECOMPUTE args_hash + state_hash</text>
+      <rect x="712" y="584" width="284" height="16" rx="2" fill="#ffffff"/>
+      <text x="854" y="596" fill="#6b7280" font-size="12" text-anchor="middle" font-style="italic">a client-supplied hash is never accepted</text>
+
+      <!-- ============ ALT FRAGMENT ============ -->
+      <rect x="90" y="628" width="1070" height="180" rx="4" fill="none" stroke="#6b7280" stroke-width="1"/>
+      <path d="M 90 628 L 166 628 L 166 644 L 150 656 L 90 656 Z" fill="#f7f7fa" stroke="#6b7280" stroke-width="1"/>
+      <text x="118" y="646" fill="#24242e" font-size="12" font-weight="700">ALT</text>
+      <text x="178" y="646" fill="#24242e" font-size="12">[every binding still holds]</text>
+
+      <!-- 8 -->
+      <line x1="632" y1="700" x2="874" y2="700" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="656" y="676" width="196" height="16" rx="2" fill="#ffffff"/>
+      <text x="754" y="688" fill="#24242e" font-size="12" text-anchor="middle">8 · ONE WRITE, ONE TOOL</text>
+
+      <line x1="90" y1="728" x2="1160" y2="728" stroke="#6b7280" stroke-width="1" stroke-dasharray="6,5"/>
+      <text x="178" y="746" fill="#24242e" font-size="12">[else]</text>
+
+      <!-- 9 -->
+      <line x1="608" y1="772" x2="384" y2="772" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="392" y="748" width="208" height="16" rx="2" fill="#ffffff"/>
+      <text x="496" y="760" fill="#24242e" font-size="12" text-anchor="middle">9 · REFUSED · stated reason</text>
+
+      <!-- 10 -->
+      <line x1="358" y1="796" x2="128" y2="796" stroke="#6b7280" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-open)"/>
+      <rect x="140" y="772" width="212" height="16" rx="2" fill="#ffffff"/>
+      <text x="246" y="784" fill="#6b7280" font-size="12" text-anchor="middle">10 · error event · NO WRITE MADE</text>
+
+      <!-- ============ ACTORS ============ -->
+      <rect x="40" y="150" width="160" height="62" rx="10" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1.4"/>
+      <text x="120" y="176" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Guest</text>
+      <text x="120" y="196" fill="#24242e" font-size="12" text-anchor="middle">sees the reason</text>
+
+      <rect x="290" y="150" width="160" height="62" rx="10" fill="#91ccf1" stroke="#2e7dbf" stroke-width="1.4"/>
+      <text x="370" y="176" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">apps/api</text>
+      <text x="370" y="196" fill="#24242e" font-size="12" text-anchor="middle">SSE stream</text>
+
+      <rect x="540" y="150" width="160" height="62" rx="10" fill="#9a85e1" stroke="#6440c9" stroke-width="1.4"/>
+      <text x="620" y="176" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Write Guard</text>
+      <text x="620" y="196" fill="#24242e" font-size="12" text-anchor="middle">holds no write tool</text>
+
+      <rect x="800" y="150" width="160" height="62" rx="10" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1.4"/>
+      <text x="880" y="176" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Silpo MCP</text>
+      <text x="880" y="196" fill="#24242e" font-size="12" text-anchor="middle">mcp.silpo.ua</text>
+
+      <rect x="1020" y="150" width="160" height="62" rx="10" fill="#afa4de" stroke="#7c6bc4" stroke-width="1.4"/>
+      <text x="1100" y="176" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Neon</text>
+      <text x="1100" y="196" fill="#24242e" font-size="12" text-anchor="middle">consent record</text>
+
+      <!-- ============ LEGEND: every refusal the guard can raise ============ -->
+      <rect x="40" y="856" width="1120" height="164" rx="8" fill="#f7f7fa" stroke="#9ca3af" stroke-width="0.8"/>
+      <text x="62" y="880" fill="#6b7280" font-size="12" font-weight="700">REFUSALS — ● OBSERVED LIVE 2026-09-07</text>
+
+      <text x="62" y="906" fill="#24242e" font-size="12">● tool schema hash differs from the reviewed baseline</text>
+      <text x="62" y="928" fill="#24242e" font-size="12">● no consent recorded for this session</text>
+      <text x="62" y="950" fill="#24242e" font-size="12">● cart changed since consent (state_hash)</text>
+      <text x="62" y="972" fill="#24242e" font-size="12">● consent expired (5 min TTL)</text>
+      <text x="62" y="994" fill="#24242e" font-size="12">● no budget reserve left for the read-back</text>
+
+      <text x="620" y="906" fill="#24242e" font-size="12">tool outside the write allowlist</text>
+      <text x="620" y="928" fill="#24242e" font-size="12">tool quarantined pending review</text>
+      <text x="620" y="950" fill="#24242e" font-size="12">args_hash differs from the consented call</text>
+      <text x="620" y="972" fill="#24242e" font-size="12">owner or session does not match</text>
+      <text x="620" y="994" fill="#24242e" font-size="12">consent already consumed · cart id changed</text>
+    </svg>
+</div>
+
+<h2>15. Why this is expected to help, not just work</h2>
 <p>The mechanism above targets a specific, observed gap: the retailer's own MCP server
 already returns more structured detail about why a cart is blocked than the shopping
 app's screen displays. A cart can carry two independent blocking conditions and the
@@ -1761,7 +2185,7 @@ their cart was blocked and fixed it in one step spent less time and fewer action
 doing it than one navigating a generic "add more items" prompt with no further
 detail.</p>
 
-<h2>13. Measured outcome</h2>
+<h2>16. Measured outcome</h2>
 
 <p class="pending">Not yet measured. This section will report recovery completion
 rate, median time-to-recovery versus the app, and disclosure rate — each with its
@@ -1769,5 +2193,5 @@ sample size, never as a bare percentage — once moderated before/after testing 
 them.</p>
 
 
-<p class="meta">Regenerated 2026-09-06T18:22:41+00:00. No external network resources.</p>
+<p class="meta">Regenerated 2026-09-07T01:26:30+00:00. No external network resources.</p>
 </body></html>
