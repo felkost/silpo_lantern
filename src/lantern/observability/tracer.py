@@ -103,12 +103,39 @@ def redact_write_input(kwargs: Mapping[str, Any]) -> Dict[str, Any]:
     }
 
 
+def redact_write_output(outputs: Any) -> Dict[str, Any]:
+    """The write tool answers `{success, summary, products:[{productId,
+    quantity}]}` -- and echoes back the real product id. Redacting only the
+    INPUTS left that id reaching a third-party trace anyway, which a live
+    run showed after `redact_write_input` was already in place: the span's
+    inputs were clean and its outputs carried
+    `1eee7135-...` verbatim.
+
+    Same rule as the input side, for the same reason: `success` and the
+    line count are what a reviewer needs, and the identity of what a real
+    person bought is not.
+    """
+    if not isinstance(outputs, Mapping):
+        return {"output": "<unrecognised shape, not traced>"}
+    products = outputs.get("products")
+    lines = products if isinstance(products, list) else []
+    return {
+        "success": outputs.get("success"),
+        "summary": outputs.get("summary"),
+        "product_count": len(lines),
+        "quantities": [
+            line.get("quantity") for line in lines if isinstance(line, Mapping)
+        ],
+    }
+
+
 def traced_llm_call(
     name: str,
     fn: Callable[..., T],
     process_inputs: Callable[[Mapping[str, Any]], Dict[str, Any]],
     version_tuple: Optional[Mapping[str, str]] = None,
     tags: Optional[Sequence[str]] = None,
+    process_outputs: Optional[Callable[[Any], Dict[str, Any]]] = None,
 ) -> Callable[..., T]:
     """Wraps `fn` (a `planner_call`/`explainer_call`) with a named
     LangSmith span. `version_tuple` — schema_hash, prompt_version,
@@ -120,7 +147,14 @@ def traced_llm_call(
     A no-op wrapper when tracing is disabled (measured — see module
     docstring), so callers never need to branch on whether tracing is on.
     """
-    traced = traceable(name=name, process_inputs=process_inputs)(fn)
+    if process_outputs is None:
+        traced = traceable(name=name, process_inputs=process_inputs)(fn)
+    else:
+        traced = traceable(
+            name=name,
+            process_inputs=process_inputs,
+            process_outputs=process_outputs,
+        )(fn)
     metadata = dict(version_tuple) if version_tuple else {}
 
     def call(*args: Any, **kwargs: Any) -> T:

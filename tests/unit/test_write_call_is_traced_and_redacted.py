@@ -17,7 +17,10 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Tuple
 
 from src.lantern.graph.build import build_recovery_graph
-from src.lantern.observability.tracer import redact_write_input
+from src.lantern.observability.tracer import (
+    redact_write_input,
+    redact_write_output,
+)
 from src.lantern.policies.loader import load_registry
 
 _REAL_CART_ID = "4e83e418-a6b1-4187-b961-f8c9fb4ba2f5"
@@ -107,3 +110,28 @@ def test_the_write_callable_reaching_the_node_is_wrapped_in_a_span() -> None:
     assert bare_write not in [
         cell.cell_contents for cell in (wrapped or ())
     ], "the raw write callable reached the node — it was never wrapped in a span"
+
+
+def test_t17_the_write_response_does_not_leak_the_product_id_either() -> None:
+    """Found live, after `redact_write_input` was already in place: the
+    span's inputs were clean and its outputs carried the real product id
+    verbatim, because the tool echoes it back and only inputs were being
+    redacted. Redacting one side of a call is not redacting the call.
+    """
+    response = {
+        "success": True,
+        "summary": "Updated 1 product(s)",
+        "products": [{"productId": _REAL_PRODUCT_ID, "quantity": 2}],
+    }
+
+    traced = redact_write_output(response)
+
+    assert _REAL_PRODUCT_ID not in repr(traced)
+    assert traced["success"] is True
+    assert traced["summary"] == "Updated 1 product(s)"
+    assert traced["product_count"] == 1
+    assert traced["quantities"] == [2]
+
+
+def test_an_unrecognised_write_response_is_not_traced_verbatim() -> None:
+    assert _REAL_PRODUCT_ID not in repr(redact_write_output(_REAL_PRODUCT_ID))

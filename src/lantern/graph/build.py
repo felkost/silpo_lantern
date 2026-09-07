@@ -36,6 +36,7 @@ from src.lantern.observability.tracer import (
     redact_explainer_input,
     redact_planner_input,
     redact_write_input,
+    redact_write_output,
     traced_llm_call,
 )
 from src.lantern.policies.loader import DEFAULT_REGISTRY_PATH, PolicyRegistry
@@ -209,7 +210,12 @@ def build_recovery_graph(
     # step in the graph leaving no trace at all -- found by the pre-merge
     # audit, after the live runs had already happened.
     traced_call_write_tool = traced_llm_call(
-        "write", call_write_tool, redact_write_input, version_tuple, trace_tags
+        "write",
+        call_write_tool,
+        redact_write_input,
+        version_tuple,
+        trace_tags,
+        process_outputs=redact_write_output,
     )
 
     read_node = make_read_node(fetch_my_cart, fetch_cart_by_id)

@@ -32,7 +32,9 @@ def _noop_explainer(proposal: Any) -> ExplainerOutput:
 def test_tools_schema_hash_reaches_every_traced_call() -> None:
     calls: List[Dict[str, Any]] = []
 
-    def spy_traced_llm_call(name, fn, process_inputs, version_tuple=None, tags=None):
+    def spy_traced_llm_call(
+        name, fn, process_inputs, version_tuple=None, tags=None, **kwargs
+    ):
         calls.append({"name": name, "version_tuple": version_tuple})
         return fn
 
@@ -75,7 +77,9 @@ def test_an_empty_schema_hash_still_reaches_the_trace_explicitly() -> None:
     notice missing than an empty one."""
     calls: List[Dict[str, Any]] = []
 
-    def spy_traced_llm_call(name, fn, process_inputs, version_tuple=None, tags=None):
+    def spy_traced_llm_call(
+        name, fn, process_inputs, version_tuple=None, tags=None, **kwargs
+    ):
         calls.append(version_tuple)
         return fn
 
@@ -106,7 +110,9 @@ def test_trace_tags_reach_both_the_planner_and_explainer_call() -> None:
     `scripts/ua_eval_run.py` already does for its own raw LLM calls."""
     calls: List[Dict[str, Any]] = []
 
-    def spy_traced_llm_call(name, fn, process_inputs, version_tuple=None, tags=None):
+    def spy_traced_llm_call(
+        name, fn, process_inputs, version_tuple=None, tags=None, **kwargs
+    ):
         calls.append({"name": name, "tags": tags})
         return fn
 
