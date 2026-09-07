@@ -1757,11 +1757,12 @@ a receipt or the dashed state that records "we could not confirm this".</p>
 <p>Why it matters: the two dashed states are the point of the design. A system that can
 only report success will report success when it is wrong. This one has somewhere honest
 to land.</p>
-<div class="example"><b>Example.</b> A guest approved adding one item worth 14.99 UAH to
-a cart that was 2.98 UAH below the shop's minimum. The write was made, the second
-reading showed 606.21 UAH against a 599 UAH minimum, the blocker was gone, and the
-checkout link appeared. Had that second reading not confirmed the change, the run would
-have ended in the dashed state instead, and the guest would have been told so.</div>
+<div class="example"><b>Example.</b> A guest approved adding one item priced at 3.99 UAH
+to a cart 2.98 UAH below the shop's 599 UAH minimum. The write was made, the second
+reading showed 599.61 UAH, the blocker was gone and the checkout link appeared. The shop
+charged 3.59, not 3.99, and the receipt records that difference rather than hiding it.
+Had the second reading not confirmed the change, the run would have ended in the dashed
+state instead, and the guest would have been told so.</div>
 <div class="diagram"><svg viewBox="0 0 980 790" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g5-state-title g5-state-desc">
       <title id="g5-state-title">Write segment states and the consent interrupt</title>
       <desc id="g5-state-desc">State machine of the recovery graph's write segment. The graph pauses in Awaiting consent at a static interrupt before the Write Guard. The guard either authorizes, moving to Consented, or refuses, moving to the dashed exception state Aborted with no write performed. From Consented the write call and an independent read-back run, reaching Written, which resolves to Verified when the read-back confirms the consented change or to the dashed exception state Unverified when it does not. A verified write whose receipt shows the blocker still standing returns the graph to diagnose for a further consent round, capped at three.</desc>
@@ -2193,5 +2194,5 @@ sample size, never as a bare percentage — once moderated before/after testing 
 them.</p>
 
 
-<p class="meta">Regenerated 2026-09-07T01:26:30+00:00. No external network resources.</p>
+<p class="meta">Regenerated 2026-09-07T01:41:42+00:00. No external network resources.</p>
 </body></html>

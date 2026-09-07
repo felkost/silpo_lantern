@@ -241,11 +241,12 @@ a receipt or the dashed state that records "we could not confirm this".</p>
 <p>Why it matters: the two dashed states are the point of the design. A system that can
 only report success will report success when it is wrong. This one has somewhere honest
 to land.</p>
-<div class="example"><b>Example.</b> A guest approved adding one item worth 14.99 UAH to
-a cart that was 2.98 UAH below the shop's minimum. The write was made, the second
-reading showed 606.21 UAH against a 599 UAH minimum, the blocker was gone, and the
-checkout link appeared. Had that second reading not confirmed the change, the run would
-have ended in the dashed state instead, and the guest would have been told so.</div>
+<div class="example"><b>Example.</b> A guest approved adding one item priced at 3.99 UAH
+to a cart 2.98 UAH below the shop's 599 UAH minimum. The write was made, the second
+reading showed 599.61 UAH, the blocker was gone and the checkout link appeared. The shop
+charged 3.59, not 3.99, and the receipt records that difference rather than hiding it.
+Had the second reading not confirmed the change, the run would have ended in the dashed
+state instead, and the guest would have been told so.</div>
 <div class="diagram">{{ g5_state_svg }}</div>
 
 <h2>13. From consent to receipt</h2>
