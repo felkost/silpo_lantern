@@ -10,11 +10,26 @@ Pure per this project's "domain core does no I/O" invariant: everything
 here operates on data the caller already fetched.
 """
 
+import re
 from dataclasses import dataclass
 from datetime import datetime
+from decimal import Decimal
 from typing import Any, Mapping, Optional, Sequence
 
 from src.lantern.domain.models import EvidenceTuple, Money
+
+# G5+G6 (D-G5-03): live probe P1 confirmed `find_products_batch`'s own
+# `id`/`companyId`/`branchId` are UUID-shaped, matching the same pattern
+# `tests/contract/fixtures/tools_list_2026-09-05.json`'s write tool
+# requires -- checked here, not merely presence, so a malformed non-UUID
+# string cannot slip through as if it could ever be sent to the write tool.
+_UUID_RE = re.compile(
+    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+)
+
+
+def _is_uuid_shaped(value: Optional[str]) -> bool:
+    return value is not None and bool(_UUID_RE.match(value))
 
 
 @dataclass(frozen=True)
@@ -27,6 +42,16 @@ class RawCandidate:
     forge an entire `RawCandidate`, not just supply four convincing-looking
     values, and nothing in this module accepts one from anywhere but
     `raw_candidates_from_find_products_batch`.
+
+    `product_uuid`/`company_id`/`branch_id`/`stock`/`weighted`/`step`
+    (G5+G6, D-G5-03) are the write tool's own argument fields, confirmed
+    live (probe P1) to be the catalogue product's real UUID -- the SAME
+    identifier the cart's own `LineItem.product_id` carries for a product
+    already in the cart, not a fourth, separate space. `external_product_id`
+    stays a distinct field: D16 already settled that it is structurally
+    incompatible with the cart's own id, and `channel_snapshot_builder`
+    still matches on it for its own, unrelated purpose (item availability
+    per channel).
     """
 
     call_id: str
@@ -37,6 +62,12 @@ class RawCandidate:
     price_raw: Any  # exactly what the tool's JSON carried — unconverted
     available_raw: Any
     captured_at: datetime
+    product_uuid: Optional[str] = None
+    company_id: Optional[str] = None
+    branch_id: Optional[str] = None
+    stock: Optional[int] = None
+    weighted: Optional[bool] = None
+    step: Optional[Decimal] = None
 
 
 def raw_candidates_from_find_products_batch(
@@ -54,6 +85,7 @@ def raw_candidates_from_find_products_batch(
     candidates: list[RawCandidate] = []
     for query in response.get("queries", []):
         for product in query.get("products", []):
+            step_raw = product.get("step")
             candidates.append(
                 RawCandidate(
                     call_id=call_id,
@@ -64,21 +96,31 @@ def raw_candidates_from_find_products_batch(
                     price_raw=product.get("price"),
                     available_raw=product.get("available"),
                     captured_at=captured_at,
+                    product_uuid=product.get("id"),
+                    company_id=product.get("companyId"),
+                    branch_id=product.get("branchId"),
+                    stock=product.get("stock"),
+                    weighted=product.get("weighted"),
+                    step=Decimal(str(step_raw)) if step_raw is not None else None,
                 )
             )
     return candidates
 
 
 def resolve_product_id(raw: RawCandidate) -> Optional[str]:
-    """Match by `externalProductId` (the article code) when
-    present; fall back to `slug` when it is null (the tool's own
-    `outputSchema` types this field `number | null` — measured, not
-    assumed). A candidate with neither is `unresolved` — dropped, never
-    guessed at."""
-    if raw.external_product_id is not None:
-        return str(raw.external_product_id)
-    if raw.slug:
-        return raw.slug
+    """G5+G6 (D-G5-03): resolves to `product_uuid` -- the catalogue
+    product's own UUID, confirmed live (probe P1) to be the exact
+    identifier the write tool's `productId` argument expects, and to
+    match the cart's own `LineItem.product_id` when the product is
+    already in the cart. Retires the `externalProductId`/`slug` fallback
+    this function used before that measurement existed: `id` is a
+    required, non-null field in the tool's own `outputSchema`, so a
+    resolved evidence tuple can now always be turned into a real write
+    argument, not merely a plausible-looking one. A candidate with no
+    `product_uuid` is `unresolved` — dropped, never guessed at.
+    """
+    if raw.product_uuid:
+        return raw.product_uuid
     return None
 
 
@@ -102,8 +144,12 @@ def _resolve_price(raw: RawCandidate) -> Optional[Money]:
 def gate_candidates(raw_candidates: Sequence[RawCandidate]) -> list[EvidenceTuple]:
     """A candidate survives only if:
 
-    (a) its product id resolves (externalProductId, falling back to slug);
-        a candidate resolving to neither is dropped, not guessed;
+    (a) its product id resolves to a UUID-shaped `product_uuid`, and its
+        `company_id`/`branch_id` are also UUID-shaped (G5+G6, D-G5-03) —
+        the three arguments the write tool's own `inputSchema` requires
+        per product. A candidate missing any of the three could be shown
+        to the guest but never actually written, which is exactly the
+        promise this gate already makes for price/availability;
     (b) its price converts to a positive `Money` (`_resolve_price` above) —
         a present-but-invalid value (a string that isn't a number, zero, or
         negative) is rejected here, not merely a missing one — a
@@ -112,6 +158,11 @@ def gate_candidates(raw_candidates: Sequence[RawCandidate]) -> list[EvidenceTupl
         `1`/`"true"` from a malformed upstream response does not silently
         pass as a boolean `True` the way Python's own truthiness would.
 
+    Stock/weighted-step validity is deliberately NOT checked here: it
+    depends on the requested quantity, which this gate does not know yet
+    — `action_proposal_builder.build_action_proposals` checks it once the
+    quantity is available.
+
     Every survivor is built through `EvidenceTuple`'s normal Pydantic
     constructor, never `model_construct` — that is what keeps the Money
     conversion guarantee in force (see `_resolve_price`'s docstring).
@@ -119,7 +170,9 @@ def gate_candidates(raw_candidates: Sequence[RawCandidate]) -> list[EvidenceTupl
     survivors: list[EvidenceTuple] = []
     for raw in raw_candidates:
         product_id = resolve_product_id(raw)
-        if product_id is None:
+        if product_id is None or not _is_uuid_shaped(product_id):
+            continue
+        if not _is_uuid_shaped(raw.company_id) or not _is_uuid_shaped(raw.branch_id):
             continue
         price = _resolve_price(raw)
         if price is None:

@@ -27,19 +27,30 @@ it does not recognise, and the read-only disclosure layer including the delivery
 comparison. It does no I/O at all — an architecture test enforces that, and the whole
 of it runs offline.
 
-The agent graph now runs end to end through `read → diagnose → compare_channels → plan
-→ collect_and_gate → rank → explain`, reaching a terminal `awaiting_consent` state with
-real, Evidence-Gated candidates — proven both offline (fixture-driven tests) and live,
-against a real Silpo cart. The planner and explainer are real LLM calls (OpenRouter);
+The agent graph runs `read → diagnose → compare_channels → plan → collect_and_gate →
+rank → explain`, pauses for the guest's consent, and only then continues into the write
+segment — proven both offline (fixture-driven tests) and live, against a real Silpo
+cart. The planner and explainer are real LLM calls (OpenRouter);
 a 28-prompt evaluation picked the cheapest explainer candidate that clears a
-Ukrainian-language quality bar with zero critical errors. The write path is
-deliberately unreachable until the Write Guard is built: no code in this repository can
-change a cart today, and no LLM output can reach a write tool even after that guard
-exists — a planner's structured output has no field a candidate's price or id could be
-smuggled through.
+Ukrainian-language quality bar with zero critical errors. No LLM output can reach a
+write tool: a planner's structured output has no field a candidate's price or id could
+be smuggled through, and the quantity a proposal asks for is arithmetic computed from
+the measured gap, not a number the model supplies.
 
-The recovery UI, live production wiring of the MCP fetchers into an API route, and the
-Write Guard itself are the next stages.
+The write path is now built and has been exercised against a real cart. A guest signs
+in with their own phone number — each session holds its own credential, so two guests
+never share one — approves one specific action by id, and only then can anything be
+written. The Write Guard re-reads the cart, re-checks every binding, and either
+authorizes exactly one call to exactly one allowlisted tool or refuses with a stated
+reason; five of its refusal branches have been observed against the live server. The
+server's own success flag is recorded and believed for nothing: an independent
+read-back decides the outcome, and the receipt separates "the write did what we agreed"
+from "the cart can now be checked out". A verified write that leaves the blocker
+standing offers a further round rather than reporting success. The recovery card
+(login, diagnosis, consent, receipt) is built and tested.
+
+Golden and regression datasets for the write path, and the metrics computed from them,
+are deferred to G8+G9 where the project's evaluation work lives.
 
 ## Problem
 

@@ -123,7 +123,13 @@ def normalize_cart(raw: Mapping[str, Any]) -> Cart:
     read leniently (`test_dr_01_money_is_decimal.py`'s own minimal fixture
     carries no `id` at all) because a missing
     cart id is a data-completeness question for a caller to decide on, not
-    a shape this normalizer cannot make sense of."""
+    a shape this normalizer cannot make sense of.
+
+    `checkoutWebLink` (G5+G6, D-G5-25) is a sibling of `cart` in the wire
+    response, not a field inside it — the caller merges it into `raw`
+    before calling this function (see `graph.nodes.make_read_node`), so
+    this normalizer's own "raw is the cart object" contract still holds
+    for every other field."""
     cart_id = raw.get("id", "")
     calculation = _require(raw, "calculation", "cart")
     products_total = to_money(calculation.get("productsTotal"))
@@ -181,4 +187,5 @@ def normalize_cart(raw: Mapping[str, Any]) -> Cart:
         delivery_cost=to_money(delivery.get("total")),
         restrictions=list(raw.get("restrictions") or []),
         constraints=dict(raw.get("constraints") or {}),
+        checkout_web_link=raw.get("checkoutWebLink"),
     )

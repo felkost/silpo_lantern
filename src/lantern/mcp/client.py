@@ -66,6 +66,17 @@ def load_reviewed_tool_names() -> FrozenSet[str]:
     return frozenset(payload["names"])
 
 
+@lru_cache(maxsize=1)
+def load_reviewed_tool_hashes() -> Dict[str, str]:
+    """G5+G6 (D-G5-05): the per-tool reviewed baseline, generated from the
+    same tracked contract fixture as `load_reviewed_tool_names` by
+    `scripts/generate_reviewed_tool_hashes.py` — never hand-typed, since a
+    hand-typed hash is unverifiable against anything."""
+    payload = json.loads(_REVIEWED_TOOLS_PATH.read_text(encoding="utf-8"))
+    hashes = payload.get("tool_hashes", {})
+    return dict(hashes)
+
+
 def compute_schema_hash(tools_raw: List[Dict[str, Any]]) -> str:
     """sha256 over the canonical JSON of a raw `tools/list` `tools` array —
     matching the hashing already used by the evidence lab
@@ -74,6 +85,46 @@ def compute_schema_hash(tools_raw: List[Dict[str, Any]]) -> str:
     """
     canonical = json.dumps(tools_raw, ensure_ascii=False, indent=2)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def compute_per_tool_schema_hashes(tools_raw: List[Dict[str, Any]]) -> Dict[str, str]:
+    """G5+G6 (D-G5-05): one hash per tool, not the whole-array hash above.
+    The G4 stage report itself named the whole-array granularity "adequate
+    while no write allowlist exists to make 'which tool moved' matter" —
+    that condition ends once a Write Guard exists: the guard must detect
+    drift in `silpo_add_or_update_cart_products` specifically, not treat
+    every unrelated tool's release note as equally disqualifying.
+
+    Unlike `compute_schema_hash`, this one canonicalises each tool through
+    the SDK model before hashing, because the two answer different
+    questions. The whole-array hash is a tripwire against a historical raw
+    capture, so it must stay on the wire bytes. This one is compared
+    reviewed-against-live by the Write Guard, and the live side always
+    arrives already round-tripped — `mcp.session._list_tools_async` can
+    only obtain tools as typed `Tool` objects, the SDK exposing no hook for
+    the raw JSON-RPC bytes underneath.
+
+    Hashing the caller's dicts as-given made the canonicalisation a
+    property of whichever `fetch` callable happened to be wired in, so a
+    baseline generated from the raw fixture and a live listing could never
+    compare equal even with an identical schema — measured: all 39 hashes
+    differ by canonicalisation alone. That refused a legitimate write on
+    this project's first real consent. Doing the conversion here gives
+    every producer and consumer of these hashes one space by construction.
+    """
+    canonical = [
+        mcp_types.Tool.model_validate(tool).model_dump(
+            mode="json", by_alias=True, exclude_none=True
+        )
+        for tool in tools_raw
+        if "name" in tool
+    ]
+    return {
+        tool["name"]: hashlib.sha256(
+            json.dumps(tool, ensure_ascii=False, indent=2).encode("utf-8")
+        ).hexdigest()
+        for tool in canonical
+    }
 
 
 def raise_on_tool_error(result: mcp_types.CallToolResult) -> mcp_types.CallToolResult:
@@ -99,6 +150,12 @@ class CachedTools:
     # had, so no `model_dump` option set recovers byte equality with the raw
     # JSON.
     schema_hash: str
+    # G5+G6 (D-G5-05): one hash per tool, computed the same way as
+    # `schema_hash` above but scoped to a single tool object — see
+    # `compute_per_tool_schema_hashes`. The Write Guard checks this for
+    # the one allowlisted write tool specifically, since a whole-array
+    # hash cannot say *which* tool moved.
+    per_tool_hashes: Dict[str, str]
     # Unlike `unknown_to_registry` (relative to this process's own fetch
     # history, resets on restart), `quarantined` is checked against the
     # tracked baseline in `reviewed_tools.json`, which survives one. Drift
@@ -156,6 +213,19 @@ class ToolRegistry:
     def invalidate(self) -> None:
         self._cached = None
 
+    def tool_schema_hashes(self, tool_name: str) -> "tuple[str, str, bool]":
+        """G5+G6: `(reviewed_hash, live_hash, is_quarantined)` for one
+        tool -- the exact shape `graph.nodes.make_write_guard_node`
+        expects. A lookup by name, not a generic "call any tool"
+        dispatcher: the caller already knows which tool it is asking
+        about (`ActionProposal.tool_name`, itself constrained to
+        `WRITE_TOOL_ALLOWLIST` before this is ever reached)."""
+        cached = self.get()
+        reviewed = load_reviewed_tool_hashes().get(tool_name, "")
+        live = cached.per_tool_hashes.get(tool_name, "")
+        is_quarantined = tool_name in cached.quarantined
+        return reviewed, live, is_quarantined
+
     def observe_error(self, error: McpAdapterError) -> None:
         """Invalidate immediately on evidence the cached schema is stale,
         rather than waiting out the TTL. A `McpSchemaError` (cached
@@ -178,6 +248,7 @@ class ToolRegistry:
         tools_raw = self._fetch()
         _reject_if_oversized(tools_raw)
         schema_hash = compute_schema_hash(tools_raw)
+        per_tool_hashes = compute_per_tool_schema_hashes(tools_raw)
         result = mcp_types.ListToolsResult(
             tools=[mcp_types.Tool.model_validate(t) for t in tools_raw]
         )
@@ -193,6 +264,7 @@ class ToolRegistry:
             fetched_at=self._now(),
             unknown_to_registry=frozenset(new_names),
             schema_hash=schema_hash,
+            per_tool_hashes=per_tool_hashes,
             quarantined=frozenset(quarantined),
         )
         self._cached = cached

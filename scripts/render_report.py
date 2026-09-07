@@ -231,7 +231,59 @@ delivery channel's failure was handled — the kind of gap a hand-drawn diagram 
 surface, since it only draws what the design intends, not what happened.</div>
 <div class="diagram">{{ g4_sequence_svg }}</div>
 
-<h2>12. Why this is expected to help, not just work</h2>
+<h2>12. The only path that can change a cart</h2>
+<p>This state machine shows what happens after the guest has been offered a change.
+The graph stops and waits: it cannot go further on its own. When consent arrives, the
+Write Guard either authorizes the change or refuses it, and a refusal ends the run with
+no cart touched at all. If the write is made, the system reads the cart again from the
+server, by a separate call, and only that second reading decides whether the result is
+a receipt or the dashed state that records "we could not confirm this".</p>
+<p>Why it matters: the two dashed states are the point of the design. A system that can
+only report success will report success when it is wrong. This one has somewhere honest
+to land.</p>
+<div class="example"><b>Example.</b> A guest approved adding one item priced at 3.99 UAH
+to a cart 2.98 UAH below the shop's 599 UAH minimum. The write was made, the second
+reading showed 599.61 UAH, the blocker was gone and the checkout link appeared. The shop
+charged 3.59, not 3.99, and the receipt records that difference rather than hiding it.
+Had the second reading not confirmed the change, the run would have ended in the dashed
+state instead, and the guest would have been told so.</div>
+<div class="diagram">{{ g5_state_svg }}</div>
+
+<h2>13. From consent to receipt</h2>
+<p>Here the same path is drawn as a conversation between the guest, the service, the
+retailer's server and the database. The guest approves one specific action by its
+identifier. The service does not accept any figure from the guest's browser: it
+recalculates the fingerprints of both the exact call and the cart itself. The guard
+re-reads the cart before authorizing, so the change is approved against the cart as it
+stands at that moment, not as it stood when the guest was reading.</p>
+<p>Why it matters: the write call answers with a success flag. That flag is recorded
+and believed for nothing. The independent read-back that follows is the only evidence
+the system accepts, and the branching frame at the bottom shows the two receipts it can
+produce.</p>
+<div class="example"><b>Example.</b> One live write expected the cart to grow by 96.49
+UAH, because that is the price the catalogue reported. The read-back showed 86.84 UAH:
+the cart applied a discount the catalogue does not publish. Nothing was wrong with the
+write — the right product arrived in the right quantity — so the receipt was issued,
+with the difference written on it rather than hidden.</div>
+<div class="diagram">{{ g5_sequence_svg }}</div>
+
+<h2>14. What the guard checks before it says yes</h2>
+<p>This diagram lists the reasons the system refuses to change a cart. The guard loads
+the guest's approval from the database, and lets the database decide whether it has
+expired, so a clock difference between machines cannot revive a stale approval or kill
+a fresh one. It then re-reads the cart and recalculates the fingerprints itself. Either
+every condition still holds and exactly one write is made, or nothing is written and
+the guest is told the reason.</p>
+<p>Why it matters: the guard holds no write tool of its own. It can say yes, and a
+separate step performs the change. That separation is what makes "the system never
+writes without approval" a property of one file, not a hope spread across many.</p>
+<div class="example"><b>Example.</b> During live testing a guest changed one item's
+quantity in the shop's own app while deciding whether to accept a proposal. The cart no
+longer matched the one the approval was given for, and the write was refused rather
+than overwriting the change the guest had just made by hand.</div>
+<div class="diagram">{{ g5_refusal_svg }}</div>
+
+<h2>15. Why this is expected to help, not just work</h2>
 <p>The mechanism above targets a specific, observed gap: the retailer's own MCP server
 already returns more structured detail about why a cart is blocked than the shopping
 app's screen displays. A cart can carry two independent blocking conditions and the
@@ -245,7 +297,7 @@ their cart was blocked and fixed it in one step spent less time and fewer action
 doing it than one navigating a generic "add more items" prompt with no further
 detail.</p>
 
-<h2>13. Measured outcome</h2>
+<h2>16. Measured outcome</h2>
 {% if metrics %}
 <table>
 <tr><th>Metric</th><th>Value</th><th>n</th></tr>
@@ -301,6 +353,9 @@ def render() -> Path:
         domain_activity_svg=_inline_svg("diagnose_activity"),
         g4_activity_svg=_inline_svg("g4_planner_evidence_rank_activity"),
         g4_sequence_svg=_inline_svg("g4_llm_tool_choice_sequence"),
+        g5_state_svg=_inline_svg("g5_graph_state_with_interrupt"),
+        g5_sequence_svg=_inline_svg("g5_consent_write_readback_sequence"),
+        g5_refusal_svg=_inline_svg("g5_guard_refusal_sequence"),
         metrics=_load_metrics(),
         generated_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
     )

@@ -52,6 +52,35 @@ def get_database_url(env_path: Optional[Path] = None) -> str:
         ) from exc
 
 
+def get_openrouter_api_key(env_path: Optional[Path] = None) -> str:
+    """The OpenRouter API key for planner/explainer LLM calls."""
+    load_env(env_path)
+    try:
+        return os.environ["OPENROUTER_API_KEY"]
+    except KeyError as exc:
+        raise MissingSettingError(
+            f"OPENROUTER_API_KEY is set neither in the environment nor in "
+            f"{env_path or DEFAULT_ENV_PATH}"
+        ) from exc
+
+
+def get_owner_secret(env_path: Optional[Path] = None) -> str:
+    """G5+G6 (D-G5-06): a server-side secret mixed into the derived
+    `owner` hash when the cached MCP OAuth token carries no stable
+    subject claim (measured live — probe P2 — that it does not). Never
+    derived from `cart_id`: `compute_state_hash` already includes
+    `cart_id`, so an owner derived from it would make an owner-mismatch
+    check vacuous."""
+    load_env(env_path)
+    try:
+        return os.environ["LANTERN_OWNER_SECRET"]
+    except KeyError as exc:
+        raise MissingSettingError(
+            f"LANTERN_OWNER_SECRET is set neither in the environment nor in "
+            f"{env_path or DEFAULT_ENV_PATH}"
+        ) from exc
+
+
 def strip_sqlalchemy_dialect(url: str) -> str:
     """Derive the bare `postgresql://` DSN `langgraph-checkpoint-postgres`
     needs from the SQLAlchemy-dialect `DATABASE_URL`. Fails loud on

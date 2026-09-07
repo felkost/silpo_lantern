@@ -76,17 +76,15 @@ def build_item_availability_by_name(
     captured_at: datetime,
 ) -> List[bool]:
     """Fallback for `build_item_availability` when no confirmed
-    `externalProductId` exists for the cart's own line items — measured
-    directly (not assumed): the only tracked live cart capture
-    (`tests/unit/fixtures/d12_cart_wire_shape.json`) has an empty
-    `shipments[].products[]`, so this project has never seen a live line
-    item's article code, and `LineItem.product_id` (the cart's own internal
-    id) has no confirmed relationship to `find_products_batch`'s
-    `externalProductId`. `find_products_batch`'s own description documents
-    free-text name search as supported — this is an approximate signal
-    (case-insensitive exact match on `name`), not a guaranteed-exact one,
-    and stays a named risk until the first live multi-item cart capture
-    settles the real id relationship.
+    `externalProductId` exists for the cart's own line items. Settled by
+    D16's live 11-item cart capture: `LineItem.product_id` (a UUID) and
+    `find_products_batch`'s `externalProductId` (`number | null`) are
+    structurally incompatible identifier spaces by construction, not
+    merely unobserved to match — so this fallback is the permanent design
+    for a cart-line item with no confirmed article code, not a stopgap.
+    `find_products_batch`'s own description documents free-text name
+    search as supported — this is an approximate signal (case-insensitive
+    exact match on `name`), not a guaranteed-exact one.
     """
     candidates = raw_candidates_from_find_products_batch(
         call_id=call_id, response=find_products_batch_response, captured_at=captured_at

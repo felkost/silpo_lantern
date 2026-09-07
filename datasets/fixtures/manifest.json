@@ -66,6 +66,12 @@
       "fixture_id": "unavailable_item_zero_price",
       "origin": "mutated",
       "path": "datasets/fixtures/mutated/unavailable_item_zero_price.json"
+    },
+    {
+      "fixture_id": "cart_multi_item_diverse",
+      "origin": "recorded",
+      "path": "datasets/fixtures/sanitized/cart_multi_item_diverse.json",
+      "provenance": "live capture 2026-09-06, 11-item diverse cart (D16); identifiers pseudonymised, address dropped"
     }
   ],
   "generated_at": "2026-09-06T11:15:20.576549+00:00",

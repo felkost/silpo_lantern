@@ -1,5 +1,7 @@
 """Graph nodes: read -> diagnose -> compare_channels -> plan ->
-collect_and_gate -> rank -> explain -> terminal `awaiting_consent`.
+collect_and_gate -> rank -> explain -> awaiting_consent -> write_guard ->
+write_and_readback -> persist_receipt. The three write-path nodes were
+added at G5+G6; everything before `awaiting_consent` is unchanged from G4.
 
 Every MCP/LLM call is dependency-injected as a plain `Callable` — the same
 pattern `ToolRegistry(fetch=...)` already established in this codebase
@@ -24,7 +26,8 @@ choice, not a scope cut.
 """
 
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Mapping, Sequence
+from decimal import Decimal
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from src.lantern.domain.action_proposal_builder import build_action_proposals
 from src.lantern.domain.channel_snapshot_builder import (
@@ -34,7 +37,7 @@ from src.lantern.domain.channel_snapshot_builder import (
     build_item_availability_by_name,
     select_timeslot_for_find_products_batch,
 )
-from src.lantern.domain.diagnosis import diagnose
+from src.lantern.domain.diagnosis import compute_order_cost_min_gap, diagnose
 from src.lantern.domain.disclosure import (
     ChannelSnapshot,
     build_disclosure,
@@ -44,12 +47,19 @@ from src.lantern.domain.evidence_gate import (
     gate_candidates,
     raw_candidates_from_find_products_batch,
 )
+from src.lantern.domain.models import Cart, ConsentRecord, Money, Receipt
 from src.lantern.domain.normalizer import CartShapeError, normalize_cart
 from src.lantern.domain.rank import rank_candidates
 from src.lantern.graph.schemas import ExplainerOutput, SearchIntent
-from src.lantern.graph.state import RecoveryState
+from src.lantern.graph.state import (
+    MAX_WRITE_ROUNDS,
+    RecoveryState,
+    has_write_reserve,
+)
 from src.lantern.mcp.errors import McpAdapterError
+from src.lantern.memory.repository import IdempotencyState
 from src.lantern.policies.loader import PolicyRegistry
+from src.lantern.safety.write_guard import authorize_write, finalize_write_outcome
 
 # LangGraph node signature: a plain function of (RecoveryState) -> a PARTIAL
 # state update dict — LangGraph merges the returned keys into the running
@@ -57,6 +67,38 @@ from src.lantern.policies.loader import PolicyRegistry
 # the installed SDK, not assumed — see
 # `tests/unit/test_graph_pipeline_reaches_awaiting_consent.py`).
 Node = Callable[[RecoveryState], Dict[str, Any]]
+
+
+def _recovery_outcome(
+    read_back_cart: Optional[Cart], primary_code: Optional[str]
+) -> Tuple[bool, Optional[Money]]:
+    """Did the write achieve what the guest wanted? Answered from the
+    independent read-back alone: the blocker is cleared when the cart no
+    longer carries `primary_code` at error level, and for an
+    `order.cost.min` block the shortfall that remains is recomputed from
+    the cart's own threshold.
+
+    An unreachable read-back proves nothing either way, so it counts as
+    not cleared -- the same fail-closed reading `finalize_write_outcome`
+    already applies to the write itself.
+    """
+    if read_back_cart is None or primary_code is None:
+        return False, None
+
+    still_blocking = [
+        validation
+        for validation in read_back_cart.validations
+        if validation.level == "error" and validation.code == primary_code
+    ]
+    if not still_blocking:
+        return True, None
+
+    threshold = still_blocking[0].context.get("orderCostMin")
+    if primary_code != "order.cost.min" or threshold is None:
+        return False, None
+    return False, compute_order_cost_min_gap(
+        Decimal(str(threshold)), read_back_cart.products_total
+    )
 
 
 def make_read_node(
@@ -67,6 +109,10 @@ def make_read_node(
     first call returns no cart body (a measured finding); the second call's
     parsed response nests the cart under a `cart` key
     (`normalizer.normalize_cart`'s own documented input shape).
+
+    `checkoutWebLink` (G5+G6, D-G5-25) is a sibling of `cart` in the raw
+    response, not a field inside it, so it is merged into the dict passed
+    to `normalize_cart` here rather than being silently dropped.
     """
 
     def read_node(state: RecoveryState) -> Dict[str, Any]:
@@ -74,7 +120,9 @@ def make_read_node(
             my_cart = fetch_my_cart()
             cart_id = my_cart["shoppingCartId"]
             full = fetch_cart_by_id(cart_id)
-            cart = normalize_cart(full["cart"])
+            cart_payload = dict(full["cart"])
+            cart_payload.setdefault("checkoutWebLink", full.get("checkoutWebLink"))
+            cart = normalize_cart(cart_payload)
         except (CartShapeError, KeyError) as exc:
             return {"status": "aborted", "error": f"read failed: {exc}"}
         return {"cart": cart, "mcp_attempts_used": state["mcp_attempts_used"] + 2}
@@ -217,6 +265,16 @@ def make_plan_node(planner_call: Callable[[RecoveryState], SearchIntent]) -> Nod
     """
 
     def plan_node(state: RecoveryState) -> Dict[str, Any]:
+        # Every proposal this pipeline can build closes a cost gap by adding
+        # products, so with no gap there is nothing to plan -- and asking the
+        # planner anyway is what produced three invented drinks for a cart
+        # blocked by a missing delivery slot and an out-of-stock line, on the
+        # first live run. Checked before `planner_call`, not after, because
+        # the call costs money and its output would be discarded.
+        diagnosis = state.get("diagnosis")
+        if diagnosis is None or diagnosis.gap is None:
+            return {"status": "no_action_available"}
+
         intent = planner_call(state)
         return {"search_intent": intent, "status": "planned"}
 
@@ -264,10 +322,17 @@ def make_collect_and_gate_node(
             call_id="collect_options", response=response, captured_at=now()
         )
         evidence = gate_candidates(raw_candidates)
+        # The gap, not the planner's `quantity_hint`, decides how many
+        # units to propose: the amount of money a write moves is code's to
+        # compute (CLAUDE.md), and a hint that always came back as 1 left
+        # every proposal unable to close the gap it was answering.
+        diagnosis = state["diagnosis"]
+        assert diagnosis is not None and diagnosis.gap is not None
         proposals = build_action_proposals(
             raw_candidates=raw_candidates,
             evidence=evidence,
-            quantity=intent.quantity_hint,
+            gap=diagnosis.gap,
+            cart=cart,
         )
         return {
             "candidates": proposals,
@@ -288,11 +353,20 @@ def make_explain_node(explainer_call: Callable[[Any], ExplainerOutput]) -> Node:
     """`explainer_call` is the production `ChatOpenAI` adapter's plug-in
     point, same caveat as `make_plan_node`. Each candidate's rendered
     sentence is attached via `model_copy` — `ActionProposal` is frozen.
-    Ends this slice at `awaiting_consent`: no node past this one exists
-    this stage — the write route is a deliberate dead end.
+    Ends this slice at `awaiting_consent`, where G4 stopped; G5+G6 resumes
+    the graph past this point through `make_write_guard_node` below, after
+    an `interrupt_before` pause for the guest's consent.
     """
 
     def explain_node(state: RecoveryState) -> Dict[str, Any]:
+        # A gap can exist and still leave nothing to offer: the Evidence
+        # Gate drops candidates missing write identity, over stock, or off
+        # the weighted step. Announcing `awaiting_consent` with an empty
+        # list asks the guest to approve nothing, and the API dutifully
+        # emitted `consent_required` for it -- an empty consent screen.
+        if not state["candidates"]:
+            return {"status": "no_action_available"}
+
         explained = []
         for proposal in state["candidates"]:
             output = explainer_call(proposal)
@@ -302,3 +376,292 @@ def make_explain_node(explainer_call: Callable[[Any], ExplainerOutput]) -> Node:
         return {"candidates": explained, "status": "awaiting_consent"}
 
     return explain_node
+
+
+def make_write_guard_node(
+    load_consent: Callable[[str], Tuple[Optional[ConsentRecord], bool]],
+    fetch_my_cart: Callable[[], Mapping[str, Any]],
+    fetch_cart_by_id: Callable[[str], Mapping[str, Any]],
+    tool_schema_hashes: Callable[[str], Tuple[str, str, bool]],
+    now: Callable[[], datetime],
+) -> Node:
+    """The single point of write authorization (`CLAUDE.md` section 4).
+    Receives NO write-tool callable at all -- it cannot perform a write
+    even by mistake, only decide whether the next node may. This is the
+    node `build_recovery_graph` pauses in front of via `interrupt_before`.
+
+    `tool_schema_hashes(tool_name)` returns `(reviewed_hash, live_hash,
+    is_quarantined)` for one specific tool -- a lookup, not a generic
+    "call any tool" dispatcher.
+
+    Re-reads the cart via `fetch_my_cart` (not the id already in state)
+    and refuses if the current cart id differs from the one consent was
+    granted against -- a stale id would otherwise still read successfully
+    (e.g. after checkout opened a new cart).
+    """
+
+    def write_guard_node(state: RecoveryState) -> Dict[str, Any]:
+        action_id = state["consent_action_id"]
+        if action_id is None:
+            return {
+                "status": "aborted",
+                "error": "write_guard_node: no consent_action_id set",
+            }
+
+        proposal = next(
+            (p for p in state["candidates"] if p.action_id == action_id), None
+        )
+        if proposal is None:
+            return {
+                "status": "aborted",
+                "error": "write_guard_node: no candidate matches consent_action_id",
+            }
+
+        consent, expired = load_consent(action_id)
+        if consent is None:
+            return {"status": "aborted", "error": "write_guard_node: consent not found"}
+
+        current_time = now()
+        my_cart = fetch_my_cart()
+        current_cart_id = my_cart["shoppingCartId"]
+        full = fetch_cart_by_id(current_cart_id)
+        cart_payload = dict(full["cart"])
+        cart_payload.setdefault("checkoutWebLink", full.get("checkoutWebLink"))
+        re_read_cart = normalize_cart(cart_payload)
+
+        reviewed_hash, live_hash, is_quarantined = tool_schema_hashes(
+            proposal.tool_name
+        )
+        quarantined = frozenset({proposal.tool_name}) if is_quarantined else frozenset()
+
+        decision = authorize_write(
+            proposal=proposal,
+            consent=consent,
+            re_read_cart=re_read_cart,
+            owner=state["owner"],
+            session_id=state["session_id"],
+            consent_expired=expired,
+            reviewed_tool_hash=reviewed_hash,
+            live_tool_hash=live_hash,
+            quarantined=quarantined,
+            budget_reserve_ok=has_write_reserve(state, current_time),
+        )
+        if not decision.authorized:
+            return {"status": "aborted", "error": f"write refused: {decision.reason}"}
+
+        return {
+            "consent": consent,
+            "cart": re_read_cart,
+            "status": "consented",
+            "mcp_attempts_used": state["mcp_attempts_used"] + 2,
+        }
+
+    return write_guard_node
+
+
+def make_write_and_readback_node(
+    call_write_tool: Callable[[str, Dict[str, Any]], Dict[str, Any]],
+    fetch_cart_by_id: Callable[[str], Mapping[str, Any]],
+    claim_and_consume: Callable[[str, str, str, str], Tuple[bool, IdempotencyState]],
+    mark_action: Callable[[str, str, str, IdempotencyState], None],
+    now: Callable[[], datetime],
+) -> Node:
+    """The ONLY node that calls a write tool (`CLAUDE.md` section 4).
+    Claims the idempotency journal row and consumes the consent in one
+    transaction immediately before the call (D-G5-07b) -- measured
+    (probe M2b against the installed LangGraph SDK) that
+    `interrupt_before` protects the write guard node from re-execution on
+    resume, but NOT this node: a crash after this node's own side effect
+    causes LangGraph to re-run it from the top on the next resume.
+
+    `claim_and_consume` returns `(just_claimed, state)` rather than a bare
+    state (found while writing this node's own resume test, not assumed
+    correct from the signature alone): a resumed attempt whose earlier
+    run already claimed the row must NEVER call `call_write_tool` again,
+    even though the stored state is still `"in_flight"` (identical to
+    what a fresh claim also returns) -- only `just_claimed` distinguishes
+    "you may write" from "someone already claimed this, reconcile only".
+
+    Builds the full `Receipt` here rather than passing a separate
+    `WriteOutcome` through state -- `persist_receipt_node` only persists
+    what this node already decided.
+    """
+
+    def _finalize(
+        state: RecoveryState,
+        cart: Any,
+        consent: ConsentRecord,
+        product: Dict[str, Any],
+        proposal: Any,
+        write_response: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        try:
+            full = fetch_cart_by_id(cart.cart_id)
+            cart_payload = dict(full["cart"])
+            cart_payload.setdefault("checkoutWebLink", full.get("checkoutWebLink"))
+            read_back_cart: Optional[Any] = normalize_cart(cart_payload)
+        except (CartShapeError, KeyError, McpAdapterError):
+            read_back_cart = None
+
+        outcome = finalize_write_outcome(
+            write_response,
+            read_back_result=read_back_cart,
+            before=cart,
+            expected_delta=proposal.expected_delta,
+            expected_product_id=product["productId"],
+            expected_quantity=Decimal(str(product["quantity"])),
+        )
+        journal_next: IdempotencyState = (
+            "confirmed" if outcome.status == "receipt" else "unknown"
+        )
+        mark_action(state["owner"], cart.cart_id, consent.action_id, journal_next)
+
+        # "Verified write" and "cart recovered" are different questions,
+        # and a live run answered them differently: the write landed
+        # exactly as consented and the cart stayed blocked by 2.98 UAH.
+        # Recorded here so the receipt can answer the one the guest
+        # actually asked -- can I check out now?
+        primary_code = state["diagnosis"].primary_code if state["diagnosis"] else None
+        blocker_cleared, remaining_gap = _recovery_outcome(read_back_cart, primary_code)
+
+        receipt = Receipt(
+            action_id=consent.action_id,
+            session_id=state["session_id"],
+            owner=state["owner"],
+            before_state=cart.model_dump(mode="json"),
+            after_state=(
+                read_back_cart.model_dump(mode="json") if read_back_cart else {}
+            ),
+            verified=outcome.status == "receipt",
+            status=outcome.status,
+            reason=outcome.reason,
+            expected_delta=proposal.expected_delta,
+            actual_delta=outcome.actual_delta,
+            trace_id=state["trace_id"],
+            created_at=now(),
+            blocker_cleared=blocker_cleared,
+            remaining_gap=remaining_gap,
+        )
+        updates: Dict[str, Any] = {
+            "write_response": write_response,
+            "receipt": receipt,
+            "status": "verified" if outcome.status == "receipt" else "unverified",
+            "mcp_attempts_used": state["mcp_attempts_used"] + 1,
+        }
+        if read_back_cart is not None:
+            # The read-back cart becomes the current one, so a second round
+            # diagnoses what the write actually produced rather than the
+            # state it started from.
+            updates["cart"] = read_back_cart
+        return updates
+
+    def write_and_readback_node(state: RecoveryState) -> Dict[str, Any]:
+        consent = state["consent"]
+        cart = state["cart"]
+        if consent is None or cart is None:
+            return {
+                "status": "aborted",
+                "error": "write_and_readback_node: missing consent or cart",
+            }
+        proposal = next(
+            (p for p in state["candidates"] if p.action_id == consent.action_id), None
+        )
+        if proposal is None:
+            return {
+                "status": "aborted",
+                "error": "write_and_readback_node: no matching candidate",
+            }
+        product = proposal.canonical_args["products"][0]
+
+        just_claimed, journal_state = claim_and_consume(
+            state["owner"], cart.cart_id, consent.action_id, consent.args_hash
+        )
+
+        if not just_claimed:
+            # D-G5-07c: an earlier attempt already claimed this action —
+            # this is a resume after a crash, or a genuine duplicate
+            # request. NEVER write again; reconcile purely from a
+            # read-back, using a synthetic "not actually called this
+            # time" response so `finalize_write_outcome` never treats
+            # `success` from a call that never happened as evidence.
+            if journal_state == "confirmed":
+                return {
+                    "status": "verified",
+                    "write_response": {"idempotent_replay": journal_state},
+                }
+            if journal_state == "failed":
+                return {
+                    "status": "unverified",
+                    "write_response": {"idempotent_replay": journal_state},
+                }
+            reconcile_response = {
+                "success": False,
+                "summary": (
+                    f"reconciling from journal state '{journal_state}', "
+                    "no write issued"
+                ),
+                "products": [],
+            }
+            return _finalize(
+                state, cart, consent, product, proposal, reconcile_response
+            )
+
+        try:
+            write_response = call_write_tool(
+                proposal.tool_name, dict(proposal.canonical_args)
+            )
+        except McpAdapterError as exc:
+            # D-G5-07c: an exception from the write call itself means the
+            # server MAY have applied it -- never assumed to have failed,
+            # never retried blindly. A mandatory read-back still runs.
+            write_response = {"success": False, "summary": str(exc), "products": []}
+
+        return _finalize(state, cart, consent, product, proposal, write_response)
+
+    return write_and_readback_node
+
+
+def make_persist_receipt_node(save_receipt: Callable[[Receipt], None]) -> Node:
+    """Thin persistence step: the domain decision (`WriteOutcome` ->
+    `Receipt`, and the idempotency journal transition) is already made in
+    `make_write_and_readback_node` -- this node's only job is writing the
+    already-built `Receipt` to Neon."""
+
+    def persist_receipt_node(state: RecoveryState) -> Dict[str, Any]:
+        receipt = state["receipt"]
+        if receipt is None:
+            return {"status": "aborted", "error": "persist_receipt_node: no receipt"}
+        save_receipt(receipt)
+
+        # A write can be correct and still leave the guest blocked: how much
+        # a write actually moves the cart cannot be known beforehand,
+        # because no catalogue endpoint exposes the price the cart will
+        # apply (measured live -- 96.49 advertised, 86.84 charged, 2.98
+        # short). Rather than guess a margin, the graph offers another
+        # round: re-diagnose the cart the write produced, propose against
+        # the remaining gap, and ask for consent again. Never a silent
+        # second write -- `interrupt_before` still stops at `write_guard`.
+        rounds_used = state.get("write_rounds_used", 0) + 1
+        if (
+            receipt.blocker_cleared
+            or state["status"] != "verified"
+            or rounds_used >= MAX_WRITE_ROUNDS
+        ):
+            return {"write_rounds_used": rounds_used}
+
+        return {
+            "write_rounds_used": rounds_used,
+            # Cleared so the next pass cannot reuse a consumed consent: the
+            # guard loads consent by this id, and the previous one is spent.
+            "consent_action_id": None,
+            "consent": None,
+            "candidates": [],
+            # Cleared with the consent: a receipt from the previous round
+            # left in place would be re-emitted as this round's outcome if
+            # the next one never reaches a write.
+            "receipt": None,
+            "write_response": None,
+            "status": "diagnosed",
+        }
+
+    return persist_receipt_node

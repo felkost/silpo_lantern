@@ -1,10 +1,15 @@
 """Closes the Definition-of-Done requirement that a server/release/schema
 hash and app/prompt/policy/model versions appear in the trace: `build.py`
 constructs `version_tuple` from its own `tools_schema_hash` parameter and
-passes it to `traced_llm_call` for BOTH the planner and explainer calls —
-this test proves that wiring end to end without needing live tracing
-enabled, by spying on `traced_llm_call` itself rather than on a real
-LangSmith run.
+passes it to `traced_llm_call` for every traced call — this test proves
+that wiring end to end without needing live tracing enabled, by spying on
+`traced_llm_call` itself rather than on a real LangSmith run.
+
+The set of traced calls is asserted exactly, not by membership: it grew
+from two to three when the write got a span of its own (D-G5-13), and it
+had been two for a whole stage during which the one call that changes a
+guest's cart was the only step emitting nothing. An exact set is what
+makes the next such omission fail here instead of going unnoticed.
 """
 
 from datetime import datetime, timezone
@@ -24,10 +29,12 @@ def _noop_explainer(proposal: Any) -> ExplainerOutput:
     return ExplainerOutput(action_id="a1", guest_text_uk="x")
 
 
-def test_tools_schema_hash_reaches_both_the_planner_and_explainer_trace() -> None:
+def test_tools_schema_hash_reaches_every_traced_call() -> None:
     calls: List[Dict[str, Any]] = []
 
-    def spy_traced_llm_call(name, fn, process_inputs, version_tuple=None, tags=None):
+    def spy_traced_llm_call(
+        name, fn, process_inputs, version_tuple=None, tags=None, **kwargs
+    ):
         calls.append({"name": name, "version_tuple": version_tuple})
         return fn
 
@@ -50,7 +57,7 @@ def test_tools_schema_hash_reaches_both_the_planner_and_explainer_trace() -> Non
         )
 
     names = {c["name"] for c in calls}
-    assert names == {"planner", "explainer"}
+    assert names == {"planner", "explainer", "write"}
     for call in calls:
         assert call["version_tuple"]["schema_hash"] == "abc123def456"
         assert call["version_tuple"]["policy_registry_version"] != ""
@@ -70,7 +77,9 @@ def test_an_empty_schema_hash_still_reaches_the_trace_explicitly() -> None:
     notice missing than an empty one."""
     calls: List[Dict[str, Any]] = []
 
-    def spy_traced_llm_call(name, fn, process_inputs, version_tuple=None, tags=None):
+    def spy_traced_llm_call(
+        name, fn, process_inputs, version_tuple=None, tags=None, **kwargs
+    ):
         calls.append(version_tuple)
         return fn
 
@@ -101,7 +110,9 @@ def test_trace_tags_reach_both_the_planner_and_explainer_call() -> None:
     `scripts/ua_eval_run.py` already does for its own raw LLM calls."""
     calls: List[Dict[str, Any]] = []
 
-    def spy_traced_llm_call(name, fn, process_inputs, version_tuple=None, tags=None):
+    def spy_traced_llm_call(
+        name, fn, process_inputs, version_tuple=None, tags=None, **kwargs
+    ):
         calls.append({"name": name, "tags": tags})
         return fn
 
@@ -123,3 +134,22 @@ def test_trace_tags_reach_both_the_planner_and_explainer_call() -> None:
 
     for call in calls:
         assert call["tags"] == ["g4-live", "criterion-8"]
+
+
+def test_the_production_graph_tags_every_traced_call() -> None:
+    """D22's lesson from G4, and it was lost again: `production.py` was
+    written without `trace_tags`, so every live run of this stage — six
+    real cart writes included — went to LangSmith indistinguishable from
+    any other trace in the project.
+
+    Asserted at the production wiring, not at `build_recovery_graph`,
+    because the parameter existed all along; what was missing was anyone
+    passing it.
+    """
+    import inspect
+
+    from src.lantern.graph import production
+
+    source = inspect.getsource(production.build_production_graph)
+    assert "trace_tags=" in source, "the production graph passes no trace tags"
+    assert production.PRODUCTION_TRACE_TAGS, "the default tag set is empty"

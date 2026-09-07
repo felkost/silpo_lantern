@@ -5,6 +5,232 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/session": {
+      "post": {
+        "summary": "Create Session",
+        "operationId": "create_session_session_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateSessionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/{session_id}/events": {
+      "get": {
+        "summary": "Session Events",
+        "description": "Drives the graph one segment further and streams each completed\nnode as one of plan section 1.5's five SSE events. Called twice by a\nreal client: once right after `POST /session` (runs the read\npipeline to its `awaiting_consent` pause), and once again after\n`POST /session/{id}/consent` (resumes into the write pipeline to a\n`receipt`/`error` outcome).",
+        "operationId": "session_events_session__session_id__events_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/{session_id}/consent": {
+      "post": {
+        "summary": "Submit Consent",
+        "description": "Records consent and advances the checkpoint's `consent_action_id`\n-- it does NOT run the write itself. The actual outcome (a Write Guard\nrefusal, or a verified/unverified receipt) is observed by the client's\nnext call to `GET /session/{id}/events`, which resumes the graph.",
+        "operationId": "submit_consent_session__session_id__consent_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentAckResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/start": {
+      "get": {
+        "summary": "Auth Start",
+        "description": "Sends THIS guest to Silpo's own login (phone + OTP). `session_id`\nis required: the token that comes back belongs to one guest, and the\ncallback has to know whose session to store it against.",
+        "operationId": "auth_start_auth_start_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/callback": {
+      "get": {
+        "summary": "Auth Callback",
+        "operationId": "auth_callback_auth_callback_get",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Code"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "name": "error",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Error"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Auth Callback Auth Callback Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health",
@@ -25,6 +251,125 @@
             }
           }
         }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ConsentAckResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "consent_recorded"
+          },
+          "action_id": {
+            "type": "string",
+            "title": "Action Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action_id"
+        ],
+        "title": "ConsentAckResponse",
+        "description": "Acknowledges that consent was recorded and the graph's checkpoint\nwas updated to resume into the Write Guard -- NOT the write's own\noutcome. The guest's client reconnects to `GET /session/{id}/events`\nto see `receipt`/`error` for the write itself, the same way it saw\n`diagnosis`/`options`/`consent_required` for the read pipeline."
+      },
+      "ConsentRequest": {
+        "properties": {
+          "action_id": {
+            "type": "string",
+            "title": "Action Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action_id"
+        ],
+        "title": "ConsentRequest",
+        "description": "D-G5-18/T18: the guest picks an `action_id` only. `args_hash` and\n`state_hash` are never accepted from the client -- the server\nrecomputes both from the proposal and cart it already holds, so a\ntampered value on the wire has nothing to overwrite."
+      },
+      "CreateSessionResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "created"
+          },
+          "authorized": {
+            "type": "boolean",
+            "title": "Authorized",
+            "default": false
+          },
+          "auth_url": {
+            "type": "string",
+            "title": "Auth Url",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id"
+        ],
+        "title": "CreateSessionResponse",
+        "description": "`POST /session` only creates the session row and returns its id --\nthe graph does not run yet (D30: real live push). A new session has\nno guest token yet, so `authorized` is False and `auth_url` is where\nthe client sends the guest to log in (phone + OTP at Silpo's own\npage); `GET /session/{id}/events` comes after that."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
       }
     }
   }

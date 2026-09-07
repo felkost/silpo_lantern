@@ -39,30 +39,46 @@ def test_build_recovery_graph_has_no_generic_call_any_tool_parameter() -> None:
     """Every MCP-shaped parameter is a distinct, statically-typed
     `Callable` bound to exactly one real tool's own argument shape — never
     a `Callable[[str, ...], ...]`-style generic dispatcher that could be
-    handed a write tool's name at runtime."""
+    handed a write tool's name at runtime.
+
+    G5+G6 (D-G5-24 audit finding): this test's own comment used to claim
+    the name-set assertion below would catch a `call_*` parameter too, but
+    the filter only ever matched `fetch_*` — a real hole, found before any
+    write callable existed to slip through it. Widened to `fetch_`/`call_`
+    so the property the comment already claimed is actually enforced.
+
+    G5+G6 (declared this stage): `call_write_tool` is added deliberately —
+    it is `Callable[[str, Dict], Dict]`, taking a tool name, which reads
+    like the generic dispatcher this test forbids. It is not one: the
+    *name* it is called with is fixed by `ActionProposal.tool_name`, which
+    only ever comes from `WRITE_TOOL_ALLOWLIST`-checked, code-constructed
+    proposals (`safety.write_guard.authorize_write`) — never a name an LLM
+    or a caller supplies directly to this parameter. Its own injection
+    site is checked separately: `test_write_node_is_only_call_site_of_
+    write_tool.py` proves it is referenced in exactly one node function
+    and is not a parameter of `make_write_guard_node`.
+    """
     signature = inspect.signature(build_recovery_graph)
-    fetch_params = {
+    mcp_params = {
         name: param
         for name, param in signature.parameters.items()
-        if name.startswith("fetch_")
+        if name.startswith("fetch_") or name.startswith("call_")
     }
 
-    assert set(fetch_params) == {
+    assert set(mcp_params) == {
         "fetch_my_cart",
         "fetch_cart_by_id",
         "fetch_delivery_types",
         "fetch_time_slots",
         "fetch_find_products_batch",
+        "call_write_tool",
     }
 
     import collections.abc
 
-    for name, param in fetch_params.items():
+    for name, param in mcp_params.items():
         # Each is a `Callable` bound to one specific tool's own argument
         # shape (e.g. `Callable[[str], Mapping]` for a cart id) — never a
         # generic `Callable[[str, Mapping], Mapping]`-style dispatcher that
-        # a caller could point at an arbitrary tool name at runtime. The
-        # five names above are exhaustive by construction: adding a write
-        # tool would mean adding a sixth `fetch_*`/`call_*` parameter here,
-        # which this test's name-set assertion above would catch.
+        # a caller could point at an arbitrary tool name at runtime.
         assert typing.get_origin(param.annotation) is collections.abc.Callable, name

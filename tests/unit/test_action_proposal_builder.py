@@ -5,8 +5,18 @@ needs one for the consent sentence. `build_action_proposals` re-pairs each
 approved `EvidenceTuple` back to the `RawCandidate` it came from (matched
 by `product_id`, via the same `resolve_product_id` the gate itself uses —
 no second, divergent matching rule) to recover the name, and computes
-`expected_delta = price * quantity` — arithmetic, never LLM-supplied
-(DR-09).
+`expected_delta = price * increment` — arithmetic, never LLM-supplied
+(DR-09), where the increment itself is the number of units that closes the
+diagnosed gap.
+
+G5+G6 (D-G5-02/D-G5-02b): rewritten in substance, not just formatting.
+`canonical_args` is now the exact, complete write-tool argument object
+(`shoppingCartId` + per-product `productId`/`companyId`/`branchId`), and
+the write tool's own REPLACE semantics (`addQuantity: false` means "set
+the quantity to this value", not "add this many") mean the wire quantity
+is `existing_cart_quantity + quantity_increment`, while `expected_delta`
+and `ActionProposal.quantity` stay in terms of the increment alone — what
+the guest is actually being asked to consent to adding.
 """
 
 from datetime import datetime, timezone
@@ -18,8 +28,13 @@ from src.lantern.domain.evidence_gate import (
     gate_candidates,
     raw_candidates_from_find_products_batch,
 )
+from src.lantern.domain.models import Cart, LineItem
 
 _NOW = datetime(2026, 9, 8, 12, 0, 0, tzinfo=timezone.utc)
+
+_UUID_1 = "11111111-1111-1111-1111-111111111111"
+_COMPANY = "22222222-2222-2222-2222-222222222222"
+_BRANCH = "33333333-3333-3333-3333-333333333333"
 
 _RESPONSE = {
     "queries": [
@@ -27,10 +42,16 @@ _RESPONSE = {
             "query": "milk",
             "products": [
                 {
+                    "id": _UUID_1,
                     "name": "Молоко «Галичина» 2,5%",
                     "slug": "moloko-halychyna",
                     "price": 39.99,
+                    "stock": 600,
+                    "weighted": False,
+                    "step": 1,
                     "available": True,
+                    "companyId": _COMPANY,
+                    "branchId": _BRANCH,
                     "externalProductId": 795319,
                 }
             ],
@@ -39,10 +60,16 @@ _RESPONSE = {
             "query": "bread",
             "products": [
                 {
+                    "id": "44444444-4444-4444-4444-444444444444",
                     "name": "Хліб «Житній»",
                     "slug": "khlib-zhytniy",
                     "price": 0,  # rejected by the gate — must never reach a proposal
+                    "stock": 10,
+                    "weighted": False,
+                    "step": 1,
                     "available": True,
+                    "companyId": _COMPANY,
+                    "branchId": _BRANCH,
                     "externalProductId": 111,
                 }
             ],
@@ -51,14 +78,19 @@ _RESPONSE = {
 }
 
 
+def _empty_cart() -> Cart:
+    return Cart(cart_id="cart-1", products_total=Decimal("0"))
+
+
 def test_builds_one_proposal_per_gate_approved_candidate() -> None:
     raw = raw_candidates_from_find_products_batch(
         call_id="call-1", response=_RESPONSE, captured_at=_NOW
     )
     evidence = gate_candidates(raw)  # the zero-price bread is dropped here
 
+    # One unit already covers a 30.00 gap at 39.99 each.
     proposals = build_action_proposals(
-        raw_candidates=raw, evidence=evidence, quantity=1
+        raw_candidates=raw, evidence=evidence, gap=Decimal("30.00"), cart=_empty_cart()
     )
 
     assert len(proposals) == 1
@@ -68,26 +100,147 @@ def test_builds_one_proposal_per_gate_approved_candidate() -> None:
     assert proposal.quantity == Decimal("1")
     assert proposal.expected_delta == Decimal("39.99")
     assert proposal.canonical_args == {
-        "productId": "795319",
-        "quantity": 1,
-        "addQuantity": False,
+        "shoppingCartId": "cart-1",
+        "products": [
+            {
+                "productId": _UUID_1,
+                "companyId": _COMPANY,
+                "branchId": _BRANCH,
+                "quantity": 1,
+                "addQuantity": False,
+            }
+        ],
     }
     assert proposal.evidence == [evidence[0]]
 
 
-def test_expected_delta_scales_with_quantity() -> None:
+def test_quantity_is_the_number_of_units_that_closes_the_gap() -> None:
+    """The quantity is arithmetic, not a planner hint: 100.00 of gap at
+    39.99 a unit needs three, because two would leave the cart blocked."""
     raw = raw_candidates_from_find_products_batch(
         call_id="call-1", response=_RESPONSE, captured_at=_NOW
     )
     evidence = gate_candidates(raw)
 
     proposals = build_action_proposals(
-        raw_candidates=raw, evidence=evidence, quantity=3
+        raw_candidates=raw, evidence=evidence, gap=Decimal("100.00"), cart=_empty_cart()
     )
 
     assert proposals[0].quantity == Decimal("3")
     assert proposals[0].expected_delta == Decimal("119.97")  # 39.99 * 3
-    assert proposals[0].canonical_args["quantity"] == 3
+    assert proposals[0].canonical_args["products"][0]["quantity"] == 3
+
+
+def test_replace_semantics_adds_to_the_existing_cart_quantity() -> None:
+    """D-G5-02b: the wire `quantity` is REPLACE, not ADD -- a product
+    already in the cart at 5 units, asked to add 1 more, must send
+    `quantity: 6`, while `expected_delta` stays the price of ONE unit."""
+    raw = raw_candidates_from_find_products_batch(
+        call_id="call-1", response=_RESPONSE, captured_at=_NOW
+    )
+    evidence = gate_candidates(raw)
+    cart_with_existing_item = Cart(
+        cart_id="cart-1",
+        products_total=Decimal("199.95"),
+        products=[
+            LineItem(
+                product_id=_UUID_1,
+                name="Молоко «Галичина» 2,5%",
+                quantity=Decimal("5"),
+                price=Decimal("39.99"),
+            )
+        ],
+    )
+
+    proposals = build_action_proposals(
+        raw_candidates=raw,
+        evidence=evidence,
+        gap=Decimal("30.00"),
+        cart=cart_with_existing_item,
+    )
+
+    assert proposals[0].quantity == Decimal("1")  # the increment, not the total
+    assert proposals[0].expected_delta == Decimal("39.99")  # one unit, not six
+    assert proposals[0].canonical_args["products"][0]["quantity"] == 6  # 5 + 1
+    assert proposals[0].canonical_args["products"][0]["addQuantity"] is False
+
+
+def test_over_stock_candidate_is_dropped() -> None:
+    over_stock_response = {
+        "queries": [
+            {
+                "products": [
+                    {
+                        "id": _UUID_1,
+                        "name": "Milk",
+                        "slug": "milk",
+                        "price": 39.99,
+                        "stock": 2,
+                        "weighted": False,
+                        "step": 1,
+                        "available": True,
+                        "companyId": _COMPANY,
+                        "branchId": _BRANCH,
+                        "externalProductId": 1,
+                    }
+                ]
+            }
+        ]
+    }
+    raw = raw_candidates_from_find_products_batch(
+        call_id="call-1", response=over_stock_response, captured_at=_NOW
+    )
+    evidence = gate_candidates(raw)
+
+    # 100.00 of gap needs three units at 39.99; only two are in stock.
+    proposals = build_action_proposals(
+        raw_candidates=raw, evidence=evidence, gap=Decimal("100.00"), cart=_empty_cart()
+    )
+
+    assert proposals == []
+
+
+def test_weighted_goods_quantity_must_be_a_multiple_of_step() -> None:
+    weighted_response = {
+        "queries": [
+            {
+                "products": [
+                    {
+                        "id": _UUID_1,
+                        "name": "Cheese",
+                        "slug": "cheese",
+                        "price": 199.0,
+                        "stock": 100,
+                        "weighted": True,
+                        "step": 0.5,
+                        "available": True,
+                        "companyId": _COMPANY,
+                        "branchId": _BRANCH,
+                        "externalProductId": 2,
+                    }
+                ]
+            }
+        ]
+    }
+    raw = raw_candidates_from_find_products_batch(
+        call_id="call-1", response=weighted_response, captured_at=_NOW
+    )
+    evidence = gate_candidates(raw)
+
+    # 100.00 of gap at 199.00/kg needs 0.5025 kg, rounded up to the 0.5
+    # step -> 1.0. The wire quantity must land on a step multiple.
+    proposals = build_action_proposals(
+        raw_candidates=raw, evidence=evidence, gap=Decimal("100.00"), cart=_empty_cart()
+    )
+    assert len(proposals) == 1
+    assert proposals[0].canonical_args["products"][0]["quantity"] == 1
+
+    # A smaller gap rounds up to the step itself, not to a whole unit.
+    half = build_action_proposals(
+        raw_candidates=raw, evidence=evidence, gap=Decimal("50.00"), cart=_empty_cart()
+    )
+    assert half[0].canonical_args["products"][0]["quantity"] == 0.5
+    assert half[0].expected_delta == Decimal("99.5")
 
 
 def test_action_ids_are_unique_across_proposals() -> None:
@@ -96,9 +249,16 @@ def test_action_ids_are_unique_across_proposals() -> None:
             {
                 "products": [
                     {
+                        "id": _UUID_1,
                         "name": "A",
+                        "slug": "a",
                         "price": 10,
+                        "stock": 5,
+                        "weighted": False,
+                        "step": 1,
                         "available": True,
+                        "companyId": _COMPANY,
+                        "branchId": _BRANCH,
                         "externalProductId": 1,
                     }
                 ]
@@ -106,9 +266,16 @@ def test_action_ids_are_unique_across_proposals() -> None:
             {
                 "products": [
                     {
+                        "id": "55555555-5555-5555-5555-555555555555",
                         "name": "B",
+                        "slug": "b",
                         "price": 20,
+                        "stock": 5,
+                        "weighted": False,
+                        "step": 1,
                         "available": True,
+                        "companyId": _COMPANY,
+                        "branchId": _BRANCH,
                         "externalProductId": 2,
                     }
                 ]
@@ -121,7 +288,7 @@ def test_action_ids_are_unique_across_proposals() -> None:
     evidence = gate_candidates(raw)
 
     proposals = build_action_proposals(
-        raw_candidates=raw, evidence=evidence, quantity=1
+        raw_candidates=raw, evidence=evidence, gap=Decimal("20.00"), cart=_empty_cart()
     )
 
     assert len({p.action_id for p in proposals}) == 2
@@ -141,10 +308,87 @@ def test_an_evidence_tuple_with_no_matching_raw_candidate_is_skipped() -> None:
         price_raw=1,
         available_raw=True,
         captured_at=_NOW,
+        product_uuid="66666666-6666-6666-6666-666666666666",
+        company_id=_COMPANY,
+        branch_id=_BRANCH,
+        stock=10,
     )
     evidence = gate_candidates([orphan_raw])
 
     # An empty raw_candidates list means nothing can be traced back.
-    proposals = build_action_proposals(raw_candidates=[], evidence=evidence, quantity=1)
+    proposals = build_action_proposals(
+        raw_candidates=[], evidence=evidence, gap=Decimal("10.00"), cart=_empty_cart()
+    )
 
     assert proposals == []
+
+
+def test_every_proposal_actually_closes_the_gap() -> None:
+    """The property whose absence made four live runs useless: each
+    proposal's own `expected_delta` must be worth at least the gap it is
+    answering. Before the quantity came from the gap, it came from the
+    planner's `quantity_hint` -- always 1 -- so a 208.10 gap was answered
+    with a 9.34 drink, and consenting to it could not have unblocked the
+    cart.
+    """
+    raw = raw_candidates_from_find_products_batch(
+        call_id="call-1", response=_RESPONSE, captured_at=_NOW
+    )
+    evidence = gate_candidates(raw)
+
+    for gap in ("0.01", "39.99", "40.00", "208.10", "1000.00"):
+        proposals = build_action_proposals(
+            raw_candidates=raw, evidence=evidence, gap=Decimal(gap), cart=_empty_cart()
+        )
+        for proposal in proposals:
+            assert proposal.expected_delta >= Decimal(
+                gap
+            ), f"gap {gap} answered with {proposal.expected_delta}"
+
+
+def test_a_product_too_cheap_to_close_the_gap_within_stock_is_dropped() -> None:
+    """The live case, measured: a 208.10 gap, coffee at 9.34 with 10 in
+    stock. Twenty-three units would be needed and ten exist, so the
+    candidate is not offered at all -- rather than offered at one unit,
+    which is what used to happen.
+    """
+    coffee = {
+        "queries": [
+            {
+                "products": [
+                    {
+                        "id": _UUID_1,
+                        "name": "Кава розчинна Jacobs Barista Editions Americano",
+                        "slug": "jacobs",
+                        "price": 9.34,
+                        "stock": 10,
+                        "weighted": False,
+                        "step": 1,
+                        "available": True,
+                        "companyId": _COMPANY,
+                        "branchId": _BRANCH,
+                        "externalProductId": 3,
+                    }
+                ]
+            }
+        ]
+    }
+    raw = raw_candidates_from_find_products_batch(
+        call_id="call-1", response=coffee, captured_at=_NOW
+    )
+    evidence = gate_candidates(raw)
+
+    assert (
+        build_action_proposals(
+            raw_candidates=raw,
+            evidence=evidence,
+            gap=Decimal("208.10"),
+            cart=_empty_cart(),
+        )
+        == []
+    )
+    # The same product against a gap it CAN close is still offered.
+    within_reach = build_action_proposals(
+        raw_candidates=raw, evidence=evidence, gap=Decimal("20.00"), cart=_empty_cart()
+    )
+    assert within_reach[0].quantity == Decimal("3")  # 9.34 * 3 = 28.02 >= 20.00

@@ -26,7 +26,7 @@ _REALISTIC_RESPONSE = {
             "totalFound": 1,
             "products": [
                 {
-                    "id": "internal-1",
+                    "id": "11111111-1111-1111-1111-111111111111",
                     "name": "Молоко «Галичина» 2,5%",
                     "slug": "moloko-halychyna",
                     "price": 39.99,
@@ -38,8 +38,8 @@ _REALISTIC_RESPONSE = {
                     "step": 1,
                     "displayRatio": "1 л",
                     "specialPrices": None,
-                    "companyId": "c1",
-                    "branchId": "b1",
+                    "companyId": "22222222-2222-2222-2222-222222222222",
+                    "branchId": "33333333-3333-3333-3333-333333333333",
                     "externalProductId": 795319,
                 }
             ],
@@ -94,5 +94,8 @@ def test_end_to_end_realistic_response_survives_the_gate() -> None:
     survivors = gate_candidates(candidates)
 
     assert len(survivors) == 1
-    assert survivors[0].product_id == "795319"
+    # G5+G6 (D-G5-03): the write identity is `id`, not `externalProductId`
+    # -- confirmed live (probe P1) to be the same UUID the write tool's
+    # own `productId` argument expects.
+    assert survivors[0].product_id == "11111111-1111-1111-1111-111111111111"
     assert survivors[0].source_tool == "silpo_find_products_batch"

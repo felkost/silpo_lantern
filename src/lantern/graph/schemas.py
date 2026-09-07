@@ -12,9 +12,22 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class SearchIntent(BaseModel):
     """The planner's ENTIRE output. No node downstream of `plan` reads
-    anything from this model except `search_terms`/`quantity_hint` — in
-    particular, `collect_options` never trusts a price or an id from here,
-    because none exists to trust.
+    anything from this model except `search_terms` — in particular,
+    `collect_options` never trusts a price or an id from here, because
+    none exists to trust.
+
+    `quantity_hint` is NO LONGER CONSULTED by anything. It decided how
+    many units each proposal offered until four live runs showed what that
+    meant in practice: the model returned 1 every time, so a 208.10 gap
+    was answered with a 9.34 drink and the guest could consent to a write
+    that could not unblock their cart. How many units close a gap is
+    arithmetic, and `CLAUDE.md` reserves arithmetic for code, so
+    `build_action_proposals` now derives it from the gap and the price.
+
+    The field is still declared, and the planner prompt still asks for it,
+    because removing it changes `planner_v1.md`'s content and a changed
+    prompt needs a new version -- which belongs in a deliberate version
+    bump, not as a side effect of a bug fix.
     """
 
     model_config = ConfigDict(frozen=True)
