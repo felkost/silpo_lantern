@@ -25,10 +25,17 @@ import uvicorn
 
 
 def main() -> None:
+    # G7 (IV-07): Render injects its own $PORT and expects a bind on
+    # 0.0.0.0 -- `LANTERN_API_PORT`/`LANTERN_API_HOST` stay the local-dev
+    # defaults (127.0.0.1:8000) so nothing about a plain `make run`
+    # changes; $PORT wins only when Render (or any host following the
+    # same convention) actually sets it.
     config = uvicorn.Config(
         "apps.api.main:app",
-        host=os.environ.get("LANTERN_API_HOST", "127.0.0.1"),
-        port=int(os.environ.get("LANTERN_API_PORT", "8000")),
+        host=os.environ.get(
+            "LANTERN_API_HOST", "0.0.0.0" if "PORT" in os.environ else "127.0.0.1"
+        ),
+        port=int(os.environ.get("PORT") or os.environ.get("LANTERN_API_PORT", "8000")),
         reload=False,
     )
     server = uvicorn.Server(config)

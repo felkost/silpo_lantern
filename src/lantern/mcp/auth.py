@@ -12,6 +12,7 @@ rather than as an opaque "never logged in" during a live demo.
 """
 
 import json
+import os
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, Optional, Protocol
 
@@ -28,7 +29,20 @@ DEFAULT_TOKEN_PATH = PROJECT_ROOT / ".cache" / "silpo_mcp_token.json"
 # carries a `redirect_uri` pointing at this app's own `/auth/callback`;
 # `DEFAULT_TOKEN_PATH`'s own client was registered by the CLI login script
 # for `https://localhost/callback` and cannot serve an HTTP callback route.
-WEB_CLIENT_PATH = PROJECT_ROOT / ".cache" / "silpo_mcp_web_client.json"
+#
+# G7 (IV-07): `SILPO_MCP_WEB_CLIENT_PATH` overrides the default local-dev
+# path -- Render's free tier has no persistent disk, so a file written at
+# one deploy does not survive the next; its "Secret Files" feature always
+# mounts a file at `/etc/secrets/<filename>` (no subdirectories in the
+# filename Render accepts), never at an arbitrary repo-relative path like
+# `.cache/...`. Set this env var to that mounted path on a deployed host;
+# local dev leaves it unset and gets the `.cache/` default unchanged.
+WEB_CLIENT_PATH = Path(
+    os.environ.get(
+        "SILPO_MCP_WEB_CLIENT_PATH",
+        str(PROJECT_ROOT / ".cache" / "silpo_mcp_web_client.json"),
+    )
+)
 
 
 class TokenStorageLike(Protocol):
