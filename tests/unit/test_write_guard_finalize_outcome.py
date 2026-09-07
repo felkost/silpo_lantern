@@ -170,3 +170,42 @@ def test_matching_identity_and_total_is_a_receipt() -> None:
     )
     assert outcome.status == "receipt"
     assert outcome.actual_delta == Decimal("79.98")
+
+
+def test_identity_matches_but_the_cart_priced_it_differently_is_a_receipt() -> None:
+    """Measured on the first live write: the search endpoint reported 9.34
+    for a product the cart then priced at 8.41 -- a discount it does not
+    expose (`oldPrice` was null). Identity held: exactly the consented
+    product, at the consented quantity, nothing else touched.
+
+    That is a verified outcome. Gating it on the totals being equal made
+    every discounted product permanently unverifiable and left
+    `CostDeltaAccuracy` nothing to measure, since a mismatch could never
+    reach a receipt. The difference is recorded on the receipt instead.
+    """
+    before = _cart("100.00")
+    after = _cart(
+        "108.41",
+        products=[
+            LineItem(
+                product_id="p1",
+                name="Coffee the cart discounted",
+                quantity=Decimal("1"),
+                price=Decimal("8.41"),
+            )
+        ],
+    )
+
+    outcome = finalize_write_outcome(
+        _RESPONSE,
+        read_back_result=after,
+        before=before,
+        expected_delta=Decimal("9.34"),
+        expected_product_id="p1",
+        expected_quantity=Decimal("1"),
+    )
+
+    assert outcome.status == "receipt"
+    assert outcome.actual_delta == Decimal("8.41")
+    assert "expected 9.34" in outcome.reason
+    assert "actual 8.41" in outcome.reason

@@ -485,3 +485,34 @@ def test_repeating_events_after_a_terminal_outcome_replays_it(
     assert graph.astream_inputs == []
     assert "event: error" in response.text
     assert "write refused: consent has expired" in response.text
+
+
+def test_a_node_that_updates_no_state_does_not_break_the_stream(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`persist_receipt` returns `{}` -- it writes to Neon, not to the
+    graph state -- and LangGraph reports that as `{node_name: None}`.
+    Measured live: the stream raised AttributeError on it AFTER the write
+    had landed and the receipt had been stored, so the guest got a 500
+    instead of the receipt that already existed.
+    """
+    receipt_state = {
+        **_consented_state(),
+        "status": "unverified",
+        "receipt": None,
+    }
+    graph = _FakeGraph(
+        chunks=[
+            {"write_and_readback": {"status": "unverified"}},
+            {"persist_receipt": None},
+        ],
+        final_state=receipt_state,
+        initial_state=_consented_state(),
+    )
+    app = _make_app(graph, monkeypatch)
+    client = TestClient(app)
+
+    response = client.get("/session/s1/events")
+
+    assert response.status_code == 200
+    assert "event: receipt" in response.text

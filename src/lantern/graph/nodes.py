@@ -286,10 +286,16 @@ def make_collect_and_gate_node(
             call_id="collect_options", response=response, captured_at=now()
         )
         evidence = gate_candidates(raw_candidates)
+        # The gap, not the planner's `quantity_hint`, decides how many
+        # units to propose: the amount of money a write moves is code's to
+        # compute (CLAUDE.md), and a hint that always came back as 1 left
+        # every proposal unable to close the gap it was answering.
+        diagnosis = state["diagnosis"]
+        assert diagnosis is not None and diagnosis.gap is not None
         proposals = build_action_proposals(
             raw_candidates=raw_candidates,
             evidence=evidence,
-            quantity_increment=intent.quantity_hint,
+            gap=diagnosis.gap,
             cart=cart,
         )
         return {

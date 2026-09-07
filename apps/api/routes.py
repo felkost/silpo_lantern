@@ -197,6 +197,15 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
                 for node_name, partial in chunk.items():
                     if node_name == "__interrupt__":
                         continue
+                    # A node that updates no channel (`persist_receipt`
+                    # returns `{}` -- it writes to Neon, not to the state)
+                    # arrives here as `{node_name: None}`. Measured live,
+                    # where it crashed the stream with AttributeError AFTER
+                    # the write had already landed and the receipt had been
+                    # persisted, so the guest saw a 500 instead of their
+                    # own receipt.
+                    if not partial:
+                        continue
                     if node_name == "diagnose" and partial.get("diagnosis") is not None:
                         yield _diagnosis_line(partial["diagnosis"])
                     if node_name == "explain" and partial.get("candidates"):

@@ -290,13 +290,27 @@ def finalize_write_outcome(
             actual_delta=diff.total_delta,
         )
 
-    if diff.total_delta != expected_delta:
-        return WriteOutcome(
-            status="unverified",
-            reason="read-back total delta does not match the expected delta",
-            diff=diff,
-            actual_delta=diff.total_delta,
+    # A differing total is NOT a verification failure. The identity checks
+    # above already established that exactly the consented product landed,
+    # at the consented quantity, with nothing else moved -- the cart is in
+    # the intended state. A different total means the price ESTIMATE was
+    # wrong, which is a fact about our own arithmetic, not about the write.
+    #
+    # Measured on the first live write: `find_products_batch` reported 9.34
+    # for a product the cart then priced at 8.41 (exactly 10% lower, with
+    # `oldPrice` null -- the search endpoint does not expose that discount
+    # at all). Gating the receipt on equality made every discounted product
+    # permanently unverifiable, and left `CostDeltaAccuracy` -- the plan
+    # section 13 metric whose entire job is measuring this difference --
+    # with nothing to measure, since a mismatch could never reach a receipt.
+    delta_note = (
+        ""
+        if diff.total_delta == expected_delta
+        else (
+            f"cart applied a different price than the search result: "
+            f"expected {expected_delta}, actual {diff.total_delta}"
         )
+    )
 
     new_error_validations = [
         v
@@ -315,5 +329,5 @@ def finalize_write_outcome(
         )
 
     return WriteOutcome(
-        status="receipt", reason="", diff=diff, actual_delta=diff.total_delta
+        status="receipt", reason=delta_note, diff=diff, actual_delta=diff.total_delta
     )

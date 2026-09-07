@@ -147,7 +147,11 @@ def test_pipeline_reaches_awaiting_consent_with_a_real_candidate() -> None:
 
     proposal = final_state["candidates"][0]
     assert proposal.product_name == "Молоко «Галичина» 2,5%"
-    assert proposal.expected_delta == Decimal("39.99")
+    # The gap is 599 - 404.89 = 194.11, and one unit is 39.99, so the
+    # pipeline proposes the five units that actually close it -- not the
+    # single unit the planner's own `quantity_hint` used to dictate.
+    assert proposal.quantity == Decimal("5")
+    assert proposal.expected_delta == Decimal("199.95")
     assert proposal.guest_text_uk != ""
     assert proposal.canonical_args == {
         "shoppingCartId": "cart-1",
@@ -156,7 +160,7 @@ def test_pipeline_reaches_awaiting_consent_with_a_real_candidate() -> None:
                 "productId": "11111111-1111-1111-1111-111111111111",
                 "companyId": "22222222-2222-2222-2222-222222222222",
                 "branchId": "33333333-3333-3333-3333-333333333333",
-                "quantity": 1,
+                "quantity": 5,
                 "addQuantity": False,
             }
         ],

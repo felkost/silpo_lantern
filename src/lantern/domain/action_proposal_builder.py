@@ -18,7 +18,7 @@ which would silently overcharge for every unit already in the cart.
 """
 
 import uuid
-from decimal import Decimal
+from decimal import ROUND_CEILING, Decimal
 from typing import Callable, List, Optional, Sequence, Union
 
 from src.lantern.domain.evidence_gate import RawCandidate, resolve_product_id
@@ -45,24 +45,47 @@ def _existing_quantity(cart: Cart, product_id: str) -> Decimal:
     return Decimal(0)
 
 
+def _quantity_that_closes(
+    gap: Money, price: Money, existing_quantity: Decimal, unit: Decimal
+) -> Decimal:
+    """The smallest total line quantity whose increase over
+    `existing_quantity` is worth at least `gap`, rounded up to a whole
+    `unit` (1 for a countable product, the catalogue's `step` for a
+    weighted one).
+    """
+    exact = existing_quantity + gap / price
+    return (exact / unit).to_integral_value(rounding=ROUND_CEILING) * unit
+
+
 def build_action_proposals(
     raw_candidates: Sequence[RawCandidate],
     evidence: Sequence[EvidenceTuple],
-    quantity_increment: int,
+    gap: Money,
     cart: Cart,
     action_id_factory: Optional[Callable[[], str]] = None,
 ) -> List[ActionProposal]:
-    """`expected_delta = price * quantity_increment` -- arithmetic
-    performed here, in code, never supplied by an LLM. `action_id_factory`
-    defaults to `uuid.uuid4`; injectable for deterministic tests, matching
-    this project's existing pattern of injecting `now`/`fetch` elsewhere.
+    """Chooses the quantity that actually closes `gap`, then computes
+    `expected_delta = price * increment`. Both are arithmetic, done here in
+    code -- `action_id_factory` defaults to `uuid.uuid4`, injectable for
+    deterministic tests.
+
+    The quantity used to be `SearchIntent.quantity_hint`, a field the
+    PLANNER LLM fills and which defaulted to 1. Measured across four live
+    runs: every proposal came back as one unit, so a 208.10 gap was
+    answered with drinks worth 9-32, and the guest could consent to a
+    write that provably could not unblock their cart. That also put the
+    model in charge of an amount of money, which `CLAUDE.md` reserves for
+    code. The hint is no longer consulted.
 
     A candidate is dropped (not merely reduced in quantity) when: the
     resulting total quantity would exceed the catalogue's own `stock`
     figure, or the product is weighted and that total is not a multiple
     of its `step` -- both accepted by the write tool's own schema, both
     documented by the tool itself as surfacing only later, as a cart
-    validation the guest never consented to (G5+G6, D-G5-03).
+    validation the guest never consented to (G5+G6, D-G5-03). Dropping on
+    stock is what keeps the new arithmetic honest: closing a large gap
+    with a cheap product needs many units, and a candidate that cannot
+    supply them is not offered at all rather than offered uselessly.
     """
     make_action_id = action_id_factory or (lambda: str(uuid.uuid4()))
 
@@ -72,15 +95,18 @@ def build_action_proposals(
         if (product_id := resolve_product_id(raw)) is not None
     }
 
-    increment = Decimal(quantity_increment)
     proposals: List[ActionProposal] = []
     for tuple_ in evidence:
         raw = by_product_id.get(tuple_.product_id)
-        if raw is None:
+        if raw is None or tuple_.price <= 0:
             continue
 
         existing_quantity = _existing_quantity(cart, tuple_.product_id)
-        new_total_quantity = existing_quantity + increment
+        unit = raw.step if (raw.weighted and raw.step) else Decimal(1)
+        new_total_quantity = _quantity_that_closes(
+            gap, tuple_.price, existing_quantity, unit
+        )
+        increment = new_total_quantity - existing_quantity
 
         if raw.stock is not None and new_total_quantity > raw.stock:
             continue
