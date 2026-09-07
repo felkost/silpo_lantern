@@ -1,0 +1,377 @@
+{
+  "fixture_id": "replay_hero_order_cost_min",
+  "origin": "synthetic",
+  "source_schema_hash": "synthetic-v1",
+  "generator_version": "replay-recorder-v1",
+  "seed": null,
+  "transformations": [
+    "built from tests/unit/test_write_path_interrupt_and_resume.py's own synthetic fixture (already pseudonymised test_* identifiers, no real cart/guest data) -- not a live capture; a live-recorded bundle is scripts/record_replay_bundle.py's job, pending the author's explicit go-ahead for a live MCP write (G7 plan section 4)"
+  ],
+  "expected_outcome": {
+    "final_status": "unverified",
+    "receipts": [
+      {
+        "session_id": "replay-owner-session",
+        "owner": "replay-owner",
+        "verified": true,
+        "status": "receipt",
+        "reason": "",
+        "expected_delta": "599.85",
+        "actual_delta": "599.85",
+        "blocker_cleared": false,
+        "remaining_gap": "-35.85"
+      },
+      {
+        "session_id": "replay-owner-session",
+        "owner": "replay-owner",
+        "verified": false,
+        "status": "unverified",
+        "reason": "read-back diff does not match the consented product by identity",
+        "expected_delta": "0.00",
+        "actual_delta": "0.00",
+        "blocker_cleared": false,
+        "remaining_gap": "-35.85"
+      }
+    ]
+  },
+  "payload": {
+    "recorded_at": "2026-09-08T12:00:00+00:00",
+    "versions": {
+      "schema_hash": "synthetic-v1",
+      "policy_registry_version": "d6bb30e47b48"
+    },
+    "inputs": {
+      "session_id": "replay-owner-session",
+      "trace_id": "replay-trace",
+      "owner": "replay-owner"
+    },
+    "tool_schema_hashes": {
+      "silpo_add_or_update_cart_products": [
+        "reviewed-hash-abc",
+        "reviewed-hash-abc",
+        false
+      ]
+    },
+    "mcp": {
+      "silpo_get_my_shopping_cart:44136fa355b3": [
+        {
+          "shoppingCartId": "cart-1"
+        },
+        {
+          "shoppingCartId": "cart-1"
+        },
+        {
+          "shoppingCartId": "cart-1"
+        }
+      ],
+      "silpo_get_shopping_cart_by_id:5d7ac30767cc": [
+        {
+          "cart": {
+            "id": "cart-1",
+            "deliveryType": "NovaPoshta",
+            "calculation": {
+              "productsTotal": 35.0,
+              "validations": [
+                {
+                  "level": "error",
+                  "type": "order",
+                  "message": "order.cost.min",
+                  "context": {
+                    "orderCostMin": 599
+                  }
+                }
+              ]
+            },
+            "shipments": [
+              {
+                "id": "ship-1",
+                "companyId": "c1",
+                "branchId": "b1",
+                "products": [
+                  {
+                    "productId": "p1",
+                    "name": "Молоко «Галичина» 2,5%",
+                    "quantity": 1,
+                    "price": 35.0
+                  }
+                ]
+              }
+            ],
+            "timeslot": {
+              "start": "2026-09-08T10:00:00+00:00",
+              "end": "2026-09-08T12:00:00+00:00"
+            }
+          }
+        },
+        {
+          "cart": {
+            "id": "cart-1",
+            "deliveryType": "NovaPoshta",
+            "calculation": {
+              "productsTotal": 35.0,
+              "validations": [
+                {
+                  "level": "error",
+                  "type": "order",
+                  "message": "order.cost.min",
+                  "context": {
+                    "orderCostMin": 599
+                  }
+                }
+              ]
+            },
+            "shipments": [
+              {
+                "id": "ship-1",
+                "companyId": "c1",
+                "branchId": "b1",
+                "products": [
+                  {
+                    "productId": "p1",
+                    "name": "Молоко «Галичина» 2,5%",
+                    "quantity": 1,
+                    "price": 35.0
+                  }
+                ]
+              }
+            ],
+            "timeslot": {
+              "start": "2026-09-08T10:00:00+00:00",
+              "end": "2026-09-08T12:00:00+00:00"
+            }
+          }
+        },
+        {
+          "cart": {
+            "id": "cart-1",
+            "deliveryType": "NovaPoshta",
+            "calculation": {
+              "productsTotal": 634.85,
+              "validations": [
+                {
+                  "level": "error",
+                  "type": "order",
+                  "message": "order.cost.min",
+                  "context": {
+                    "orderCostMin": 599
+                  }
+                }
+              ]
+            },
+            "shipments": [
+              {
+                "id": "ship-1",
+                "companyId": "c1",
+                "branchId": "b1",
+                "products": [
+                  {
+                    "productId": "p1",
+                    "name": "Молоко «Галичина» 2,5%",
+                    "quantity": 1,
+                    "price": 35.0
+                  },
+                  {
+                    "productId": "11111111-1111-1111-1111-111111111111",
+                    "name": "Молоко «Галичина» 2,5%",
+                    "quantity": 15,
+                    "price": 39.99
+                  }
+                ]
+              }
+            ],
+            "timeslot": {
+              "start": "2026-09-08T10:00:00+00:00",
+              "end": "2026-09-08T12:00:00+00:00"
+            }
+          }
+        },
+        {
+          "cart": {
+            "id": "cart-1",
+            "deliveryType": "NovaPoshta",
+            "calculation": {
+              "productsTotal": 634.85,
+              "validations": [
+                {
+                  "level": "error",
+                  "type": "order",
+                  "message": "order.cost.min",
+                  "context": {
+                    "orderCostMin": 599
+                  }
+                }
+              ]
+            },
+            "shipments": [
+              {
+                "id": "ship-1",
+                "companyId": "c1",
+                "branchId": "b1",
+                "products": [
+                  {
+                    "productId": "p1",
+                    "name": "Молоко «Галичина» 2,5%",
+                    "quantity": 1,
+                    "price": 35.0
+                  },
+                  {
+                    "productId": "11111111-1111-1111-1111-111111111111",
+                    "name": "Молоко «Галичина» 2,5%",
+                    "quantity": 15,
+                    "price": 39.99
+                  }
+                ]
+              }
+            ],
+            "timeslot": {
+              "start": "2026-09-08T10:00:00+00:00",
+              "end": "2026-09-08T12:00:00+00:00"
+            }
+          }
+        },
+        {
+          "cart": {
+            "id": "cart-1",
+            "deliveryType": "NovaPoshta",
+            "calculation": {
+              "productsTotal": 634.85,
+              "validations": [
+                {
+                  "level": "error",
+                  "type": "order",
+                  "message": "order.cost.min",
+                  "context": {
+                    "orderCostMin": 599
+                  }
+                }
+              ]
+            },
+            "shipments": [
+              {
+                "id": "ship-1",
+                "companyId": "c1",
+                "branchId": "b1",
+                "products": [
+                  {
+                    "productId": "p1",
+                    "name": "Молоко «Галичина» 2,5%",
+                    "quantity": 1,
+                    "price": 35.0
+                  },
+                  {
+                    "productId": "11111111-1111-1111-1111-111111111111",
+                    "name": "Молоко «Галичина» 2,5%",
+                    "quantity": 15,
+                    "price": 39.99
+                  }
+                ]
+              }
+            ],
+            "timeslot": {
+              "start": "2026-09-08T10:00:00+00:00",
+              "end": "2026-09-08T12:00:00+00:00"
+            }
+          }
+        }
+      ],
+      "silpo_find_products_batch:c53c1a3bfbfa": [
+        {
+          "queries": [
+            {
+              "query": "Молоко «Галичина» 2,5%",
+              "products": [
+                {
+                  "id": "11111111-1111-1111-1111-111111111111",
+                  "name": "Молоко «Галичина» 2,5%",
+                  "slug": "moloko-halychyna",
+                  "price": 39.99,
+                  "stock": 600,
+                  "weighted": false,
+                  "step": 1,
+                  "available": true,
+                  "companyId": "22222222-2222-2222-2222-222222222222",
+                  "branchId": "33333333-3333-3333-3333-333333333333",
+                  "externalProductId": 795319
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "queries": [
+            {
+              "query": "Молоко «Галичина» 2,5%",
+              "products": [
+                {
+                  "id": "11111111-1111-1111-1111-111111111111",
+                  "name": "Молоко «Галичина» 2,5%",
+                  "slug": "moloko-halychyna",
+                  "price": 39.99,
+                  "stock": 600,
+                  "weighted": false,
+                  "step": 1,
+                  "available": true,
+                  "companyId": "22222222-2222-2222-2222-222222222222",
+                  "branchId": "33333333-3333-3333-3333-333333333333",
+                  "externalProductId": 795319
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "silpo_add_or_update_cart_products:659f109f247d": [
+        {
+          "success": true,
+          "summary": "ok",
+          "products": [
+            {
+              "productId": "11111111-1111-1111-1111-111111111111",
+              "companyId": "22222222-2222-2222-2222-222222222222",
+              "branchId": "33333333-3333-3333-3333-333333333333",
+              "quantity": 15,
+              "addQuantity": false
+            }
+          ]
+        },
+        {
+          "success": true,
+          "summary": "ok",
+          "products": [
+            {
+              "productId": "11111111-1111-1111-1111-111111111111",
+              "companyId": "22222222-2222-2222-2222-222222222222",
+              "branchId": "33333333-3333-3333-3333-333333333333",
+              "quantity": 15,
+              "addQuantity": false
+            }
+          ]
+        }
+      ]
+    },
+    "llm": {
+      "planner": [
+        {
+          "search_terms": [
+            "Молоко «Галичина» 2,5%"
+          ]
+        },
+        {
+          "search_terms": [
+            "Молоко «Галичина» 2,5%"
+          ]
+        }
+      ],
+      "explainer": [
+        {
+          "action_id": "da47591d-fc95-44ad-bf99-b6373c28c825",
+          "guest_text_uk": "Додати товар"
+        },
+        {
+          "action_id": "dd1a9519-d6b1-458f-a89f-3eafbbdc3b88",
+          "guest_text_uk": "Додати товар"
+        }
+      ]
+    }
+  }
+}

@@ -121,7 +121,7 @@ def _fake_planner(state: RecoveryState) -> SearchIntent:
     names = [li.name for li in cart.products][:5] if cart else []
     if not names:
         names = ["хліб"]  # fallback: cart has no line items to search near
-    return SearchIntent(search_terms=names, quantity_hint=1)
+    return SearchIntent(search_terms=names)
 
 
 def _fake_explainer(proposal: Any) -> ExplainerOutput:

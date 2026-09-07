@@ -28,7 +28,7 @@ import asyncio
 import json
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Any, AsyncIterator, Dict, Optional
+from typing import Any, AsyncIterator, Dict, Optional, Sequence
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
@@ -102,16 +102,20 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
     `POST /session/{id}/consent` (resumes into the write pipeline to a
     `receipt`/`error` outcome).
     """
-    graph = await _get_graph(request)
-    config = _config(session_id)
-
-    # Bind THIS guest's own credential for the whole run. Every MCP call
-    # the graph makes reads it from the context (measured to survive both
-    # LangGraph's sync-node execution and the `asyncio.run` inside
-    # `mcp.session.call_tool` -- pinned by
-    # `tests/unit/test_session_token_contextvar_propagates.py`). Without
-    # this binding every guest would silently fall back to the single
-    # operator token on disk and read somebody else's cart.
+    # Bind THIS guest's own credential BEFORE touching the graph at all --
+    # G7/IV-07 found live that `_get_graph` builds the production graph
+    # lazily on its OWN first call, ever, across the whole app's lifetime
+    # (`app.state.graph` is cached permanently once built), and that
+    # build calls `list_tools_raw()` synchronously to seed the tool
+    # registry. Binding the token afterward meant the very first guest to
+    # hit this route triggered that call with no guest context bound yet,
+    # falling back to the single operator token on disk -- invisible in
+    # local dev (the operator's own token happens to exist there) but a
+    # hard 500 on a host with no such file (Render). Every MCP call the
+    # graph makes reads this binding from the context (measured to
+    # survive both LangGraph's sync-node execution and the `asyncio.run`
+    # inside `mcp.session.call_tool` -- pinned by
+    # `tests/unit/test_session_token_contextvar_propagates.py`).
     storage = SessionTokenStorage(request.app.state.repo_pool, session_id)
     if await storage.get_tokens() is None:
         raise HTTPException(
@@ -122,6 +126,9 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
             ),
         )
     current_token_storage.set(storage)
+
+    graph = await _get_graph(request)
+    config = _config(session_id)
 
     snapshot = await graph.aget_state(config)
     existing_state: RecoveryState = snapshot.values
@@ -162,13 +169,42 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
             "version": version_tuple,
         }
 
-        def _diagnosis_line(diagnosis: Any) -> str:
+        def _diagnosis_line(
+            diagnosis: Any, disclosure: Any, channels: Sequence[Any]
+        ) -> str:
+            # G7 (D-G7-03): carries the disclosure layer and the
+            # delivery-channel comparison, not just primary_code/gap --
+            # both were already computed for the planner's own prompt
+            # (`llm_adapter.py`) and never reached the guest before this.
+            # `disclosure` is `DisclosureReport | None`: `diagnose_node`
+            # always sets it alongside `diagnosis`, but the accumulator in
+            # `stream()` below only calls this once both are non-None.
             return _sse_line(
                 "diagnosis",
                 {
                     **base,
                     "primary_code": diagnosis.primary_code,
                     "gap": (str(diagnosis.gap) if diagnosis.gap is not None else None),
+                    "gap_is_borderline": bool(
+                        disclosure and disclosure.gap_is_borderline
+                    ),
+                    "validations": [
+                        {"code": v.code, "level": v.level, "type": v.type}
+                        for v in (
+                            list(disclosure.blockers) + list(disclosure.disclosures)
+                            if disclosure
+                            else []
+                        )
+                    ],
+                    "channels": [
+                        {
+                            "delivery_type": row.snapshot.delivery_type,
+                            "gap": str(row.gap),
+                            "verdict": row.verdict,
+                            "reason": row.reason,
+                        }
+                        for row in channels
+                    ],
                 },
             )
 
@@ -217,6 +253,18 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
 
         emitted_receipt = False
         if should_advance:
+            # G7 (D-G7-03): the diagnosis frame needs BOTH `diagnose`'s
+            # own output (diagnosis, disclosure) and `compare_channels`'s
+            # (channel_comparison) -- two separate node chunks in
+            # `stream_mode="updates"`, never a merged state at either
+            # point. Held here until both have arrived, then emitted once
+            # on the LATER (`compare_channels`) chunk -- never on
+            # `diagnose` alone, which is the exact bug an adversarial
+            # audit of this stage's own plan caught: emitting on
+            # `diagnose` shipped `channels: []` on every live run, while
+            # only the (never-advancing) replay branch below -- which
+            # reads the merged checkpoint -- would have shown it working.
+            pending_diagnosis: Dict[str, Any] = {}
             async for chunk in graph.astream(
                 resume_input, config, stream_mode="updates"
             ):
@@ -233,7 +281,17 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
                     if not partial:
                         continue
                     if node_name == "diagnose" and partial.get("diagnosis") is not None:
-                        yield _diagnosis_line(partial["diagnosis"])
+                        pending_diagnosis["diagnosis"] = partial["diagnosis"]
+                        pending_diagnosis["disclosure"] = partial.get("disclosure")
+                    if (
+                        node_name == "compare_channels"
+                        and "diagnosis" in pending_diagnosis
+                    ):
+                        yield _diagnosis_line(
+                            pending_diagnosis["diagnosis"],
+                            pending_diagnosis["disclosure"],
+                            partial.get("channel_comparison") or [],
+                        )
                     if node_name == "explain" and partial.get("candidates"):
                         yield _options_line(partial["candidates"])
                     if partial.get("receipt") is not None:
@@ -252,9 +310,16 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
         else:
             # Replay: the same frames a first-time caller saw, rebuilt from
             # the checkpoint, so a repeated GET is informative rather than
-            # silent -- and, above all, does not move the graph.
+            # silent -- and, above all, does not move the graph. The
+            # checkpoint is the MERGED state, so diagnosis/disclosure/
+            # channel_comparison are all present together here regardless
+            # of which node last touched them.
             if existing_state.get("diagnosis") is not None:
-                yield _diagnosis_line(existing_state["diagnosis"])
+                yield _diagnosis_line(
+                    existing_state["diagnosis"],
+                    existing_state.get("disclosure"),
+                    existing_state.get("channel_comparison") or [],
+                )
             if existing_state.get("candidates"):
                 yield _options_line(existing_state["candidates"])
             if status == "aborted":

@@ -22,6 +22,8 @@ from src.lantern.config import PROJECT_ROOT, get_openrouter_api_key
 from src.lantern.domain.models import ConsentRecord, Receipt
 from src.lantern.graph.build import build_recovery_graph, policy_registry_version
 from src.lantern.graph.llm_adapter import (
+    EXPLAINER_PROMPT_VERSION,
+    PLANNER_PROMPT_VERSION,
     build_explainer_llm,
     build_planner_llm,
     make_explainer_call,
@@ -147,8 +149,8 @@ def build_production_graph(
         "schema_hash": tools_schema_hash,
         "policy_registry_version": policy_registry_version(),
         "planner_model_id": models["planner"]["model"],
-        "planner_prompt_version": "planner_v1",
+        "planner_prompt_version": PLANNER_PROMPT_VERSION,
         "explainer_model_id": explainer_model,
-        "explainer_prompt_version": "explainer_v1",
+        "explainer_prompt_version": EXPLAINER_PROMPT_VERSION,
     }
     return graph, version_tuple

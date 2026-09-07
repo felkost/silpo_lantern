@@ -63,7 +63,16 @@ describe("recovery card", () => {
         }
         return new Response(
           sseStream([
-            frame("diagnosis", { ...ENVELOPE, primary_code: "order.cost.min", gap: "194.11" }),
+            frame("diagnosis", {
+              ...ENVELOPE,
+              primary_code: "order.cost.min",
+              gap: "194.11",
+              gap_is_borderline: false,
+              validations: [
+                { code: "order.cost.min", level: "error", type: "cost" },
+              ],
+              channels: [],
+            }),
             frame("options", { ...ENVELOPE, candidates: [CANDIDATE] }),
             frame("consent_required", ENVELOPE),
           ]),
@@ -106,6 +115,8 @@ describe("recovery card", () => {
               status: "receipt",
               reason: "",
               actual_delta: "39.99",
+              blocker_cleared: true,
+              remaining_gap: null,
             }),
           ]),
           { status: 200 },
@@ -122,6 +133,66 @@ describe("recovery card", () => {
       expect(screen.getByTestId("receipt-verified")).toBeInTheDocument();
     });
     expect(screen.getByTestId("actual-delta")).toHaveTextContent("39.99");
+  });
+
+  it("keeps round 1's receipt visible through a second consent round (D42)", async () => {
+    // G7 (D-G7-05): the exact regression an adversarial audit of this
+    // stage's plan caught -- `persist_receipt` clears `receipt` and
+    // routes back to `diagnose` inside the SAME stream when a verified
+    // write does not clear the blocker. Naively replacing `receipt`
+    // instead of accumulating loses round 1's proof the instant round 2
+    // starts.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (init?.method === "POST" && url.endsWith("/session")) {
+          return new Response(
+            JSON.stringify({
+              session_id: "s1",
+              status: "created",
+              authorized: true,
+              auth_url: "/auth/start?session_id=s1",
+            }),
+            { status: 200 },
+          );
+        }
+        return new Response(
+          sseStream([
+            frame("receipt", {
+              ...ENVELOPE,
+              status: "receipt",
+              reason: "",
+              actual_delta: "39.99",
+              blocker_cleared: false,
+              remaining_gap: "2.98",
+            }),
+            frame("diagnosis", {
+              ...ENVELOPE,
+              primary_code: "order.cost.min",
+              gap: "2.98",
+              gap_is_borderline: true,
+              validations: [],
+              channels: [],
+            }),
+            frame("options", { ...ENVELOPE, candidates: [CANDIDATE] }),
+            frame("consent_required", ENVELOPE),
+          ]),
+          { status: 200 },
+        );
+      }),
+    );
+
+    render(<App />);
+    await act(async () => {
+      screen.getByRole("button", { name: /перевірити мій кошик/i }).click();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("prior-receipts")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("prior-receipt-0")).toHaveTextContent("39.99");
+    // The consent screen for round 2 is showing, not the receipt screen.
+    expect(screen.getByTestId("product-name")).toBeInTheDocument();
   });
 
   it("surfaces an error event as its own screen", async () => {
@@ -207,19 +278,28 @@ describe("receipt screen", () => {
   it("renders `unverified` as its own outcome, not a success", () => {
     render(
       <ReceiptScreen
-        receipt={{
-          ...ENVELOPE,
-          status: "unverified",
-          reason: "read-back unreachable",
-          actual_delta: null,
-        }}
+        receipts={[
+          {
+            ...ENVELOPE,
+            status: "unverified",
+            reason: "read-back unreachable",
+            actual_delta: null,
+            blocker_cleared: false,
+            remaining_gap: null,
+          },
+        ]}
       />,
     );
 
     expect(screen.getByTestId("receipt-unverified")).toBeInTheDocument();
     expect(screen.queryByTestId("receipt-verified")).toBeNull();
-    expect(screen.getByTestId("receipt-reason")).toHaveTextContent(
+    // The raw developer string is translated to Ukrainian for the guest
+    // (D-G7-04) -- it must not appear verbatim on this screen.
+    expect(screen.getByTestId("receipt-reason")).not.toHaveTextContent(
       "read-back unreachable",
+    );
+    expect(screen.getByTestId("receipt-reason")).toHaveTextContent(
+      "перевірте кошик",
     );
   });
 });

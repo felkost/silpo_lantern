@@ -58,7 +58,7 @@ DEFAULT_REDIRECT_URI = "http://127.0.0.1:8000/auth/callback"
 WEB_CLIENT_PATH = PROJECT_ROOT / ".cache" / "silpo_mcp_web_client.json"
 
 
-async def _register(redirect_uri: str, server_url: str) -> None:
+async def _register(redirect_uri: str, server_url: str, output_path: Path) -> None:
     async with httpx.AsyncClient(timeout=30) as client:
         metadata = None
         for url in build_oauth_authorization_server_metadata_discovery_urls(
@@ -90,13 +90,13 @@ async def _register(redirect_uri: str, server_url: str) -> None:
         response = await client.send(request)
         info = await handle_registration_response(response)
 
-    WEB_CLIENT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    WEB_CLIENT_PATH.write_text(
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
         info.model_dump_json(indent=2, exclude_none=True), encoding="utf-8"
     )
     print(f"registered client_id: {info.client_id}")
     print(f"redirect_uris: {[str(u) for u in (info.redirect_uris or [])]}")
-    print(f"written to: {WEB_CLIENT_PATH}")
+    print(f"written to: {output_path}")
     print(
         "\nThis file is gitignored (.cache/). It holds a client_id, not a "
         "guest's token -- but treat it as a credential anyway."
@@ -107,11 +107,23 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--redirect-uri", default=DEFAULT_REDIRECT_URI)
     parser.add_argument("--server-url", default=DEFAULT_MCP_URL)
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=WEB_CLIENT_PATH,
+        help=(
+            "Where to write the registration (default: the local-dev "
+            "path, .cache/silpo_mcp_web_client.json). G7/IV-07: pass a "
+            "DIFFERENT path when registering a second client for a "
+            "deployed redirect_uri, so this write never overwrites the "
+            "local-dev client's own registration."
+        ),
+    )
     args = parser.parse_args()
 
     print(f"Registering a client for redirect_uri: {args.redirect_uri}")
     print(f"Authorization server derived from: {args.server_url}\n")
-    asyncio.run(_register(args.redirect_uri, args.server_url))
+    asyncio.run(_register(args.redirect_uri, args.server_url, args.output))
 
 
 if __name__ == "__main__":

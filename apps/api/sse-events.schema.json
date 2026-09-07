@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://lantern.local/schemas/sse-event.json",
   "title": "SSE event envelope",
-  "description": "G5+G6 (D-G5-21): `event` is now the closed enum plan section 1.5 declares. Corrected in place -- this description previously named a different, seven-value vocabulary (read/diagnose/plan/consent/write/readback/receipt) that was never actually emitted by any route; the five values below are what `apps/api/routes.py`'s `session_events` endpoint emits.",
+  "description": "G5+G6 (D-G5-21): `event` is now the closed enum plan section 1.5 declares. Corrected in place -- this description previously named a different, seven-value vocabulary (read/diagnose/plan/consent/write/readback/receipt) that was never actually emitted by any route; the five values below are what `apps/api/routes.py`'s `session_events` endpoint emits. G7 (D-G7-03): per-event `data` shapes added for `diagnosis` and `receipt` -- previously only the three envelope fields common to every event were declared, so the disclosure layer and channel comparison the guest actually needs were never schema-checked at all.",
   "type": "object",
   "required": ["event", "data"],
   "properties": {
@@ -26,5 +26,75 @@
       "description": "Client reconnect delay in milliseconds, per the SSE spec."
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": { "properties": { "event": { "const": "diagnosis" } } },
+      "then": {
+        "properties": {
+          "data": {
+            "required": [
+              "session_id", "trace_id", "version",
+              "primary_code", "gap", "gap_is_borderline", "validations", "channels"
+            ],
+            "properties": {
+              "primary_code": { "type": ["string", "null"] },
+              "gap": { "type": ["string", "null"] },
+              "gap_is_borderline": { "type": "boolean" },
+              "validations": {
+                "type": "array",
+                "description": "Every validation the cart already carries -- blockers and disclosures alike (plan section 5.1's disclosure-layer requirement).",
+                "items": {
+                  "type": "object",
+                  "required": ["code", "level", "type"],
+                  "properties": {
+                    "code": { "type": "string" },
+                    "level": { "type": "string", "enum": ["error", "warning", "info"] },
+                    "type": { "type": "string" }
+                  }
+                }
+              },
+              "channels": {
+                "type": "array",
+                "description": "The delivery-channel comparison (amendment A7).",
+                "items": {
+                  "type": "object",
+                  "required": ["delivery_type", "gap", "verdict", "reason"],
+                  "properties": {
+                    "delivery_type": { "type": "string" },
+                    "gap": { "type": "string" },
+                    "verdict": { "type": "string", "enum": ["clears_now", "needs_check"] },
+                    "reason": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "event": { "const": "receipt" } } },
+      "then": {
+        "properties": {
+          "data": {
+            "required": [
+              "session_id", "trace_id", "version",
+              "status", "reason", "actual_delta", "blocker_cleared", "remaining_gap"
+            ],
+            "properties": {
+              "status": { "type": "string" },
+              "reason": { "type": ["string", "null"] },
+              "actual_delta": { "type": ["string", "null"] },
+              "blocker_cleared": {
+                "type": "boolean",
+                "description": "D42: a verified write is not a recovered cart -- distinguishes 'the write landed' from 'you can check out'."
+              },
+              "remaining_gap": { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

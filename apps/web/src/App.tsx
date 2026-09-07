@@ -21,12 +21,19 @@ import type {
   Screen,
 } from "./types";
 
+// G7 (D-G7-05): the second consent+write round (D42) clears `receipt` in
+// the graph state and routes back to `diagnose`, all inside one SSE
+// stream -- `receipt(round 1) -> diagnosis(round 2) -> options ->
+// consent_required`. Replacing a single `receipt` field loses round 1's
+// receipt the instant round 2 starts (an adversarial audit of this
+// stage's plan caught it before it shipped): the fix is to accumulate.
+
 function App() {
   const [screen, setScreen] = useState<Screen>("idle");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [diagnosis, setDiagnosis] = useState<DiagnosisEvent | null>(null);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [receipt, setReceipt] = useState<ReceiptEvent | null>(null);
+  const [receipts, setReceipts] = useState<ReceiptEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [authUrl, setAuthUrl] = useState<string>("");
   const [busy, setBusy] = useState(false);
@@ -41,7 +48,7 @@ function App() {
       } else if (event.event === "consent_required") {
         setScreen("consent");
       } else if (event.event === "receipt") {
-        setReceipt(event.data as unknown as ReceiptEvent);
+        setReceipts((prev) => [...prev, event.data as unknown as ReceiptEvent]);
         setScreen("receipt");
       } else if (event.event === "error") {
         setError(String((event.data as { error?: string }).error ?? "невідома помилка"));
@@ -137,14 +144,21 @@ function App() {
       )}
 
       {(screen === "diagnosis" || screen === "consent") && (
-        <DiagnosisScreen diagnosis={diagnosis} disclosures={[]} />
+        <DiagnosisScreen diagnosis={diagnosis} />
       )}
 
       {screen === "consent" && (
-        <ConsentScreen candidates={candidates} onConsent={consent} submitting={busy} />
+        <ConsentScreen
+          candidates={candidates}
+          onConsent={consent}
+          submitting={busy}
+          priorReceipts={receipts}
+        />
       )}
 
-      {screen === "receipt" && receipt !== null && <ReceiptScreen receipt={receipt} />}
+      {screen === "receipt" && receipts.length > 0 && (
+        <ReceiptScreen receipts={receipts} />
+      )}
 
       {screen === "error" && (
         <section aria-labelledby="error-heading">

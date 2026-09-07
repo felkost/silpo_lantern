@@ -9,17 +9,40 @@
 // model wrote, while a different payload executes, has not actually
 // consented to the write.
 
-import type { Candidate } from "../types";
+import type { Candidate, ReceiptEvent } from "../types";
 
 interface Props {
   candidates: Candidate[];
   onConsent: (actionId: string) => void;
   submitting: boolean;
+  /** G7 (D-G7-05): a second consent+write round (D42) means the guest
+   * may already have one round's receipt by the time this screen shows
+   * again -- shown here so it is not lost between rounds. */
+  priorReceipts?: ReceiptEvent[];
 }
 
-export function ConsentScreen({ candidates, onConsent, submitting }: Props) {
+export function ConsentScreen({
+  candidates,
+  onConsent,
+  submitting,
+  priorReceipts = [],
+}: Props) {
   return (
     <section aria-labelledby="consent-heading">
+      {priorReceipts.length > 0 && (
+        <div data-testid="prior-receipts">
+          <h3>Попередні зміни цього сеансу</h3>
+          <ul>
+            {priorReceipts.map((receipt, index) => (
+              <li key={index} data-testid={`prior-receipt-${index}`}>
+                {receipt.status === "receipt"
+                  ? `Додано на ${receipt.actual_delta} ₴`
+                  : "Не підтверджено"}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <h2 id="consent-heading">Оберіть, що додати</h2>
       <ul>
         {candidates.map((candidate) => (
