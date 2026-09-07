@@ -23,6 +23,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from apps.api import routes as routes_module
+from src.lantern.mcp.session import current_token_storage
 from src.lantern.domain.disclosure import DisclosureReport
 from src.lantern.domain.models import (
     ActionProposal,
@@ -440,6 +441,40 @@ def test_b3_write_guard_refusal_reaches_the_client_as_an_error_event(
     assert response.status_code == 200
     assert "event: error" in response.text
     assert guard_reason in response.text
+
+
+def test_the_guest_token_is_bound_before_the_graph_is_ever_built(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """G7/IV-07 (live finding): `_get_graph` builds the production graph
+    LAZILY on its own first call across the whole app's lifetime, and
+    that build synchronously calls `list_tools_raw()`, which reads
+    `current_token_storage` -- falling back to the single operator token
+    on disk if nothing is bound yet. That fallback is invisible in local
+    dev (the operator's own token happens to exist there) and a hard 500
+    on any host with no such file (measured live, on Render). The fix is
+    ordering: bind the guest's own token before `_get_graph` is ever
+    awaited, not after -- this test fails against the pre-fix ordering,
+    where `spying_graph_builder` would see `None`.
+    """
+    seen_token_storage: List[object] = []
+
+    def spying_graph_builder() -> Any:
+        seen_token_storage.append(current_token_storage.get())
+        return _FakeGraph(chunks=[], final_state={})
+
+    app = _make_app(_FakeGraph(chunks=[], final_state={}), monkeypatch)
+    app.state.graph_builder = spying_graph_builder
+    client = TestClient(app)
+
+    client.get("/session/s1/events")
+
+    assert len(seen_token_storage) == 1
+    assert seen_token_storage[0] is not None, (
+        "the graph was built with no guest token bound -- it would have "
+        "fallen back to the single operator token on disk"
+    )
+    assert isinstance(seen_token_storage[0], _FakeTokenStorage)
 
 
 def test_events_refuses_an_unauthorized_session(

@@ -102,16 +102,20 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
     `POST /session/{id}/consent` (resumes into the write pipeline to a
     `receipt`/`error` outcome).
     """
-    graph = await _get_graph(request)
-    config = _config(session_id)
-
-    # Bind THIS guest's own credential for the whole run. Every MCP call
-    # the graph makes reads it from the context (measured to survive both
-    # LangGraph's sync-node execution and the `asyncio.run` inside
-    # `mcp.session.call_tool` -- pinned by
-    # `tests/unit/test_session_token_contextvar_propagates.py`). Without
-    # this binding every guest would silently fall back to the single
-    # operator token on disk and read somebody else's cart.
+    # Bind THIS guest's own credential BEFORE touching the graph at all --
+    # G7/IV-07 found live that `_get_graph` builds the production graph
+    # lazily on its OWN first call, ever, across the whole app's lifetime
+    # (`app.state.graph` is cached permanently once built), and that
+    # build calls `list_tools_raw()` synchronously to seed the tool
+    # registry. Binding the token afterward meant the very first guest to
+    # hit this route triggered that call with no guest context bound yet,
+    # falling back to the single operator token on disk -- invisible in
+    # local dev (the operator's own token happens to exist there) but a
+    # hard 500 on a host with no such file (Render). Every MCP call the
+    # graph makes reads this binding from the context (measured to
+    # survive both LangGraph's sync-node execution and the `asyncio.run`
+    # inside `mcp.session.call_tool` -- pinned by
+    # `tests/unit/test_session_token_contextvar_propagates.py`).
     storage = SessionTokenStorage(request.app.state.repo_pool, session_id)
     if await storage.get_tokens() is None:
         raise HTTPException(
@@ -122,6 +126,9 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
             ),
         )
     current_token_storage.set(storage)
+
+    graph = await _get_graph(request)
+    config = _config(session_id)
 
     snapshot = await graph.aget_state(config)
     existing_state: RecoveryState = snapshot.values
