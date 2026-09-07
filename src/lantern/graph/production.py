@@ -13,7 +13,7 @@ effects the moment it runs (reading `OPENROUTER_API_KEY`, a live
 
 import time
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Sequence, Tuple
 
 import yaml
 from psycopg_pool import ConnectionPool
@@ -59,8 +59,17 @@ def _load_models_config() -> Dict[str, Any]:
     return dict(raw)
 
 
+# Every production run carries these. Without them a trace in the LangSmith
+# UI is indistinguishable from any other -- which is D22's lesson from G4,
+# repeated here because this module was written without them and every live
+# write in this stage went out untagged.
+PRODUCTION_TRACE_TAGS = ("lantern", "production", "write-path")
+
+
 def build_production_graph(
-    pool: ConnectionPool, checkpointer: Any
+    pool: ConnectionPool,
+    checkpointer: Any,
+    trace_tags: Sequence[str] = PRODUCTION_TRACE_TAGS,
 ) -> Tuple[Any, Dict[str, str]]:
     """Builds one compiled graph, wired to real adapters, and returns
     `(graph, version_tuple)` -- the same version tuple threaded into every
@@ -126,6 +135,7 @@ def build_production_graph(
         planner_model_id=models["planner"]["model"],
         explainer_model_id=explainer_model,
         tools_schema_hash=tools_schema_hash,
+        trace_tags=list(trace_tags),
         load_consent=load_consent,
         call_write_tool=call_write_tool,
         claim_and_consume=claim_and_consume,

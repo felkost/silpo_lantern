@@ -134,3 +134,22 @@ def test_trace_tags_reach_both_the_planner_and_explainer_call() -> None:
 
     for call in calls:
         assert call["tags"] == ["g4-live", "criterion-8"]
+
+
+def test_the_production_graph_tags_every_traced_call() -> None:
+    """D22's lesson from G4, and it was lost again: `production.py` was
+    written without `trace_tags`, so every live run of this stage — six
+    real cart writes included — went to LangSmith indistinguishable from
+    any other trace in the project.
+
+    Asserted at the production wiring, not at `build_recovery_graph`,
+    because the parameter existed all along; what was missing was anyone
+    passing it.
+    """
+    import inspect
+
+    from src.lantern.graph import production
+
+    source = inspect.getsource(production.build_production_graph)
+    assert "trace_tags=" in source, "the production graph passes no trace tags"
+    assert production.PRODUCTION_TRACE_TAGS, "the default tag set is empty"

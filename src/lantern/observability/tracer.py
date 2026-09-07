@@ -25,10 +25,61 @@ from typing import Any, Callable, Dict, Mapping, Optional, Sequence, TypeVar
 
 from langsmith import traceable
 from langsmith.run_helpers import LangSmithExtra
+from langsmith.run_trees import get_cached_client
 
 from src.lantern.domain.models import ActionProposal
 
 T = TypeVar("T")
+
+
+# Address-adjacent fields, stripped from EVERY payload before it leaves the
+# process -- not just from the spans this module wraps.
+COORDINATE_KEYS = frozenset({"latitude", "longitude"})
+
+
+def strip_coordinates(payload: Any) -> Any:
+    """Recursively removes the cart's coordinates from anything on its way
+    to LangSmith.
+
+    `redact_planner_input` already drops them from its own span, on the
+    stated grounds that address-adjacent data has no legitimate reason to
+    reach a third-party trace. That was only ever true of the three spans
+    this module wraps: LangGraph instruments every node itself and
+    serialises the whole `RecoveryState`, so a real exported trace carried
+    `latitude`/`longitude` verbatim in a neighbouring span -- measured on a
+    live run, 2026-09-07.
+    """
+    if isinstance(payload, Mapping):
+        return {
+            key: strip_coordinates(value)
+            for key, value in payload.items()
+            if key not in COORDINATE_KEYS
+        }
+    if isinstance(payload, list):
+        return [strip_coordinates(item) for item in payload]
+    return payload
+
+
+def install_trace_redaction() -> None:
+    """Primes LangSmith's process-wide cached client with the redaction
+    hook, so it applies to spans this project never created.
+
+    Must run before anything else touches the client: `get_cached_client`
+    builds it on first call and ignores the arguments of every call after
+    that. Rather than trust ordering, this verifies the hook actually
+    landed and raises if it did not -- a redactor that silently failed to
+    install is worse than none, because the trace looks supervised.
+    """
+    client = get_cached_client(
+        hide_inputs=strip_coordinates, hide_outputs=strip_coordinates
+    )
+    installed = getattr(client, "_hide_inputs", None) is strip_coordinates
+    if not installed:
+        raise RuntimeError(
+            "LangSmith's cached client already existed, so trace redaction was "
+            "not installed. Call install_trace_redaction() before anything "
+            "creates a client or emits a span."
+        )
 
 
 def redact_planner_input(kwargs: Mapping[str, Any]) -> Dict[str, Any]:

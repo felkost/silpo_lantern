@@ -27,10 +27,10 @@ it does not recognise, and the read-only disclosure layer including the delivery
 comparison. It does no I/O at all — an architecture test enforces that, and the whole
 of it runs offline.
 
-The agent graph now runs end to end through `read → diagnose → compare_channels → plan
-→ collect_and_gate → rank → explain`, reaching a terminal `awaiting_consent` state with
-real, Evidence-Gated candidates — proven both offline (fixture-driven tests) and live,
-against a real Silpo cart. The planner and explainer are real LLM calls (OpenRouter);
+The agent graph runs `read → diagnose → compare_channels → plan → collect_and_gate →
+rank → explain`, pauses for the guest's consent, and only then continues into the write
+segment — proven both offline (fixture-driven tests) and live, against a real Silpo
+cart. The planner and explainer are real LLM calls (OpenRouter);
 a 28-prompt evaluation picked the cheapest explainer candidate that clears a
 Ukrainian-language quality bar with zero critical errors. No LLM output can reach a
 write tool: a planner's structured output has no field a candidate's price or id could

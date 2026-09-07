@@ -31,6 +31,7 @@ from src.lantern.graph.state import recovery_state_serde
 from src.lantern.memory.checkpointer import get_checkpointer
 from src.lantern.memory.migrations_runner import run_migrations
 from src.lantern.memory.repository import open_repository_pool
+from src.lantern.observability.tracer import install_trace_redaction
 
 # Windows-only: asyncio's default ProactorEventLoop cannot run psycopg's
 # async mode at all (measured — see tests/conftest.py for the identical
@@ -42,6 +43,9 @@ if sys.platform == "win32":
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    # Before anything can emit a span: LangSmith's client is built once, on
+    # first use, and later arguments are ignored.
+    install_trace_redaction()
     dsn = strip_sqlalchemy_dialect(get_database_url())
     await run_migrations(dsn)
     # D-G5-15: `recovery_state_serde()` extends the msgpack allowlist with
