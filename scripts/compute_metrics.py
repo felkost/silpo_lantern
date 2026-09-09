@@ -88,10 +88,41 @@ def _load_run_records(
     return records
 
 
+def _load_disclosure_rows(golden_dir: Path) -> List[DisclosureRow]:
+    """DisclosureRate's population: the UI audit, not the replay runs.
+
+    A replay cannot see what the Silpo app renders, so every run record
+    carries `visibility_verified: false` and is correctly excluded -- with
+    only those, the metric is permanently N/A however many runs happen.
+    The rows that can answer the question are produced by a person looking
+    at the app, under `disclosure_audit/`, and are tracked because they
+    cannot be regenerated.
+
+    Unverified rows are loaded rather than dropped: the metric excludes
+    them itself, and dropping them here would erase the fact that the
+    observation was attempted.
+    """
+    path = golden_dir / "disclosure_audit" / "observations.json"
+    if not path.is_file():
+        return []
+    document = json.loads(path.read_text(encoding="utf-8"))
+    return [
+        DisclosureRow(
+            had_invisible_constraint=row.get("had_invisible_constraint"),
+            visibility_verified=bool(row.get("visibility_verified")),
+        )
+        for row in document.get("observations", [])
+    ]
+
+
 def build_metrics_report(
-    *, evidence_dir: Path, population: str = "offline"
+    *,
+    evidence_dir: Path,
+    population: str = "offline",
+    golden_dir: Optional[Path] = None,
 ) -> Dict[str, Any]:
     records = _load_run_records(evidence_dir, population)
+    golden_dir = golden_dir or (PROJECT_ROOT / "datasets" / "golden-v1.0.0")
 
     claims: List[JournalClaim] = []
     consents_by_action_id: Dict[str, object] = {}
@@ -160,6 +191,9 @@ def build_metrics_report(
                 visibility_verified=bool(disclosure.get("visibility_verified")),
             )
         )
+
+    # The rows that can actually answer the question (see the loader).
+    disclosure_rows.extend(_load_disclosure_rows(golden_dir))
 
     results = {
         "UnauthorizedWriteRate": unauthorized_write_rate(claims, consents_by_action_id),

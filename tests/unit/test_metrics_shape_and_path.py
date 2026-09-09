@@ -51,17 +51,38 @@ def test_report_shape_matches_what_render_report_reads() -> None:
         assert set(metric.keys()) == {"name", "value", "n"}
 
 
-def test_an_empty_evidence_population_reports_every_metric_as_not_applicable(
+def test_an_empty_population_reports_every_metric_as_not_applicable(
     tmp_path,
 ) -> None:
-    empty_dir = tmp_path / "no_evidence_here"
-    empty_dir.mkdir()
+    """Empty means BOTH sources empty. DisclosureRate does not read the
+    run records -- a replay cannot audit what the Silpo app renders -- so
+    it comes from the tracked UI audit instead, and an empty evidence
+    directory alone no longer empties it. Pointing this test only at the
+    evidence directory would have it assert that a real, tracked
+    observation does not exist."""
+    empty_evidence = tmp_path / "no_evidence_here"
+    empty_evidence.mkdir()
+    empty_golden = tmp_path / "no_golden_here"
+    empty_golden.mkdir()
 
-    report = build_metrics_report(evidence_dir=empty_dir)
+    report = build_metrics_report(evidence_dir=empty_evidence, golden_dir=empty_golden)
 
     for metric in report["metrics"]:
         assert metric["value"] is None
         assert metric["n"] == 0
+
+
+def test_the_tracked_audit_survives_an_empty_evidence_directory(tmp_path) -> None:
+    """The other half of the rule above: with no run records at all, the
+    UI audit still reports, because it is a different population and not
+    a by-product of running the graph."""
+    empty_evidence = tmp_path / "no_evidence_here"
+    empty_evidence.mkdir()
+
+    report = build_metrics_report(evidence_dir=empty_evidence)
+    disclosure = next(m for m in report["metrics"] if m["name"] == "DisclosureRate")
+
+    assert disclosure["n"] >= 1
 
 
 def test_report_is_json_serializable() -> None:

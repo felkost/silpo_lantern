@@ -165,7 +165,7 @@ reproducible offline from this repository:
 | False recovery | 0 | 33 |
 | Recovery completion rate | 1.00 | 18 |
 | Search-price fidelity | 0.27 | 33 |
-| Disclosure rate | not measured | 0 |
+| Disclosure rate | 1 of 1 | 1 |
 
 The last two are one question split in two. Write-delta fidelity asks what this system
 controls — does the change we recorded match the movement the cart itself shows? It is 33
@@ -177,9 +177,10 @@ change by re-reading the cart instead of trusting the prediction.
 
 The four clean figures are unrefuted, not proven — at n=33 the 95% Wilson interval for a
 proportion of 1.00 still reaches down to 0.90, and the results chart draws those
-intervals rather than four full bars. Disclosure rate is reported as not measured rather
-than 0.00, because no session's app-visibility was independently audited and unknown is
-not the same as hidden.
+intervals rather than four full bars. Disclosure rate now rests on a single audited observation: the
+cart carried two constraints and the app displayed one, with the other shown on no screen
+the guest can reach. One observation is reported as one — its interval runs from 0.21 —
+not as a percentage.
 
 See [`docs/reports/index.html`](docs/reports/index.html), which explains how the parts
 interact and why that is expected to help.
