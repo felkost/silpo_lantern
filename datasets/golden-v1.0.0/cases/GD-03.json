@@ -1,0 +1,34 @@
+{
+  "case_id": "GD-03",
+  "scenario": "Several candidates could each close the gap alone (45.00, 42.00, 39.50 against a 39.00 gap) -- ranking picks one, the write lands exactly as consented (expected delta equals actual), and the blocker clears in a single round.",
+  "gd_ref": "GD-03",
+  "input": {
+    "fixture_id": "replay_gap_has_several_viable_plans"
+  },
+  "expected_outcome": {
+    "status": "verified",
+    "primary_code": "order.cost.min",
+    "receipts_count": 1,
+    "receipt_statuses": ["receipt"]
+  },
+  "mode": "replay",
+  "source_id": "synthesized-offline-2026-09-09",
+  "pii_status": "synthetic",
+  "allowed_trajectories": [
+    [
+      "read",
+      "diagnose",
+      "compare_channels",
+      "plan",
+      "collect_and_gate",
+      "rank",
+      "explain",
+      "write_guard",
+      "write_and_readback",
+      "persist_receipt"
+    ]
+  ],
+  "allowed_tools": ["silpo_add_or_update_cart_products"],
+  "forbidden_tools": ["silpo_remove_cart_products"],
+  "rubric": "With several viable single-item fixes, exactly one write happens, its actual delta equals the expected delta computed from the gap, and one round suffices -- no second consent round is opened once the blocker is genuinely gone."
+}

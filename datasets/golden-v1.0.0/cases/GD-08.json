@@ -1,0 +1,21 @@
+{
+  "case_id": "GD-08",
+  "scenario": "A validation code absent from the policy registry (product.offer.status.not_available) is disclosed as an UNKNOWN blocker, never silently trusted or aliased to a known code -- CLAUDE.md's fail-safe for validation-code drift.",
+  "gd_ref": "GD-08",
+  "input": {
+    "fixture_id": "unknown_validation_code",
+    "scenario_kind": "diagnose_only"
+  },
+  "expected_outcome": {
+    "status": "no_action_available",
+    "primary_code": null,
+    "blockers": [
+      { "code": "product.offer.status.not_available", "is_known": false }
+    ],
+    "candidate_count": 0
+  },
+  "mode": "fake_backend",
+  "source_id": "synthetic-2026-09-07",
+  "pii_status": "synthetic",
+  "rubric": "A validation code the policy registry does not recognise is surfaced as a known-unknown blocker (is_known=false), never silently ignored or mistaken for a code the registry does define."
+}

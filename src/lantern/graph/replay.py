@@ -32,10 +32,19 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional, Tuple
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+)
 
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import InMemorySaver
@@ -49,10 +58,16 @@ from src.lantern.domain.models import ActionProposal, ConsentRecord, Receipt
 from src.lantern.graph.build import build_recovery_graph
 from src.lantern.graph.schemas import ExplainerOutput, SearchIntent
 from src.lantern.graph.state import ACTIVE_EXECUTION_SECONDS, new_recovery_state
+from src.lantern.mcp.errors import McpAdapterError
 from src.lantern.memory.repository import IdempotencyState
 from src.lantern.policies.loader import load_registry
 
 IN_FLIGHT: IdempotencyState = "in_flight"
+
+# G9 (D75): mirrors `scripts/record_replay_bundle.TAPED_ERROR_KEY`.
+# Not imported from there -- `scripts/` is not a package this layer
+# may depend on; the recorder's own test pins the two agree.
+TAPED_ERROR_KEY = "__mcp_error__"
 
 # plan section 11.1 -- mirrors `apps/api/routes.py`'s own `CONSENT_TTL`.
 # Not imported from there: `apps/api` is the interface layer and this
@@ -85,7 +100,17 @@ class ReplayBundle:
     ORDERED QUEUES, not single responses: the hero flow calls
     `fetch_cart_by_id` with identical args three times (read, the guard's
     re-read, the read-back) and the third must return the cart AFTER the
-    write -- args-only keying cannot distinguish them."""
+    write -- args-only keying cannot distinguish them.
+
+    `mcp_by_tool` (G9, D-G9-05) is a SECOND, tool-name-only queue,
+    consulted only when `mcp`'s args-keyed lookup misses -- built by
+    `record_replay_bundle.py` from the SAME tape, grouped by tool name in
+    call order, never hand-written. It exists because the 18 core repeats
+    (G9.6) run the real live planner against replayed MCP, and
+    `silpo_find_products_batch`'s args carry that planner's own search
+    terms -- which vary run to run and never match the exact-args hash
+    recorded at tape time. Optional for backward compatibility with
+    bundles recorded before G9."""
 
     fixture_id: str
     recorded_at: datetime
@@ -95,6 +120,7 @@ class ReplayBundle:
     mcp: Mapping[str, List[Mapping[str, Any]]]
     llm: Mapping[str, List[Mapping[str, Any]]]
     expected_outcome: Mapping[str, Any]
+    mcp_by_tool: Mapping[str, List[Mapping[str, Any]]] = field(default_factory=dict)
 
 
 def load_bundle(path: Path) -> ReplayBundle:
@@ -112,6 +138,9 @@ def load_bundle(path: Path) -> ReplayBundle:
         mcp=payload["mcp"],
         llm=payload["llm"],
         expected_outcome=envelope["expected_outcome"],
+        # G9 (D-G9-05): absent on bundles recorded before G9 -- `.get`
+        # with a `{}` default keeps those bundles loadable unchanged.
+        mcp_by_tool=payload.get("mcp_by_tool", {}),
     )
 
 
@@ -124,25 +153,68 @@ class BundlePlayer:
     def __init__(self, bundle: ReplayBundle) -> None:
         self.bundle = bundle
         self._cursors: Dict[str, int] = {}
+        self._by_tool_cursors: Dict[str, int] = {}
         self._planner_cursor = 0
         self._explainer_cursor = 0
+        # G9 (D80): every call this player served, in order. The metrics
+        # need the args the graph ACTUALLY wrote, to hash independently
+        # against the consent's own `args_hash` -- taking the guard's word
+        # for that would make ConsentBindingIntegrity a tautology.
+        self.calls: List[Tuple[str, Dict[str, Any]]] = []
         self.consents: Dict[str, ConsentRecord] = {}
         self.journal: Dict[Tuple[str, str, str], IdempotencyState] = {}
         self.receipts: List[Receipt] = []
 
     def call(self, tool_name: str, args: Mapping[str, Any]) -> Dict[str, Any]:
+        self.calls.append((tool_name, dict(args)))
         key = response_key(tool_name, args)
+        # G9 (D79): the fallback queue is the tape's calls to this tool IN
+        # ORDER, so its position must count EVERY call to the tool, not
+        # only the ones it served. `find_products_batch` is called twice
+        # per round -- once from the cart's own names (an args hit) and
+        # once from the live planner's terms (a miss) -- and a cursor that
+        # only moved on misses answered the planner's search with the
+        # availability response recorded for `compare_channels`.
+        by_tool_cursor = self._by_tool_cursors.get(tool_name, 0)
+        self._by_tool_cursors[tool_name] = by_tool_cursor + 1
+
         queue = self.bundle.mcp.get(key)
-        if queue is None:
-            raise ReplayMismatch(
-                f"no recorded response for {key} "
-                f"(tool={tool_name!r}, args={dict(args)!r})"
-            )
-        cursor = self._cursors.get(key, 0)
-        if cursor >= len(queue):
+        if queue is not None:
+            cursor = self._cursors.get(key, 0)
+            if cursor < len(queue):
+                self._cursors[key] = cursor + 1
+                return self._serve(queue[cursor])
             raise ReplayMismatch(f"{key} exhausted after {cursor} recorded call(s)")
-        self._cursors[key] = cursor + 1
-        return dict(queue[cursor])
+
+        # G9 (D-G9-05): the args-keyed lookup missed. Fall back to the
+        # tool-name-only queue, consulted ONLY here -- an exact args match
+        # always wins because it is strictly more specific, and a tool
+        # with no fallback queue at all raises exactly as before.
+        fallback_queue = self.bundle.mcp_by_tool.get(tool_name)
+        if fallback_queue is not None:
+            if by_tool_cursor < len(fallback_queue):
+                return self._serve(fallback_queue[by_tool_cursor])
+            raise ReplayMismatch(
+                f"{tool_name} fallback queue exhausted after "
+                f"{by_tool_cursor} recorded call(s)"
+            )
+
+        raise ReplayMismatch(
+            f"no recorded response for {key} "
+            f"(tool={tool_name!r}, args={dict(args)!r})"
+        )
+
+    @staticmethod
+    def _serve(entry: Mapping[str, Any]) -> Dict[str, Any]:
+        """A taped REFUSAL is replayed as a refusal (D75). Live, the
+        server rejects `get_time_slots` for the two channels that resolve
+        no real branch, and `compare_channels_node` degrades those
+        channels rather than aborting -- a bundle that served them an
+        empty success would replay a different graph run than the one it
+        recorded."""
+        if TAPED_ERROR_KEY in entry:
+            raise McpAdapterError(str(entry[TAPED_ERROR_KEY]))
+        return dict(entry)
 
     def next_planner(self, state: Any) -> SearchIntent:
         del state  # the recorded output does not depend on re-deriving it
@@ -234,15 +306,37 @@ class ReplayResult:
     final_state: Mapping[str, Any]
     receipts: List[Receipt]
     consented_action_id: str
+    # G9 (D80): the player itself, so a caller can read the journal, the
+    # consents and the served calls -- the three things the metrics need
+    # and none of which survive in `final_state`.
+    player: Optional["BundlePlayer"] = None
 
 
-def replay(bundle: ReplayBundle) -> ReplayResult:
+def replay(
+    bundle: ReplayBundle,
+    *,
+    planner_call: Optional[Callable[[Any], SearchIntent]] = None,
+    explainer_call: Optional[Callable[[ActionProposal], ExplainerOutput]] = None,
+    thread_id: Optional[str] = None,
+    tags: Optional[Sequence[str]] = None,
+) -> ReplayResult:
     """Builds the REAL graph via `build_recovery_graph`, every boundary
     bound to `player`, an `InMemorySaver`, and the bundle's own recorded
     clock; runs to the interrupt, records consent, resumes, and returns
     the final state and every receipt saved (D42's second consent round
-    can produce more than one)."""
+    can produce more than one).
+
+    `planner_call`/`explainer_call` (G9, D62/D-G9-05): omitted (the
+    default), MCP AND the planner/explainer both replay from the bundle's
+    tape -- today's fully-offline behavior, unchanged. Passed, they let
+    the 18 core repeats (G9.6) wire in the REAL live planner/explainer
+    while MCP still replays from the tape (via `mcp_by_tool`'s fallback
+    for the planner's own varying search terms) -- "live LLM against
+    replayed MCP", the configuration the author approved at G8+G9
+    kickoff."""
     player = BundlePlayer(bundle)
+    planner_call = planner_call or player.next_planner
+    explainer_call = explainer_call or player.next_explainer
 
     def now() -> datetime:
         return bundle.recorded_at
@@ -290,8 +384,8 @@ def replay(bundle: ReplayBundle) -> ReplayResult:
         fetch_delivery_types=fetch_delivery_types,
         fetch_time_slots=fetch_time_slots,
         fetch_find_products_batch=fetch_find_products_batch,
-        planner_call=player.next_planner,
-        explainer_call=player.next_explainer,
+        planner_call=planner_call,
+        explainer_call=explainer_call,
         now=now,
         checkpointer=checkpointer,
         tools_schema_hash=bundle.versions.get("schema_hash", ""),
@@ -303,8 +397,17 @@ def replay(bundle: ReplayBundle) -> ReplayResult:
         tool_schema_hashes=player.tool_schema_hashes,
     )
 
+    # G9 (D78): the caller may name the thread. The 18 core repeats run
+    # the same bundle three times, and a thread id derived from the
+    # fixture alone gives all three the same handle -- so a result row
+    # could not be matched to the trace it came from, which is the one
+    # thing section 13.4's per-run `trace` field exists for.
+    # `tags` reach the ROOT run. `traced_llm_call` tags only the spans it
+    # wraps, so a project list filtered by tag showed no runs at all even
+    # though every planner/explainer span carried them (D78, second round).
     config: RunnableConfig = {
-        "configurable": {"thread_id": f"replay-{bundle.fixture_id}"}
+        "configurable": {"thread_id": thread_id or f"replay-{bundle.fixture_id}"},
+        "tags": list(tags) if tags else [],
     }
     initial_state = new_recovery_state(
         session_id=bundle.inputs["session_id"],
@@ -336,4 +439,5 @@ def replay(bundle: ReplayBundle) -> ReplayResult:
         final_state=state,
         receipts=list(player.receipts),
         consented_action_id=consented_action_id,
+        player=player,
     )

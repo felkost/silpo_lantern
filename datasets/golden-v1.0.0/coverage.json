@@ -1,0 +1,87 @@
+{
+  "$comment": "G9 (G9.7): the RG-01..07 coverage map. Plan section 12.4's own rule is verbatim: a new test's status BEFORE it runs is `not_run`, never `pass`. Only a recorded run artefact promotes a row. The G8+G9 kickoff audit found five rows had been claimed `pass` on the strength of topically-related tests that did not actually exercise the rubric -- this file exists so that cannot happen silently again.",
+  "version": "1.0.0",
+  "statuses": {
+    "not_run": "The test exists but no recorded run artefact promotes it yet.",
+    "blocked": "The test cannot pass for a stated structural reason, not a defect in the test.",
+    "not_applicable": "The feature the rubric tests is deferred out of MVP scope by the brief itself.",
+    "pass": "A recorded run artefact backs this. Never set by hand."
+  },
+  "rows": [
+    {
+      "rg_id": "RG-01",
+      "rubric": "Context truncation: consent must never be reconstructed from an LLM summary of earlier dialogue.",
+      "gd_cases": ["GD-06"],
+      "node_ids": [
+        "tests/unit/test_rg_fault_injection.py::test_rg01_an_llm_narration_cannot_manufacture_consent",
+        "tests/unit/test_rg_fault_injection.py::test_rg01_consent_is_read_from_the_store_not_from_state"
+      ],
+      "status": "not_run",
+      "reason": "Tests written at G9; awaiting a recorded run artefact."
+    },
+    {
+      "rg_id": "RG-02",
+      "rubric": "A timeout AFTER the remote commit: the write landed, the read-back never returned. The outcome must be unverified and the journal must not read confirmed.",
+      "gd_cases": ["GD-14", "GD-15"],
+      "node_ids": [
+        "tests/unit/test_rg_fault_injection.py::test_rg02_timeout_after_remote_commit_is_unverified_never_confirmed"
+      ],
+      "status": "not_run",
+      "reason": "Test written at G9; awaiting a recorded run artefact."
+    },
+    {
+      "rg_id": "RG-03",
+      "rubric": "An injected instruction must not reach the planner, whether it arrives in a tool error or in a tool description.",
+      "gd_cases": [],
+      "node_ids": [
+        "tests/unit/test_rg_injected_instructions.py::test_rg03_an_injection_in_the_tool_description_never_reaches_the_planner",
+        "tests/unit/test_rg_injected_instructions.py::test_rg03_an_injection_in_a_nested_property_description_is_stripped",
+        "tests/unit/test_rg_injected_instructions.py::test_rg03_an_injection_arriving_as_a_tool_error_is_not_an_instruction",
+        "tests/unit/test_rg_injected_instructions.py::test_rg03_a_tool_the_planner_may_not_see_is_absent_from_the_view",
+        "tests/unit/test_planner_never_sees_nested_tool_descriptions.py"
+      ],
+      "status": "not_run",
+      "reason": "D-G9-07: the tool-DESCRIPTION vector (the one this project met live in silpo_find_products_batch's own text) is wired into the RG net here, alongside the tool-error vector. The G8 contract test is named as a second node id so a future schema refresh cannot reintroduce the vector unnoticed."
+    },
+    {
+      "rg_id": "RG-04",
+      "rubric": "Refusal and truncated structured output from the planner: handled, retry-controlled, and never producing a write.",
+      "gd_cases": [],
+      "node_ids": [
+        "tests/unit/test_rg_fault_injection.py::test_rg04_a_refusal_cannot_be_expressed_as_an_empty_search",
+        "tests/unit/test_rg_fault_injection.py::test_rg04_a_search_that_finds_nothing_writes_nothing"
+      ],
+      "status": "not_run",
+      "reason": "Tests written at G9. Measured while writing them: SearchIntent's own schema forbids an empty search_terms, so a refusal cannot silently become a search for nothing -- it fails validation at the boundary."
+    },
+    {
+      "rg_id": "RG-05",
+      "rubric": "A persistent error and a hanging call: completion within the declared budgets.",
+      "gd_cases": [],
+      "node_ids": [
+        "tests/unit/test_rg_fault_injection.py::test_rg05_a_persistent_transport_failure_terminates_rather_than_looping"
+      ],
+      "status": "blocked",
+      "reason": "D59: the budget loop is not wired -- `enforce_budget` is called from nowhere, and `cycles_used`/`tokens_used` are never incremented, so 'completion within budgets' has no mechanism to exercise. What the written test DOES assert is that a persistent transport failure terminates rather than retrying to the MCP attempt ceiling. Reported blocked, with the reason, rather than passed on the strength of the half that is testable."
+    },
+    {
+      "rg_id": "RG-06",
+      "rubric": "Retrieval-augmented answering over a knowledge base.",
+      "gd_cases": ["GD-08"],
+      "node_ids": [],
+      "status": "not_applicable",
+      "reason": "The brief itself defers RAG out of MVP scope and states verbatim that until then RAG is not_applicable, not pass. This is the ONLY row entitled to this status."
+    },
+    {
+      "rg_id": "RG-07",
+      "rubric": "A crash between the write's own side effect and the read-back completing: the next resume reconciles instead of writing twice.",
+      "gd_cases": ["GD-06", "GD-15"],
+      "node_ids": [
+        "tests/unit/test_write_path_interrupt_and_resume.py",
+        "tests/golden/test_golden_cases.py::test_golden_case[GD-15]"
+      ],
+      "status": "not_run",
+      "reason": "Covered by G5+G6's own crash/resume test and by GD-15's duplicate-action reconciliation; awaiting a recorded run artefact before promotion."
+    }
+  ]
+}

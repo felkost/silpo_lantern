@@ -1,0 +1,34 @@
+{
+  "case_id": "GD-04",
+  "scenario": "A weighted (per-kilogram) candidate: the gap of 499.00 against 2000.00/kg needs 0.2495 kg, rounded UP to the catalogue's own 0.1 kg step, so 0.3 kg goes on the wire as a fractional number -- not a count, not rounded to a whole unit, and a multiple of the step the schema requires.",
+  "gd_ref": "GD-04",
+  "input": {
+    "fixture_id": "replay_weighted_item_in_cart"
+  },
+  "expected_outcome": {
+    "status": "verified",
+    "primary_code": "order.cost.min",
+    "receipts_count": 1,
+    "receipt_statuses": ["receipt"]
+  },
+  "mode": "replay",
+  "source_id": "synthesized-offline-2026-09-09",
+  "pii_status": "synthetic",
+  "allowed_trajectories": [
+    [
+      "read",
+      "diagnose",
+      "compare_channels",
+      "plan",
+      "collect_and_gate",
+      "rank",
+      "explain",
+      "write_guard",
+      "write_and_readback",
+      "persist_receipt"
+    ]
+  ],
+  "allowed_tools": ["silpo_add_or_update_cart_products"],
+  "forbidden_tools": ["silpo_remove_cart_products"],
+  "rubric": "A weighted product's quantity is a mass, not a count: it is rounded up to a whole `step`, sent as a fractional JSON number, and the expected delta is price-per-kg times that mass. The cart it lands in already holds a weighted line, so the read-back diff must handle fractional quantities on both sides."
+}

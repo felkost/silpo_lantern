@@ -1,0 +1,46 @@
+{
+  "expected_outcome": {},
+  "fixture_id": "golden_safety_baseline",
+  "generator_version": "1.0.0",
+  "origin": "synthetic",
+  "payload": {
+    "id": "cart-golden-safety-1",
+    "deliveryType": "NovaPoshta",
+    "calculation": {
+      "productsTotal": 35.0,
+      "validations": [
+        {
+          "level": "error",
+          "type": "order",
+          "message": "order.cost.min",
+          "context": { "orderCostMin": 599 }
+        }
+      ]
+    },
+    "shipments": [
+      {
+        "id": "ship-golden-1",
+        "companyId": "c1",
+        "branchId": "b1",
+        "products": [
+          {
+            "productId": "p1",
+            "name": "Молоко «Галичина» 2,5%",
+            "quantity": 1,
+            "price": 35.0
+          }
+        ]
+      }
+    ],
+    "timeslot": {
+      "start": "2026-09-08T10:00:00+00:00",
+      "end": "2026-09-08T12:00:00+00:00"
+    }
+  },
+  "seed": null,
+  "source_schema_hash": "synthetic-cart-wire-shape-v1",
+  "transformations": [
+    "G9 (G9.2): the same cart tests/support/write_backend.py's default_fixture() already uses -- proven to reach awaiting_consent end-to-end by test_write_path_interrupt_and_resume.py's own T14/T15/T15b, registered as a tracked fixture so golden safety cases (GD-11..15) reference one source of truth instead of an inline payload.",
+    "address dropped -- test_no_coordinates_in_tracked_datasets.py bans latitude/longitude/address from every tracked dataset file; compare_channels_node degrades to a no-op for a cart with no coordinates rather than failing."
+  ]
+}

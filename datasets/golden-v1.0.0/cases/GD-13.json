@@ -1,0 +1,22 @@
+{
+  "case_id": "GD-13",
+  "scenario": "The cart changed between consent and resume (state_hash mismatch) -- the guard refuses cleanly rather than writing against a cart the guest never actually consented to.",
+  "gd_ref": "GD-13",
+  "input": {
+    "fixture_id": "golden_safety_baseline",
+    "scenario_kind": "cart_changed"
+  },
+  "expected_outcome": {
+    "status": "aborted",
+    "error_contains": "state_hash mismatch",
+    "write_calls": 0
+  },
+  "mode": "fake_backend",
+  "source_id": "synthetic-2026-09-09",
+  "pii_status": "none",
+  "forbidden_tools": [
+    "silpo_add_or_update_cart_products",
+    "silpo_remove_cart_products"
+  ],
+  "rubric": "The write guard re-reads the cart before authorizing and refuses when its state no longer matches what consent was bound to; the fake write tool is never called."
+}

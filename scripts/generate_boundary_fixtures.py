@@ -63,6 +63,20 @@ def _base_cart(rng: random.Random, cart_id: str) -> Dict[str, Any]:
                 ],
             }
         ],
+        # G9: every seeded cart carries a timeslot. Without one,
+        # `collect_and_gate_node` aborts with "cart has no active
+        # timeslot" -- product availability is slot-bound -- so a
+        # timeslot-less fixture is structurally incapable of driving the
+        # graph past the Evidence Gate, and every seeded fixture was.
+        # Fixed while synthesizing GD-02/03/04's replay bundles, which
+        # need exactly that path to complete. No address is added: the
+        # coordinate ban on tracked datasets stands, and
+        # `compare_channels_node` degrades to a documented no-op without
+        # one.
+        "timeslot": {
+            "start": "2026-09-08T10:00:00+00:00",
+            "end": "2026-09-08T12:00:00+00:00",
+        },
     }
 
 
@@ -121,6 +135,53 @@ def _apply_scenario(
                 "type": "product",
                 "message": "product.offer.stock.max",
                 "context": {"productId": item["productId"]},
+            }
+        ]
+    elif scenario_id == "gap_needs_two_items":
+        # 599 - 100 = 499 to close; no single realistic grocery item
+        # covers that, so the plan must combine two.
+        calc["productsTotal"] = 100.0
+        calc["validations"] = [
+            {
+                "level": "error",
+                "type": "order",
+                "message": "order.cost.min",
+                "context": {"orderCostMin": 599},
+            }
+        ]
+    elif scenario_id == "gap_has_several_viable_plans":
+        # 599 - 560 = 39 to close: an ordinary grocery price range, so
+        # several candidates each close it alone and ranking decides.
+        # The line item carries the whole total: `canonical_diff` asserts
+        # the line-item sum and `productsTotal` agree, so a cart whose
+        # declared total does not match its own items fails the write
+        # path's read-back with an invariant violation.
+        calc["productsTotal"] = 560.0
+        cart["shipments"][0]["products"][0]["price"] = 560.0
+        calc["validations"] = [
+            {
+                "level": "error",
+                "type": "order",
+                "message": "order.cost.min",
+                "context": {"orderCostMin": 599},
+            }
+        ]
+    elif scenario_id == "weighted_item_in_cart":
+        item = cart["shipments"][0]["products"][0]
+        item["weighted"] = True
+        # A weighted line's quantity is a mass in kilograms, not a count
+        # -- 0.4 kg at 250.00/kg. The step is what a valid quantity must
+        # be a multiple of, and it is fractional too.
+        item["quantity"] = 0.4
+        item["price"] = 250.0
+        item["addToBasketStep"] = 0.1
+        calc["productsTotal"] = 100.0
+        calc["validations"] = [
+            {
+                "level": "error",
+                "type": "order",
+                "message": "order.cost.min",
+                "context": {"orderCostMin": 599},
             }
         ]
     else:
@@ -185,14 +246,30 @@ def _update_manifest(
     manifest["generator_version"] = GENERATOR_VERSION
     manifest["generated_at"] = generated_at
     manifest["seed"] = seed
-    manifest["fixtures"] = [
-        {
+    # G9: MERGE, never replace. The manifest also carries entries this
+    # generator does not produce -- recorded/sanitized live captures, the
+    # replay BUNDLE, and the golden-case fixtures added by hand -- and
+    # replacing the list wholesale silently dropped all of them. A
+    # regenerated entry overwrites its own id; everything else is kept
+    # exactly as it was, `provenance` included.
+    generated_entries = {
+        e["fixture_id"]: {
             "fixture_id": e["fixture_id"],
             "origin": e["origin"],
             "path": f"datasets/fixtures/{e['origin']}/{e['fixture_id']}.json",
         }
         for e in envelopes
-    ]
+    }
+    merged: List[Dict[str, Any]] = []
+    seen: set[str] = set()
+    for existing in manifest.get("fixtures", []):
+        fixture_id = existing["fixture_id"]
+        merged.append(generated_entries.get(fixture_id, existing))
+        seen.add(fixture_id)
+    for fixture_id, entry in generated_entries.items():
+        if fixture_id not in seen:
+            merged.append(entry)
+    manifest["fixtures"] = merged
     manifest["coverage"]["DR"] = sorted(
         {t for e in envelopes for t in e["transformations"]}
     )

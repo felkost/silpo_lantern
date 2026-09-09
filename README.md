@@ -66,8 +66,26 @@ the session outright; every other refusal stays permanent. Reused the same singl
 call site and the same single authorization function as the original add path — no
 second place a write can happen from. 500 offline tests, `make gate` green.
 
-Golden and regression datasets for the write path, and the metrics computed from them,
-are deferred to G9, cut from this stage.
+Evaluation is now built. A versioned 15-case golden dataset runs inside the commit
+gate, dispatching each case either through the real compiled graph against a recorded
+bundle or through a parametrised fake write backend; a case naming a fixture the manifest
+lacks, or asserting something the harness cannot observe, fails rather than skipping.
+Two of the cases replay **live-recorded** sessions against the real Silpo server, each
+reaching a verified receipt and each replaying its own recorded run before it was written
+to the repository. One of them is shaped so the minimum-order threshold falls between the
+cart's product total and its discounted total — a build comparing the wrong one finds no
+blocker at all on that fixture and fails outright.
+
+Seven metrics are computed from the runs' own emitted records, over a population a fresh
+clone can reproduce. Eighteen end-to-end repeats run the live planner and explainer
+against replayed infrastructure; 15 of 18 pass, three are blocked by a bundle recorded
+before the fallback mechanism existed, and none fail. The target of 16 of 18 was not met
+and is reported as such — nothing was re-run or rebuilt to move the number. 637 offline
+tests, `make gate` green.
+
+What is not done: the evaluation judge is wired and selected but not yet calibrated
+against labelled pairs, the moderated user sessions are the author's to run, and no
+app-visibility audit exists, so the disclosure rate has no population.
 
 ## Problem
 
@@ -133,11 +151,32 @@ populated by later stages.
 
 ## Metrics
 
-Recovery completion rate, median time-to-recovery vs. the app, actions-to-recovery,
-disclosure rate, and a hard 0% gate on unauthorized writes / false recovery — reported
-with sample size, never as a bare number. None of them are measured yet; that begins
-once the agent runs end to end. See
-[`docs/reports/index.html`](docs/reports/index.html), which explains how the parts
+Seven metrics, each reported with the population it was measured over and never as a
+bare number. Measured over a versioned 15-case golden dataset and 18 repeats, all
+reproducible offline from this repository:
+
+| Metric | Value | n |
+|---|---|---|
+| Unauthorized write rate | 0.00 | 33 |
+| Read-back coverage | 1.00 | 33 |
+| Consent binding integrity | 1.00 | 33 |
+| False recovery | 0 | 33 |
+| Recovery completion rate | 1.00 | 18 |
+| Cost-delta accuracy | 0.455 | 33 |
+| Disclosure rate | not measured | 0 |
+
+Cost-delta accuracy is below its target and is reported rather than relaxed: the cart
+applies a per-product loyalty discount the product search does not carry, so a predicted
+change and the real one disagree more often than not. That is the case for proving every
+change by re-reading the cart instead of trusting the prediction.
+
+The four clean figures are unrefuted, not proven — at n=33 the 95% Wilson interval for a
+proportion of 1.00 still reaches down to 0.90, and the results chart draws those
+intervals rather than four full bars. Disclosure rate is reported as not measured rather
+than 0.00, because no session's app-visibility was independently audited and unknown is
+not the same as hidden.
+
+See [`docs/reports/index.html`](docs/reports/index.html), which explains how the parts
 interact and why that is expected to help.
 
 ## Privacy

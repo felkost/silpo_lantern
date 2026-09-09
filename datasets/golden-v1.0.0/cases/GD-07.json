@@ -1,0 +1,19 @@
+{
+  "case_id": "GD-07",
+  "scenario": "A line item priced at 0 with an explicit stock/error signal (product.offer.stock.max) is a known, disclosed blocker -- but not one the hero add-flow can fix by proposing a product, so no candidate is offered.",
+  "gd_ref": "GD-07",
+  "input": {
+    "fixture_id": "unavailable_item_zero_price",
+    "scenario_kind": "diagnose_only"
+  },
+  "expected_outcome": {
+    "status": "no_action_available",
+    "primary_code": null,
+    "blockers": [{ "code": "product.offer.stock.max", "is_known": true }],
+    "candidate_count": 0
+  },
+  "mode": "fake_backend",
+  "source_id": "synthetic-2026-09-07",
+  "pii_status": "synthetic",
+  "rubric": "A price:0 line with an explicit stock signal is diagnosed as a known product-level blocker; the add-only hero flow correctly offers no candidate for it (there is nothing to add that fixes an unavailable item)."
+}

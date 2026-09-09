@@ -48,20 +48,23 @@ def test_budgets_match_the_enforced_values_in_graph_state() -> None:
     assert budgets["active_execution_seconds"] == ACTIVE_EXECUTION_SECONDS
 
 
-def test_explainer_is_decided_by_ua_eval_judge_stays_undecided() -> None:
-    """`explainer.selected` is decided only after UA-Eval's live run;
-    `eval_judge.selected` is a separate, still-undecided choice — a value
-    for either before its own run would be an invented fact, not a
-    decision.
-    """
+def test_explainer_is_decided_by_ua_eval() -> None:
+    """`explainer.selected` is decided only after UA-Eval's live run — a
+    value before that run would be an invented fact, not a decision."""
     data = _load()
     # UA-Eval's full run settled the explainer pick — the only
     # candidate that cleared the threshold with complete data.
     assert data["explainer"]["selected"] == "google/gemini-3.5-flash-lite"
-    # eval_judge itself stays undecided — this run only used grok-4.6 as
-    # the cheaper of the two candidates to SCORE the explainer candidates,
-    # it never compared the two judge candidates against each other.
-    assert data["eval_judge"]["selected"] is None
+
+
+def test_eval_judge_is_selected_but_not_yet_calibrated() -> None:
+    """G9 (2026-09-09): `eval_judge.selected` was set from a live smoke
+    test across 5 candidates (3 worked cleanly) -- a real, evidence-based
+    pick, not a placeholder. `calibrated` stays `False` until G9.2's
+    golden-case labeled pairs exist to measure real judge agreement
+    against (D-G9-09) -- a smoke test proves callability, not agreement."""
+    data = _load()
+    assert data["eval_judge"]["selected"] == "openai/gpt-5.6-luna"
     assert data["eval_judge"]["calibrated"] is False
 
 

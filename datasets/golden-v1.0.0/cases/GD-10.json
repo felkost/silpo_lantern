@@ -1,0 +1,19 @@
+{
+  "case_id": "GD-10",
+  "scenario": "A timeslot spanning Ukraine's DST transition normalizes correctly and its blocker is disclosed -- the window's two endpoints share the same Kyiv wall-clock time (03:30) with different UTC offsets, the exact shape a naive local-time comparison misreads.",
+  "gd_ref": "GD-10",
+  "input": {
+    "fixture_id": "timeslot_spans_dst_transition",
+    "scenario_kind": "diagnose_only"
+  },
+  "expected_outcome": {
+    "status": "no_action_available",
+    "primary_code": null,
+    "blockers": [{ "code": "timeslot.not_available", "is_known": true }],
+    "candidate_count": 0
+  },
+  "mode": "fake_backend",
+  "source_id": "synthetic-2026-09-09",
+  "pii_status": "synthetic",
+  "rubric": "The DST-spanning timeslot does not crash normalization, and the timeslot blocker is surfaced as known. The conversion property itself (both endpoints reading 03:30 Kyiv at different UTC offsets) is pinned separately by tests/unit/test_timeslot_dst_boundary.py against this same fixture -- one source of truth for the data, two levels of assertion."
+}

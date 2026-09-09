@@ -8,14 +8,26 @@ own synthetic fixture, `origin: synthetic`, not a live capture).
 Two phases, run separately:
 
   --phase capture   Live: taps every MCP fetcher and the REAL planner/
-                     explainer LLM calls around a full hero run --
-                     including the write and, if the author drives a
-                     second consent round by hand, that too. Writes the
-                     raw, UNSANITIZED tape to the gitignored
+                     explainer LLM calls around a full hero run, and
+                     DRIVES the consent + write round (and any further
+                     D42 round) in this same process. Writes the raw,
+                     UNSANITIZED tape to the gitignored
                      `datasets/fixtures/raw/replay_tape_<timestamp>.json`.
                      Costs a live LLM call and a live MCP write --
                      needs the author's explicit go-ahead, shown as the
                      exact command before it runs (CLAUDE.md section 8).
+
+                     G9: it used to stop at the read chain, on the
+                     reasoning that the author would drive the write
+                     through the real API. That API runs in a DIFFERENT
+                     process with its own graph, so this script's
+                     in-process tape could never see the write or the
+                     read-back, and the resulting bundle replayed only to
+                     `awaiting_consent` -- never to the verified receipt
+                     GD-01 and G9-7 both require. Found by running the
+                     phase for the first time since `tool_view` landed,
+                     which also surfaced a stale `make_planner_call`
+                     call that had been broken all along.
 
   --phase build      Offline: reads the raw tape, sanitizes every
                      response through ONE shared alias map (D-G7-07 --
@@ -46,20 +58,27 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import re
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import yaml  # noqa: E402
+from langgraph.checkpoint.memory import InMemorySaver  # noqa: E402
 
 from src.lantern.config import (  # noqa: E402
     PROJECT_ROOT,
     get_openrouter_api_key,
     load_env,
 )
+from src.lantern.domain.consent_hash import (  # noqa: E402
+    compute_args_hash,
+    compute_state_hash,
+)
+from src.lantern.domain.models import ConsentRecord  # noqa: E402
 from src.lantern.graph.build import (  # noqa: E402
     build_recovery_graph,
     policy_registry_version,
@@ -73,12 +92,16 @@ from src.lantern.graph.llm_adapter import (  # noqa: E402
     make_planner_call,
 )
 from src.lantern.graph.replay import load_bundle, replay, response_key  # noqa: E402
-from src.lantern.graph.state import new_recovery_state  # noqa: E402
+from src.lantern.graph.state import (  # noqa: E402
+    ACTIVE_EXECUTION_SECONDS,
+    new_recovery_state,
+)
 from src.lantern.mcp.auth import (  # noqa: E402
     DiskTokenStorage,
     build_redirect_handler,
     callback_handler,
 )
+from src.lantern.mcp.errors import McpAdapterError  # noqa: E402
 from src.lantern.mcp.client import (  # noqa: E402
     compute_per_tool_schema_hashes,
     compute_schema_hash,
@@ -93,9 +116,7 @@ from scripts.sanitize_fixture import find_secret_shaped_matches  # noqa: E402
 DEFAULT_MCP_URL = "https://mcp.silpo.ua/mcp"
 MODELS_YAML_PATH = PROJECT_ROOT / "config" / "models.yaml"
 RAW_DIR = PROJECT_ROOT / "datasets" / "fixtures" / "raw"
-BUNDLE_PATH = (
-    PROJECT_ROOT / "datasets" / "fixtures" / "replay" / "hero_order_cost_min.json"
-)
+BUNDLE_DIR = PROJECT_ROOT / "datasets" / "fixtures" / "replay"
 # Synthetic replacement for any real address -- never the real coordinates
 # at any stage, per sanitizer.py's own rule that `address` is never
 # allow-listed. Kyiv city-centre, not the author's real delivery point.
@@ -104,6 +125,90 @@ SYNTHETIC_LONGITUDE = 30.52
 
 
 # ---------------------------------------------------------------- capture --
+
+
+class _InProcessWriteStore:
+    """G9 (G9.1): the Postgres side of the write path, in memory.
+
+    The recorder's job is to tape the LIVE MCP traffic and the LIVE LLM
+    outputs. Consent records, the idempotency journal and receipts are
+    the project's own bookkeeping -- recording them against Neon would
+    add a second live dependency to a capture whose whole point is the
+    MCP tape, and would leave rows behind for a run that exists to
+    produce a fixture. Same shape as `graph/replay.py`'s BundlePlayer
+    stand-ins, deliberately: one implementation pattern, not two.
+
+    The CONSENT ITSELF is real: built and hashed exactly as
+    `apps/api/routes.py`'s `submit_consent` builds it, including the
+    deadline re-base (D39), so the Write Guard applies every one of its
+    real checks against it.
+    """
+
+    def __init__(self, tool_hashes: List[Dict[str, Any]]) -> None:
+        self.consents: Dict[str, ConsentRecord] = {}
+        self.journal: Dict[Tuple[str, str, str], str] = {}
+        self.receipts: List[Any] = []
+        self._per_tool = compute_per_tool_schema_hashes(tool_hashes)
+
+    def load_consent(self, action_id: str) -> Tuple[Optional[ConsentRecord], bool]:
+        record = self.consents.get(action_id)
+        if record is None:
+            return None, True
+        return record, record.expires_at <= datetime.now(timezone.utc)
+
+    def claim_and_consume(
+        self, owner: str, cart_id: str, action_id: str, args_hash: str
+    ) -> Tuple[bool, str]:
+        del args_hash
+        key = (owner, cart_id, action_id)
+        if key in self.journal:
+            return False, self.journal[key]
+        consent = self.consents[action_id]
+        self.consents[action_id] = consent.model_copy(
+            update={"consumed_at": datetime.now(timezone.utc)}
+        )
+        self.journal[key] = "in_flight"
+        return True, "in_flight"
+
+    def mark_action(self, owner: str, cart_id: str, action_id: str, state: str) -> None:
+        self.journal[(owner, cart_id, action_id)] = state
+
+    def save_receipt(self, receipt: Any) -> None:
+        self.receipts.append(receipt)
+
+    def tool_schema_hashes(self, tool_name: str) -> Tuple[str, str, bool]:
+        """Reviewed == live: this capture IS the baseline the write is
+        authorized against, so both sides of the drift check agree --
+        which is what a genuinely reviewed state means, not a placeholder
+        standing in for one."""
+        digest = self._per_tool.get(tool_name, "unknown-tool-hash")
+        return (digest, digest, False)
+
+    def grant_consent(
+        self, graph: Any, config: Dict[str, Any], proposal: Any, cart: Any
+    ) -> None:
+        now = datetime.now(timezone.utc)
+        self.consents[proposal.action_id] = ConsentRecord(
+            action_id=proposal.action_id,
+            session_id="record-session",
+            owner="record-owner",
+            cart_id=cart.cart_id,
+            canonical_args=proposal.canonical_args,
+            args_hash=compute_args_hash(proposal.canonical_args),
+            state_hash=compute_state_hash(cart),
+            created_at=now,
+            expires_at=now + timedelta(minutes=5),
+        )
+        # D39: the deadline is re-based at consent time, exactly as
+        # `submit_consent` does -- without it the guard refuses on
+        # budget reserve, which a live run already proved once.
+        graph.update_state(
+            config,
+            {
+                "consent_action_id": proposal.action_id,
+                "deadline": now + timedelta(seconds=ACTIVE_EXECUTION_SECONDS),
+            },
+        )
 
 
 async def _call_tool(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
@@ -150,6 +255,33 @@ def _sync_call(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         raise cause from None
 
 
+# G9 (D75): the marker a taped entry carries instead of a response body
+# when the live server REFUSED the call. `compare_channels_node` treats an
+# `McpAdapterError` as "degrade this one channel", so a refusal is part of
+# the recorded traffic and the replay has to reproduce it -- dropping it
+# made the two refused channels fall through to the tool-name queue and
+# consume the responses recorded for later passes.
+TAPED_ERROR_KEY = "__mcp_error__"
+
+
+def _taped_call(
+    tape: List[Tuple[str, Dict[str, Any], Dict[str, Any]]],
+    tool_name: str,
+    wire_args: Dict[str, Any],
+    taped_args: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Tapes the outcome of one live call -- response or refusal -- then
+    returns or re-raises it, so the tape is a faithful record of what the
+    graph actually saw."""
+    try:
+        resp = _sync_call(tool_name, wire_args)
+    except McpAdapterError as exc:
+        tape.append((tool_name, taped_args, {TAPED_ERROR_KEY: str(exc)}))
+        raise
+    tape.append((tool_name, taped_args, resp))
+    return resp
+
+
 def _build_tapped_fetchers(
     tape: List[Tuple[str, Dict[str, Any], Dict[str, Any]]],
 ) -> Dict[str, Callable[..., Any]]:
@@ -161,49 +293,54 @@ def _build_tapped_fetchers(
 
     def fetch_my_cart() -> Dict[str, Any]:
         args: Dict[str, Any] = {}
-        resp = _sync_call("silpo_get_my_shopping_cart", args)
-        tape.append(("silpo_get_my_shopping_cart", args, resp))
-        return resp
+        return _taped_call(tape, "silpo_get_my_shopping_cart", args, args)
 
     def fetch_cart_by_id(cart_id: str) -> Dict[str, Any]:
-        resp = _sync_call("silpo_get_shopping_cart_by_id", {"shoppingCartId": cart_id})
-        args = {"cart_id": cart_id}
-        tape.append(("silpo_get_shopping_cart_by_id", args, resp))
-        return resp
+        return _taped_call(
+            tape,
+            "silpo_get_shopping_cart_by_id",
+            {"shoppingCartId": cart_id},
+            {"cart_id": cart_id},
+        )
 
     def fetch_delivery_types(latitude: float, longitude: float) -> Dict[str, Any]:
-        resp = _sync_call(
-            "silpo_get_available_delivery_types",
-            {"latitude": latitude, "longitude": longitude},
-        )
         args = {"latitude": latitude, "longitude": longitude}
-        tape.append(("silpo_get_available_delivery_types", args, resp))
-        return resp
+        return _taped_call(tape, "silpo_get_available_delivery_types", dict(args), args)
 
     def fetch_time_slots(
         branch_id: str, delivery_types: Sequence[str]
     ) -> Dict[str, Any]:
-        resp = _sync_call(
+        return _taped_call(
+            tape,
             "silpo_get_time_slots",
             {"branchId": branch_id, "deliveryTypes": list(delivery_types)},
+            {"branch_id": branch_id, "delivery_types": list(delivery_types)},
         )
-        args = {"branch_id": branch_id, "delivery_types": list(delivery_types)}
-        tape.append(("silpo_get_time_slots", args, resp))
-        return resp
 
     def fetch_find_products_batch(
         branch_id: str, delivery_type: str, start: str, end: str, names: Sequence[str]
     ) -> Dict[str, Any]:
-        resp = _sync_call(
-            "silpo_find_products_batch",
-            {
-                "branchId": branch_id,
-                "deliveryType": delivery_type,
-                "start": start,
-                "end": end,
-                "names": list(names),
-            },
-        )
+        wire_args = {
+            # G9: the WIRE names, matching
+            # `mcp/production_fetchers.fetch_find_products_batch`.
+            # The recorder was still sending `start`/`end`/`names`,
+            # which the live server now rejects with -32602
+            # ("expected string, received undefined" for
+            # timeslotStart/timeslotEnd, and for products). Production
+            # had already been corrected; the capture phase had not
+            # been run since, so nothing caught the divergence.
+            #
+            # The TAPED args below deliberately keep the internal
+            # snake_case names -- `graph/replay.py`'s own fetcher
+            # closure builds its `response_key` from those, so
+            # changing them here would make every recorded key
+            # unmatchable at replay time.
+            "branchId": branch_id,
+            "deliveryType": delivery_type,
+            "timeslotStart": start,
+            "timeslotEnd": end,
+            "products": list(names),
+        }
         args = {
             "branch_id": branch_id,
             "delivery_type": delivery_type,
@@ -211,13 +348,10 @@ def _build_tapped_fetchers(
             "end": end,
             "names": list(names),
         }
-        tape.append(("silpo_find_products_batch", args, resp))
-        return resp
+        return _taped_call(tape, "silpo_find_products_batch", wire_args, args)
 
     def call_write_tool(tool_name: str, args: Dict[str, Any]) -> Dict[str, Any]:
-        resp = _sync_call(tool_name, args)
-        tape.append((tool_name, dict(args), resp))
-        return resp
+        return _taped_call(tape, tool_name, args, dict(args))
 
     return {
         "fetch_my_cart": fetch_my_cart,
@@ -251,9 +385,17 @@ def run_capture() -> None:
             "config/models.yaml: explainer.selected is null -- no UA-Eval "
             "run has picked a winner yet"
         )
+    # G9: fetched BEFORE the graph is built, because `make_planner_call`
+    # requires the live tool list (it builds the planner's own filtered
+    # view from it). Calling it with one argument raised TypeError the
+    # first time this phase was actually run since `tool_view` landed --
+    # the capture phase had not been exercised in between.
+    print("  MCP call: tools/list")
+    tools_list_raw = list_tools_raw(server_url=DEFAULT_MCP_URL)
+
     planner_llm = build_planner_llm(models_config["planner"]["model"], key)
     explainer_llm = build_explainer_llm(explainer_model, key)
-    raw_planner_call = make_planner_call(planner_llm)
+    raw_planner_call = make_planner_call(planner_llm, tools_list_raw)
     raw_explainer_call = make_explainer_call(explainer_llm)
 
     def tapped_planner(state: Any) -> Any:
@@ -266,6 +408,24 @@ def run_capture() -> None:
         explainer_tape.append(output.model_dump(mode="json"))
         return output
 
+    # G9 (G9.1): the capture now drives the CONSENT AND WRITE round in
+    # this same process, rather than stopping at the read chain.
+    #
+    # It used to stop, on the reasoning that the author would drive the
+    # write through the real API -- but that runs in a DIFFERENT process,
+    # with its own graph and its own fetchers, so this script's in-process
+    # tape could never see the write or the read-back. A bundle built from
+    # a read-only tape replays to `awaiting_consent`, never to a receipt,
+    # which is neither what GD-01 is for nor what G9-7's criterion asks
+    # for ("replaying to a VERIFIED receipt"). Found by running the phase.
+    #
+    # The Postgres side is stood up in-process (plain dicts, the same
+    # shape `graph/replay.py`'s BundlePlayer uses) rather than against
+    # Neon: what the bundle needs to record is the MCP traffic and the
+    # LLM outputs. The consent itself is real -- built and hashed exactly
+    # as `apps/api/routes.py`'s `submit_consent` builds it.
+    store = _InProcessWriteStore(tool_hashes=tools_list_raw)
+    checkpointer = InMemorySaver()
     graph = build_recovery_graph(
         fetch_my_cart=fetchers["fetch_my_cart"],
         fetch_cart_by_id=fetchers["fetch_cart_by_id"],
@@ -276,33 +436,53 @@ def run_capture() -> None:
         planner_call=tapped_planner,
         explainer_call=tapped_explainer,
         now=lambda: datetime.now(timezone.utc),
+        checkpointer=checkpointer,
+        load_consent=store.load_consent,
+        call_write_tool=fetchers["call_write_tool"],
+        claim_and_consume=store.claim_and_consume,
+        mark_action=store.mark_action,
+        save_receipt=store.save_receipt,
+        tool_schema_hashes=store.tool_schema_hashes,
         planner_model_id=PLANNER_PROMPT_VERSION,
         explainer_model_id=EXPLAINER_PROMPT_VERSION,
     )
+    config = {"configurable": {"thread_id": "record"}}
     initial_state = new_recovery_state(
         session_id="record-session",
         trace_id="record-trace",
         now=datetime.now(timezone.utc),
         owner="record-owner",
     )
-    state = graph.invoke(initial_state, {"configurable": {"thread_id": "record"}})
+    state = graph.invoke(initial_state, config)
     print(f"read pipeline reached status={state['status']!r}")
-    print(
-        "This script's --phase capture stops here: it proves the read "
-        "chain and drives no write. The consent + write round (and any "
-        "second round) is driven by the author through the real API, "
-        "with `call_write_tool` above taping it -- see the stage spec "
-        "for the exact command sequence, shown before each run."
-    )
 
-    # G8 (D-G8-03/T5): a live `tools/list` snapshot, taped alongside the
-    # MCP/LLM calls -- without it, `run_build` had nothing to compute
-    # `tool_schema_hashes`/`schema_hash` from and left both empty for
-    # hand-filling, which made `BundlePlayer`'s replayed drift check
-    # vacuous (it fell back to `("reviewed-hash", "reviewed-hash",
-    # False)` for every tool, per `graph/replay.py`).
-    print("  MCP call: tools/list")
-    tools_list_raw = list_tools_raw(server_url=DEFAULT_MCP_URL)
+    rounds = 0
+    while state.get("status") == "awaiting_consent" and state.get("candidates"):
+        proposal = state["candidates"][0]
+        rounds += 1
+        print(
+            f"  round {rounds}: consenting to {proposal.product_name!r} "
+            f"x{proposal.quantity} (expected delta {proposal.expected_delta})"
+        )
+        store.grant_consent(graph, config, proposal, state["cart"])
+        state = graph.invoke(None, config)
+        print(f"  round {rounds}: status={state.get('status')!r}")
+        if state.get("status") not in ("diagnosed", "awaiting_consent"):
+            break
+
+    print(f"capture finished at status={state.get('status')!r}")
+    for receipt in store.receipts:
+        print(
+            f"  receipt: action_id={receipt.action_id} status={receipt.status} "
+            f"cleared={receipt.blocker_cleared} "
+            f"expected={receipt.expected_delta} actual={receipt.actual_delta}"
+        )
+    if store.receipts:
+        print(
+            "\nTo put the cart back, run (dry run first, then --confirm):\n"
+            "  .venv/Scripts/python.exe scripts/g5_restore_after_write.py "
+            f"--action-id {store.receipts[-1].action_id}"
+        )
 
     RAW_DIR.mkdir(parents=True, exist_ok=True)
     out = RAW_DIR / f"replay_tape_{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}.json"
@@ -327,6 +507,81 @@ def run_capture() -> None:
 # ------------------------------------------------------------------ build --
 
 
+def _sanitize_tape_args(
+    args: Dict[str, Any], *, aliases: Dict[str, str]
+) -> Dict[str, Any]:
+    """Pseudonymises a taped call's ARGUMENT VALUES while keeping every
+    key (D73).
+
+    `sanitize_payload` is the RESPONSE allow-list: it keeps wire names
+    (`shoppingCartId`, `branchId`) and drops the rest. The taped args use
+    the INTERNAL snake_case names `graph/replay.py`'s own fetcher closures
+    build -- `cart_id`, `branch_id`, `latitude` -- so running them through
+    it flattened almost every args dict to `{}`, and four different tools
+    all keyed to `sha256("{}")`. `replay()` computes its key from the real
+    internal args, so the args-keyed lookup could never match and every
+    call fell through to the ordered fallback queue.
+
+    Two properties have to hold at once, which is why this is its own
+    function rather than a reuse:
+
+    * no REAL identifier may be keyed on or committed;
+    * the pseudonym must be the SAME one the responses got, or the
+      replayed guard refuses on "cart id changed since consent was
+      granted" -- hence the shared `aliases` map;
+    * coordinates become the synthetic pair, because the replayed
+      `compare_channels` node reads them off the sanitized cart and would
+      otherwise compute a key the bundle does not carry.
+    """
+    out: Dict[str, Any] = {}
+    for key, value in args.items():
+        if key == "latitude":
+            out[key] = SYNTHETIC_LATITUDE
+        elif key == "longitude":
+            out[key] = SYNTHETIC_LONGITUDE
+        elif isinstance(value, str):
+            out[key] = _alias_if_identifier(value, aliases)
+        elif isinstance(value, list):
+            out[key] = [
+                _alias_if_identifier(item, aliases) if isinstance(item, str) else item
+                for item in value
+            ]
+        else:
+            out[key] = value
+    return out
+
+
+def _alias_if_identifier(value: str, aliases: Dict[str, str]) -> str:
+    """Replaces a UUID-shaped value with a stable synthetic UUID, leaving
+    everything else untouched. Search terms, delivery-type names and ISO
+    timestamps carry no identity, and the replayed graph reproduces them
+    verbatim -- changing them would break the very key match this exists
+    to preserve."""
+    if not _UUID_SHAPE.match(value):
+        return value
+    if value not in aliases:
+        aliases[value] = f"00000000-0000-4000-8000-{len(aliases) + 1:012d}"
+    return aliases[value]
+
+
+def _alias_message(message: str, aliases: Dict[str, str]) -> str:
+    """Replaces every UUID-shaped substring of a server error message with
+    the same pseudonym the responses got -- a refusal message routinely
+    quotes the offending id."""
+    return _UUID_IN_TEXT.sub(
+        lambda match: _alias_if_identifier(match.group(0), aliases), message
+    )
+
+
+_UUID_SHAPE = re.compile(
+    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-" r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+)
+
+_UUID_IN_TEXT = re.compile(
+    r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-" r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+)
+
+
 def _build_draft_from_tape(raw: Dict[str, Any]) -> Dict[str, Any]:
     """Pure transform: raw tape -> the unsanitized-nothing-yet-replayed
     draft bundle dict. Split out from `run_build` so it can be tested
@@ -344,8 +599,28 @@ def _build_draft_from_tape(raw: Dict[str, Any]) -> Dict[str, Any]:
     """
     shared_aliases: Dict[str, str] = {}
     mcp_queues: Dict[str, List[Dict[str, Any]]] = {}
+    # G9 (D-G9-05): the SAME sanitized responses, grouped by bare tool
+    # name in call order -- never a second hand-maintained source. Only
+    # `BundlePlayer`'s args-keyed lookup misses fall back to this.
+    mcp_by_tool: Dict[str, List[Dict[str, Any]]] = {}
     for tool_name, args, response in raw["mcp"]:
-        sanitized_args = sanitize_payload(args, aliases=shared_aliases)
+        sanitized_args = _sanitize_tape_args(args, aliases=shared_aliases)
+        if TAPED_ERROR_KEY in response:
+            # A refusal carries no payload to allow-list; running it
+            # through `sanitize_payload` would drop the marker and turn
+            # the entry into an empty successful response (D75). The
+            # message itself is pseudonymised through the shared map, so
+            # a server error quoting the real cart id cannot be committed.
+            sanitized_response = {
+                TAPED_ERROR_KEY: _alias_message(
+                    str(response[TAPED_ERROR_KEY]), shared_aliases
+                )
+            }
+            mcp_queues.setdefault(response_key(tool_name, sanitized_args), []).append(
+                sanitized_response
+            )
+            mcp_by_tool.setdefault(tool_name, []).append(sanitized_response)
+            continue
         sanitized_response = sanitize_payload(response, aliases=shared_aliases)
         # D-G7-07: synthetic coordinates substituted AFTER sanitization --
         # `address` is never allow-listed, so the real one is already gone;
@@ -353,13 +628,25 @@ def _build_draft_from_tape(raw: Dict[str, Any]) -> Dict[str, Any]:
         # of degrading to a no-op (`nodes.py`'s own contract for a cart
         # with no coordinates).
         cart = sanitized_response.get("cart")
-        if isinstance(cart, dict):
+        original_cart = response.get("cart") if isinstance(response, dict) else None
+        had_coordinates = isinstance(original_cart, dict) and isinstance(
+            original_cart.get("address"), dict
+        )
+        # G9: conditional on the cart having HAD an address. Restoring what
+        # the sanitizer stripped is the whole point for a live capture; doing
+        # it to a coordinate-less synthetic cart (offline synthesis, GD-02/03/04)
+        # instead makes `compare_channels_node` RUN on replay and call
+        # `silpo_get_available_delivery_types` -- a call the tape never
+        # recorded, because the taped run against that same cart no-opped.
+        # The bundle then fails its own self-consistency replay.
+        if isinstance(cart, dict) and had_coordinates:
             cart["address"] = {
                 "latitude": SYNTHETIC_LATITUDE,
                 "longitude": SYNTHETIC_LONGITUDE,
             }
         key = response_key(tool_name, sanitized_args)
         mcp_queues.setdefault(key, []).append(sanitized_response)
+        mcp_by_tool.setdefault(tool_name, []).append(sanitized_response)
 
     tools_list_raw = raw.get("tools_list")
     if tools_list_raw:
@@ -389,6 +676,7 @@ def _build_draft_from_tape(raw: Dict[str, Any]) -> Dict[str, Any]:
         },
         "tool_schema_hashes": tool_schema_hashes,
         "mcp": mcp_queues,
+        "mcp_by_tool": mcp_by_tool,
         "llm": {"planner": raw["planner"], "explainer": raw["explainer"]},
     }
 
@@ -409,13 +697,24 @@ def _build_draft_from_tape(raw: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def run_build(tape_path: Path) -> None:
+def run_build(tape_path: Path, bundle_id: str) -> None:
+    """`bundle_id` names the output file, one per bundle -- it is REQUIRED
+    rather than defaulted (D74).
+
+    The path used to be a single hardcoded constant, so building a second,
+    non-equivalent bundle silently overwrote the tracked synthetic one
+    that `tests/e2e/test_replay_hero_bundle.py` and golden case GD-06 both
+    assert against, turning the gate red on two tests that had nothing to
+    do with the recording. Overwriting an existing bundle is now something
+    a caller has to ask for by name."""
     raw = json.loads(tape_path.read_text(encoding="utf-8"))
     draft = _build_draft_from_tape(raw)
+    draft["fixture_id"] = bundle_id
+    bundle_path = BUNDLE_DIR / f"{bundle_id}.json"
 
     # Self-consistency: replay this draft bundle and use ITS OWN result
     # as the expected outcome, per graph/replay.py's module docstring.
-    tmp_path = BUNDLE_PATH.with_suffix(".draft.json")
+    tmp_path = bundle_path.with_suffix(".draft.json")
     tmp_path.write_text(
         json.dumps(draft, indent=2, ensure_ascii=False), encoding="utf-8"
     )
@@ -444,11 +743,11 @@ def run_build(tape_path: Path) -> None:
     if hits:
         raise SystemExit(f"refusing to write bundle -- secret-shaped matches: {hits}")
 
-    BUNDLE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    BUNDLE_PATH.write_text(
+    bundle_path.parent.mkdir(parents=True, exist_ok=True)
+    bundle_path.write_text(
         json.dumps(draft, indent=2, ensure_ascii=False), encoding="utf-8"
     )
-    print(f"wrote {BUNDLE_PATH}")
+    print(f"wrote {bundle_path}")
     print(
         f"live outcome for comparison: {result.final_state.get('status')!r}, "
         f"{len(result.receipts)} receipt(s) -- eyeball against the capture run's "
@@ -467,18 +766,34 @@ def main() -> None:
             "(default: newest in datasets/fixtures/raw/)"
         ),
     )
+    parser.add_argument(
+        "--bundle-id",
+        help=(
+            "output bundle id for --phase build; the file is written to "
+            "datasets/fixtures/replay/<bundle-id>.json. REQUIRED (D74): a "
+            "single hardcoded output path once silently overwrote the "
+            "tracked synthetic bundle that two tests assert against."
+        ),
+    )
     args = parser.parse_args()
 
     if args.phase == "capture":
         run_capture()
     else:
+        if not args.bundle_id:
+            raise SystemExit(
+                "--phase build needs --bundle-id: it names the output file, "
+                "and defaulting it is how a second bundle overwrote the "
+                "tracked one (D74). Use e.g. --bundle-id "
+                "replay_hero_live_<yyyymmdd>."
+            )
         tape_path = args.tape
         if tape_path is None:
             candidates = sorted(RAW_DIR.glob("replay_tape_*.json"))
             if not candidates:
                 raise SystemExit("no raw tape found under datasets/fixtures/raw/")
             tape_path = candidates[-1]
-        run_build(tape_path)
+        run_build(tape_path, args.bundle_id)
 
 
 if __name__ == "__main__":

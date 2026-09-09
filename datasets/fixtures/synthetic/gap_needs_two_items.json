@@ -1,0 +1,55 @@
+{
+  "expected_outcome": {},
+  "fixture_id": "gap_needs_two_items",
+  "generator_version": "1.0.0",
+  "origin": "synthetic",
+  "payload": {
+    "calculation": {
+      "delivery": {
+        "total": 33.89
+      },
+      "productsTotal": 100.0,
+      "subDiscount": 0,
+      "subTotal": 133.89,
+      "total": 133.89,
+      "totalAfterDiscounts": 133.89,
+      "validations": [
+        {
+          "context": {
+            "orderCostMin": 599
+          },
+          "level": "error",
+          "message": "order.cost.min",
+          "type": "order"
+        }
+      ]
+    },
+    "deliveryType": "NovaPoshta",
+    "id": "synthetic-gap_needs_two_items",
+    "shipments": [
+      {
+        "branchId": "branch-1",
+        "companyId": "company-1",
+        "id": "synthetic-gap_needs_two_items",
+        "products": [
+          {
+            "name": "Synthetic item",
+            "price": 100.0,
+            "productId": "product-2047",
+            "quantity": 1,
+            "stock": 10
+          }
+        ]
+      }
+    ],
+    "timeslot": {
+      "end": "2026-09-08T12:00:00+00:00",
+      "start": "2026-09-08T10:00:00+00:00"
+    }
+  },
+  "seed": 20260907,
+  "source_schema_hash": "synthetic-cart-wire-shape-v1",
+  "transformations": [
+    "gap larger than any single candidate — the fix needs two items"
+  ]
+}

@@ -80,7 +80,11 @@ def test_find_products_batch_response_does_not_sanitize_to_empty() -> None:
     assert product["externalProductId"] == 795319
     # A bare identifier: pseudonymised, not passed through raw.
     assert product["id"] != "11111111-1111-1111-1111-111111111111"
-    assert product["id"].startswith("test_id_")
+    # G9: a UUID-shaped original keeps a UUID-shaped pseudonym -- the
+    # Evidence Gate requires that shape (D-G5-03), and the old
+    # `test_id_NNN` form made every candidate in a sanitized bundle fail
+    # the gate on replay. Still obviously synthetic, still deterministic.
+    assert product["id"].startswith("00000000-0000-4000-8000-")
 
 
 def test_time_slots_response_does_not_sanitize_to_empty() -> None:

@@ -1,0 +1,22 @@
+{
+  "case_id": "GD-12",
+  "scenario": "The consented args no longer match what would actually be written (args_hash mismatch) -- the guard refuses cleanly, no write tool call is made.",
+  "gd_ref": "GD-12",
+  "input": {
+    "fixture_id": "golden_safety_baseline",
+    "scenario_kind": "args_hash_mismatch"
+  },
+  "expected_outcome": {
+    "status": "aborted",
+    "error_contains": "args_hash mismatch",
+    "write_calls": 0
+  },
+  "mode": "fake_backend",
+  "source_id": "synthetic-2026-09-09",
+  "pii_status": "none",
+  "forbidden_tools": [
+    "silpo_add_or_update_cart_products",
+    "silpo_remove_cart_products"
+  ],
+  "rubric": "The write guard independently re-derives the args hash and refuses when it does not match the consented one; the fake write tool is never called."
+}
