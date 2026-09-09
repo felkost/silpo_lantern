@@ -8,7 +8,7 @@ lint:
 	mypy src apps
 
 test:
-	pytest -q tests/unit tests/contract tests/e2e
+	pytest -q tests/unit tests/contract tests/e2e tests/golden tests/support
 
 # D-G1-04: needs a real Neon Postgres (DATABASE_URL
 # in the environment) — never part of `make gate`/CI, which has no reachable
@@ -34,6 +34,11 @@ openapi:
 run:
 	python -m apps.api
 
+# G9 (G9.5): re-enables the deepeval pytest plugin for THIS invocation
+# only — pyproject.toml's `addopts = "-p no:deepeval"` disables it
+# everywhere else, because `import deepeval` calls load_dotenv() and would
+# leak the whole .env into every gate run otherwise
+# (tests/unit/test_env_isolation.py pins that). tests/evals/ is excluded
+# from `make test`'s scope for the same reason.
 eval:
-	@echo "Not available yet — DeepEval wiring lands at G8+G9 (plan section 12/13)."
-	@exit 1
+	pytest -q tests/evals -p deepeval

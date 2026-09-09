@@ -1,0 +1,59 @@
+{
+  "expected_outcome": {},
+  "fixture_id": "duplicate_validations_same_product",
+  "generator_version": "1.0.0",
+  "origin": "mutated",
+  "payload": {
+    "calculation": {
+      "delivery": {
+        "total": 33.89
+      },
+      "productsTotal": 100.0,
+      "subDiscount": 0,
+      "subTotal": 133.89,
+      "total": 133.89,
+      "totalAfterDiscounts": 133.89,
+      "validations": [
+        {
+          "context": {
+            "productId": "product-5511"
+          },
+          "level": "error",
+          "message": "product.offer.stock.max",
+          "type": "product"
+        },
+        {
+          "context": {
+            "productId": "product-5511"
+          },
+          "level": "error",
+          "message": "product.offer.not_found",
+          "type": "product"
+        }
+      ]
+    },
+    "deliveryType": "NovaPoshta",
+    "id": "synthetic-duplicate_validations_same_product",
+    "shipments": [
+      {
+        "branchId": "branch-1",
+        "companyId": "company-1",
+        "id": "synthetic-duplicate_validations_same_product",
+        "products": [
+          {
+            "name": "Synthetic item",
+            "price": 100.0,
+            "productId": "product-5511",
+            "quantity": 1,
+            "stock": 0
+          }
+        ]
+      }
+    ]
+  },
+  "seed": null,
+  "source_schema_hash": "synthetic-cart-wire-shape-v1",
+  "transformations": [
+    "G9 (GD-09): two error validations for the SAME productId -- product.offer.stock.max and product.offer.not_found. DR-07's rule groups by productId alone (not by code+productId, which would make the priority unreachable) and lets not_found outrank stock.max, so the guest sees ONE blocker, not two contradictory ones."
+  ]
+}

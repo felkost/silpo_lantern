@@ -30,6 +30,10 @@ LAYER_OF = {
     "observability": "infra",
     "graph": "application",
     "prompts": "application",
+    # G9 (D-G9-06): the DeepEval judge wrapper calls the project's existing
+    # OpenRouter adapter (application-layer) and is consumed only from
+    # tests/evals/ -- application is the correct layer, not a new one.
+    "evals": "application",
 }
 
 ALLOWED: dict[str, set[str]] = {
@@ -205,16 +209,27 @@ def _imported_names(node: ast.AST) -> list[str]:
     return []
 
 
-def test_no_python_files_yet_or_all_respect_layering():
-    """No lantern/ source files exist yet at kickoff; once they do, each
-    one's imports must stay within the layer table defined by LAYER_OF and
-    ALLOWED above.
-    """
+def _module_name_for(path: Path) -> str:
+    """Derives the dotted module name by locating the `src` anchor inside
+    `path`'s own parts, rather than requiring `path` to sit under the real
+    project's `SRC.parent` -- a synthetic file built under a tempdir as
+    `<tmp>/src/lantern/domain/bad_module.py` still resolves to
+    `src.lantern.domain.bad_module`, matching the write-allowlist tripwire's
+    own tolerance for synthetic, out-of-tree files."""
+    parts = path.with_suffix("").parts
+    if "src" in parts:
+        parts = parts[parts.index("src") :]
+    return ".".join(parts)
+
+
+def _general_layering_violations(files) -> list[str]:
     violations: list[str] = []
-    for path in _iter_python_files():
-        rel = path.relative_to(SRC.parent)
-        module_parts = rel.with_suffix("").parts
-        module = ".".join(module_parts)
+    for path in files:
+        try:
+            rel = path.relative_to(SRC.parent)
+        except ValueError:
+            rel = path  # a synthetic file outside the real tree (test-only)
+        module = _module_name_for(path)
         this_layer = _layer_of_module(module)
         if this_layer is None:
             continue
@@ -229,7 +244,47 @@ def test_no_python_files_yet_or_all_respect_layering():
                         f"{rel}: layer '{this_layer}' may not import "
                         f"layer '{imported_layer}' ({name})"
                     )
+    return violations
+
+
+def test_no_python_files_yet_or_all_respect_layering():
+    """No lantern/ source files exist yet at kickoff; once they do, each
+    one's imports must stay within the layer table defined by LAYER_OF and
+    ALLOWED above.
+    """
+    violations = _general_layering_violations(_iter_python_files())
     assert not violations, "\n".join(violations)
+
+
+def test_evals_package_is_mapped_and_scanned():
+    """G9 (D-G9-06): `src/lantern/evals/` (the DeepEval judge wrapper) must
+    be a mapped layer, not silently skipped by `_layer_of_module` returning
+    `None` -- CLAUDE.md §2 claims layer assignment is a property of every
+    file, and an unmapped package makes that claim false for it.
+    """
+    assert LAYER_OF.get("evals") is not None
+
+
+def test_layering_tripwire_detects_a_synthetic_violation_reaching_evals():
+    """Proves the general cross-layer check actually catches an import
+    INTO `evals` from a lower layer, not just that `evals` participates in
+    the walk. Before D-G9-06 mapped `evals`, `_layer_of_module` returned
+    `None` for it, so `imported_layer is None` short-circuited the check
+    at line 225 above and a domain-layer file importing an LLM-calling
+    judge module would have passed silently -- the same shape of gap as
+    the write-allowlist tripwire below, for a different constant."""
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        domain_file = Path(tmp) / "src" / "lantern" / "domain" / "bad_module.py"
+        domain_file.parent.mkdir(parents=True)
+        domain_file.write_text(
+            "from src.lantern.evals.openrouter_judge import OpenRouterJudge\n",
+            encoding="utf-8",
+        )
+        violations = _general_layering_violations([domain_file])
+    assert len(violations) == 1
+    assert "evals" in violations[0]
 
 
 def test_domain_and_safety_never_import_io_libraries():

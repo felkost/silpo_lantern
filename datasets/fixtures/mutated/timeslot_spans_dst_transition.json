@@ -1,0 +1,53 @@
+{
+  "expected_outcome": {},
+  "fixture_id": "timeslot_spans_dst_transition",
+  "generator_version": "1.0.0",
+  "origin": "mutated",
+  "payload": {
+    "calculation": {
+      "delivery": {
+        "total": 33.89
+      },
+      "productsTotal": 100.0,
+      "subDiscount": 0,
+      "subTotal": 133.89,
+      "total": 133.89,
+      "totalAfterDiscounts": 133.89,
+      "validations": [
+        {
+          "context": [],
+          "level": "error",
+          "message": "timeslot.not_available",
+          "type": "timeslot"
+        }
+      ]
+    },
+    "deliveryType": "NovaPoshta",
+    "id": "synthetic-timeslot_spans_dst_transition",
+    "shipments": [
+      {
+        "branchId": "branch-1",
+        "companyId": "company-1",
+        "id": "synthetic-timeslot_spans_dst_transition",
+        "products": [
+          {
+            "name": "Synthetic item",
+            "price": 100.0,
+            "productId": "product-7742",
+            "quantity": 1,
+            "stock": 10
+          }
+        ]
+      }
+    ],
+    "timeslot": {
+      "start": "2026-10-25T00:30:00+00:00",
+      "end": "2026-10-25T01:30:00+00:00"
+    }
+  },
+  "seed": null,
+  "source_schema_hash": "synthetic-cart-wire-shape-v1",
+  "transformations": [
+    "G9 (GD-10): the timeslot spans Ukraine's 2026 DST transition (2026-10-25, UTC+3 -> UTC+2 at 01:00 UTC). Both endpoints display as 03:30 Kyiv wall-clock for a genuinely one-hour window -- the exact shape where a naive local-time comparison reads an expired slot as still live. Paired with a timeslot.not_available validation, the codeless order/timeslot-level shape both live order codes also use."
+  ]
+}

@@ -1,0 +1,433 @@
+{
+  "fixture_id": "replay_weighted_item_in_cart",
+  "origin": "synthetic",
+  "source_schema_hash": "",
+  "generator_version": "synthesize-replay-bundle-v1",
+  "seed": null,
+  "transformations": [
+    "sanitize_payload with a shared alias map across every response in the bundle",
+    "synthetic coordinates substituted for the real address, post-sanitization"
+  ],
+  "expected_outcome": {
+    "final_status": "verified",
+    "receipts": [
+      {
+        "session_id": "replay-owner-session",
+        "owner": "replay-owner",
+        "verified": true,
+        "status": "receipt",
+        "reason": "",
+        "expected_delta": "600.00",
+        "actual_delta": "600.0",
+        "blocker_cleared": true,
+        "remaining_gap": null,
+        "kind": "add"
+      }
+    ]
+  },
+  "payload": {
+    "recorded_at": "2026-09-09T16:56:12.576078+00:00",
+    "versions": {
+      "schema_hash": "",
+      "policy_registry_version": "d6bb30e47b48"
+    },
+    "inputs": {
+      "session_id": "replay-owner-session",
+      "trace_id": "replay-trace",
+      "owner": "replay-owner"
+    },
+    "tool_schema_hashes": {},
+    "mcp": {
+      "silpo_get_my_shopping_cart:44136fa355b3": [
+        {
+          "shoppingCartId": "test_cart_001"
+        },
+        {
+          "shoppingCartId": "test_cart_001"
+        }
+      ],
+      "silpo_get_shopping_cart_by_id:44136fa355b3": [
+        {
+          "cart": {
+            "calculation": {
+              "delivery": {
+                "total": 33.89
+              },
+              "productsTotal": 100.0,
+              "subDiscount": 0,
+              "subTotal": 133.89,
+              "total": 133.89,
+              "totalAfterDiscounts": 133.89,
+              "validations": [
+                {
+                  "context": {
+                    "orderCostMin": 599
+                  },
+                  "level": "error",
+                  "message": "order.cost.min",
+                  "type": "order"
+                }
+              ]
+            },
+            "deliveryType": "NovaPoshta",
+            "id": "test_cart_001",
+            "shipments": [
+              {
+                "branchId": "test_branch_002",
+                "companyId": "test_company_003",
+                "id": "test_cart_001",
+                "products": [
+                  {
+                    "name": "Synthetic item",
+                    "price": 250.0,
+                    "productId": "test_product_004",
+                    "quantity": 0.4,
+                    "stock": 10,
+                    "weighted": true
+                  }
+                ]
+              }
+            ],
+            "timeslot": {
+              "end": "2026-09-08T12:00:00+00:00",
+              "start": "2026-09-08T10:00:00+00:00"
+            }
+          }
+        },
+        {
+          "cart": {
+            "calculation": {
+              "delivery": {
+                "total": 33.89
+              },
+              "productsTotal": 100.0,
+              "subDiscount": 0,
+              "subTotal": 133.89,
+              "total": 133.89,
+              "totalAfterDiscounts": 133.89,
+              "validations": [
+                {
+                  "context": {
+                    "orderCostMin": 599
+                  },
+                  "level": "error",
+                  "message": "order.cost.min",
+                  "type": "order"
+                }
+              ]
+            },
+            "deliveryType": "NovaPoshta",
+            "id": "test_cart_001",
+            "shipments": [
+              {
+                "branchId": "test_branch_002",
+                "companyId": "test_company_003",
+                "id": "test_cart_001",
+                "products": [
+                  {
+                    "name": "Synthetic item",
+                    "price": 250.0,
+                    "productId": "test_product_004",
+                    "quantity": 0.4,
+                    "stock": 10,
+                    "weighted": true
+                  }
+                ]
+              }
+            ],
+            "timeslot": {
+              "end": "2026-09-08T12:00:00+00:00",
+              "start": "2026-09-08T10:00:00+00:00"
+            }
+          }
+        },
+        {
+          "cart": {
+            "calculation": {
+              "delivery": {
+                "total": 33.89
+              },
+              "productsTotal": 700.0,
+              "subDiscount": 0,
+              "subTotal": 133.89,
+              "total": 133.89,
+              "totalAfterDiscounts": 133.89,
+              "validations": []
+            },
+            "deliveryType": "NovaPoshta",
+            "id": "test_cart_001",
+            "shipments": [
+              {
+                "branchId": "test_branch_002",
+                "companyId": "test_company_003",
+                "id": "test_cart_001",
+                "products": [
+                  {
+                    "name": "Synthetic item",
+                    "price": 250.0,
+                    "productId": "test_product_004",
+                    "quantity": 0.4,
+                    "stock": 10,
+                    "weighted": true
+                  },
+                  {
+                    "productId": "00000000-0000-4000-8000-000000000005",
+                    "name": "Сир твердий ваговий",
+                    "quantity": 0.3,
+                    "price": 2000.0
+                  }
+                ]
+              }
+            ],
+            "timeslot": {
+              "end": "2026-09-08T12:00:00+00:00",
+              "start": "2026-09-08T10:00:00+00:00"
+            }
+          }
+        }
+      ],
+      "silpo_find_products_batch:5da94780cc47": [
+        {
+          "queries": [
+            {
+              "query": "Synthetic item",
+              "products": [
+                {
+                  "id": "00000000-0000-4000-8000-000000000005",
+                  "name": "Сир твердий ваговий",
+                  "slug": "syr-tverdyi-vahovyi",
+                  "price": 2000.0,
+                  "stock": 12,
+                  "weighted": true,
+                  "step": 0.1,
+                  "available": true,
+                  "companyId": "00000000-0000-4000-8000-000000000006",
+                  "branchId": "00000000-0000-4000-8000-000000000007",
+                  "externalProductId": 300001
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "silpo_add_or_update_cart_products:f37b3a97e7ad": [
+        {
+          "success": true,
+          "summary": "ok",
+          "products": [
+            {
+              "productId": "00000000-0000-4000-8000-000000000005",
+              "companyId": "00000000-0000-4000-8000-000000000006",
+              "branchId": "00000000-0000-4000-8000-000000000007",
+              "quantity": 0.3
+            }
+          ]
+        }
+      ]
+    },
+    "mcp_by_tool": {
+      "silpo_get_my_shopping_cart": [
+        {
+          "shoppingCartId": "test_cart_001"
+        },
+        {
+          "shoppingCartId": "test_cart_001"
+        }
+      ],
+      "silpo_get_shopping_cart_by_id": [
+        {
+          "cart": {
+            "calculation": {
+              "delivery": {
+                "total": 33.89
+              },
+              "productsTotal": 100.0,
+              "subDiscount": 0,
+              "subTotal": 133.89,
+              "total": 133.89,
+              "totalAfterDiscounts": 133.89,
+              "validations": [
+                {
+                  "context": {
+                    "orderCostMin": 599
+                  },
+                  "level": "error",
+                  "message": "order.cost.min",
+                  "type": "order"
+                }
+              ]
+            },
+            "deliveryType": "NovaPoshta",
+            "id": "test_cart_001",
+            "shipments": [
+              {
+                "branchId": "test_branch_002",
+                "companyId": "test_company_003",
+                "id": "test_cart_001",
+                "products": [
+                  {
+                    "name": "Synthetic item",
+                    "price": 250.0,
+                    "productId": "test_product_004",
+                    "quantity": 0.4,
+                    "stock": 10,
+                    "weighted": true
+                  }
+                ]
+              }
+            ],
+            "timeslot": {
+              "end": "2026-09-08T12:00:00+00:00",
+              "start": "2026-09-08T10:00:00+00:00"
+            }
+          }
+        },
+        {
+          "cart": {
+            "calculation": {
+              "delivery": {
+                "total": 33.89
+              },
+              "productsTotal": 100.0,
+              "subDiscount": 0,
+              "subTotal": 133.89,
+              "total": 133.89,
+              "totalAfterDiscounts": 133.89,
+              "validations": [
+                {
+                  "context": {
+                    "orderCostMin": 599
+                  },
+                  "level": "error",
+                  "message": "order.cost.min",
+                  "type": "order"
+                }
+              ]
+            },
+            "deliveryType": "NovaPoshta",
+            "id": "test_cart_001",
+            "shipments": [
+              {
+                "branchId": "test_branch_002",
+                "companyId": "test_company_003",
+                "id": "test_cart_001",
+                "products": [
+                  {
+                    "name": "Synthetic item",
+                    "price": 250.0,
+                    "productId": "test_product_004",
+                    "quantity": 0.4,
+                    "stock": 10,
+                    "weighted": true
+                  }
+                ]
+              }
+            ],
+            "timeslot": {
+              "end": "2026-09-08T12:00:00+00:00",
+              "start": "2026-09-08T10:00:00+00:00"
+            }
+          }
+        },
+        {
+          "cart": {
+            "calculation": {
+              "delivery": {
+                "total": 33.89
+              },
+              "productsTotal": 700.0,
+              "subDiscount": 0,
+              "subTotal": 133.89,
+              "total": 133.89,
+              "totalAfterDiscounts": 133.89,
+              "validations": []
+            },
+            "deliveryType": "NovaPoshta",
+            "id": "test_cart_001",
+            "shipments": [
+              {
+                "branchId": "test_branch_002",
+                "companyId": "test_company_003",
+                "id": "test_cart_001",
+                "products": [
+                  {
+                    "name": "Synthetic item",
+                    "price": 250.0,
+                    "productId": "test_product_004",
+                    "quantity": 0.4,
+                    "stock": 10,
+                    "weighted": true
+                  },
+                  {
+                    "productId": "00000000-0000-4000-8000-000000000005",
+                    "name": "Сир твердий ваговий",
+                    "quantity": 0.3,
+                    "price": 2000.0
+                  }
+                ]
+              }
+            ],
+            "timeslot": {
+              "end": "2026-09-08T12:00:00+00:00",
+              "start": "2026-09-08T10:00:00+00:00"
+            }
+          }
+        }
+      ],
+      "silpo_find_products_batch": [
+        {
+          "queries": [
+            {
+              "query": "Synthetic item",
+              "products": [
+                {
+                  "id": "00000000-0000-4000-8000-000000000005",
+                  "name": "Сир твердий ваговий",
+                  "slug": "syr-tverdyi-vahovyi",
+                  "price": 2000.0,
+                  "stock": 12,
+                  "weighted": true,
+                  "step": 0.1,
+                  "available": true,
+                  "companyId": "00000000-0000-4000-8000-000000000006",
+                  "branchId": "00000000-0000-4000-8000-000000000007",
+                  "externalProductId": 300001
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "silpo_add_or_update_cart_products": [
+        {
+          "success": true,
+          "summary": "ok",
+          "products": [
+            {
+              "productId": "00000000-0000-4000-8000-000000000005",
+              "companyId": "00000000-0000-4000-8000-000000000006",
+              "branchId": "00000000-0000-4000-8000-000000000007",
+              "quantity": 0.3
+            }
+          ]
+        }
+      ]
+    },
+    "llm": {
+      "planner": [
+        {
+          "search_terms": [
+            "Молоко «Галичина» 2,5%"
+          ],
+          "note": ""
+        }
+      ],
+      "explainer": [
+        {
+          "action_id": "360db56e-0fba-4a6a-94bb-560dcd9724e5",
+          "guest_text_uk": "Додати товар"
+        }
+      ]
+    }
+  }
+}

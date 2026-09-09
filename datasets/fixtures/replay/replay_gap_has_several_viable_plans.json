@@ -1,0 +1,487 @@
+{
+  "fixture_id": "replay_gap_has_several_viable_plans",
+  "origin": "synthetic",
+  "source_schema_hash": "",
+  "generator_version": "synthesize-replay-bundle-v1",
+  "seed": null,
+  "transformations": [
+    "sanitize_payload with a shared alias map across every response in the bundle",
+    "synthetic coordinates substituted for the real address, post-sanitization"
+  ],
+  "expected_outcome": {
+    "final_status": "verified",
+    "receipts": [
+      {
+        "session_id": "replay-owner-session",
+        "owner": "replay-owner",
+        "verified": true,
+        "status": "receipt",
+        "reason": "",
+        "expected_delta": "39.5",
+        "actual_delta": "39.5",
+        "blocker_cleared": true,
+        "remaining_gap": null,
+        "kind": "add"
+      }
+    ]
+  },
+  "payload": {
+    "recorded_at": "2026-09-09T16:42:08.167944+00:00",
+    "versions": {
+      "schema_hash": "",
+      "policy_registry_version": "d6bb30e47b48"
+    },
+    "inputs": {
+      "session_id": "replay-owner-session",
+      "trace_id": "replay-trace",
+      "owner": "replay-owner"
+    },
+    "tool_schema_hashes": {},
+    "mcp": {
+      "silpo_get_my_shopping_cart:44136fa355b3": [
+        {
+          "shoppingCartId": "test_cart_001"
+        },
+        {
+          "shoppingCartId": "test_cart_001"
+        }
+      ],
+      "silpo_get_shopping_cart_by_id:44136fa355b3": [
+        {
+          "cart": {
+            "calculation": {
+              "delivery": {
+                "total": 33.89
+              },
+              "productsTotal": 560.0,
+              "subDiscount": 0,
+              "subTotal": 133.89,
+              "total": 133.89,
+              "totalAfterDiscounts": 133.89,
+              "validations": [
+                {
+                  "context": {
+                    "orderCostMin": 599
+                  },
+                  "level": "error",
+                  "message": "order.cost.min",
+                  "type": "order"
+                }
+              ]
+            },
+            "deliveryType": "NovaPoshta",
+            "id": "test_cart_001",
+            "shipments": [
+              {
+                "branchId": "test_branch_002",
+                "companyId": "test_company_003",
+                "id": "test_cart_001",
+                "products": [
+                  {
+                    "name": "Synthetic item",
+                    "price": 560.0,
+                    "productId": "test_product_004",
+                    "quantity": 1,
+                    "stock": 10
+                  }
+                ]
+              }
+            ],
+            "timeslot": {
+              "end": "2026-09-08T12:00:00+00:00",
+              "start": "2026-09-08T10:00:00+00:00"
+            }
+          }
+        },
+        {
+          "cart": {
+            "calculation": {
+              "delivery": {
+                "total": 33.89
+              },
+              "productsTotal": 560.0,
+              "subDiscount": 0,
+              "subTotal": 133.89,
+              "total": 133.89,
+              "totalAfterDiscounts": 133.89,
+              "validations": [
+                {
+                  "context": {
+                    "orderCostMin": 599
+                  },
+                  "level": "error",
+                  "message": "order.cost.min",
+                  "type": "order"
+                }
+              ]
+            },
+            "deliveryType": "NovaPoshta",
+            "id": "test_cart_001",
+            "shipments": [
+              {
+                "branchId": "test_branch_002",
+                "companyId": "test_company_003",
+                "id": "test_cart_001",
+                "products": [
+                  {
+                    "name": "Synthetic item",
+                    "price": 560.0,
+                    "productId": "test_product_004",
+                    "quantity": 1,
+                    "stock": 10
+                  }
+                ]
+              }
+            ],
+            "timeslot": {
+              "end": "2026-09-08T12:00:00+00:00",
+              "start": "2026-09-08T10:00:00+00:00"
+            }
+          }
+        },
+        {
+          "cart": {
+            "calculation": {
+              "delivery": {
+                "total": 33.89
+              },
+              "productsTotal": 599.5,
+              "subDiscount": 0,
+              "subTotal": 133.89,
+              "total": 133.89,
+              "totalAfterDiscounts": 133.89,
+              "validations": []
+            },
+            "deliveryType": "NovaPoshta",
+            "id": "test_cart_001",
+            "shipments": [
+              {
+                "branchId": "test_branch_002",
+                "companyId": "test_company_003",
+                "id": "test_cart_001",
+                "products": [
+                  {
+                    "name": "Synthetic item",
+                    "price": 560.0,
+                    "productId": "test_product_004",
+                    "quantity": 1,
+                    "stock": 10
+                  },
+                  {
+                    "productId": "00000000-0000-4000-8000-000000000009",
+                    "name": "Йогурт «Живинка» без цукру",
+                    "quantity": 1,
+                    "price": 39.5
+                  }
+                ]
+              }
+            ],
+            "timeslot": {
+              "end": "2026-09-08T12:00:00+00:00",
+              "start": "2026-09-08T10:00:00+00:00"
+            }
+          }
+        }
+      ],
+      "silpo_find_products_batch:5da94780cc47": [
+        {
+          "queries": [
+            {
+              "query": "Synthetic item",
+              "products": [
+                {
+                  "id": "00000000-0000-4000-8000-000000000005",
+                  "name": "Хліб «Рум'янець» пшеничний",
+                  "slug": "khlib-rumianets-pshenychnyi",
+                  "price": 45.0,
+                  "stock": 120,
+                  "weighted": false,
+                  "step": 1,
+                  "available": true,
+                  "companyId": "00000000-0000-4000-8000-000000000006",
+                  "branchId": "00000000-0000-4000-8000-000000000007",
+                  "externalProductId": 100001
+                },
+                {
+                  "id": "00000000-0000-4000-8000-000000000008",
+                  "name": "Молоко «Галичина» 2,5%",
+                  "slug": "moloko-halychyna-2-5",
+                  "price": 42.0,
+                  "stock": 90,
+                  "weighted": false,
+                  "step": 1,
+                  "available": true,
+                  "companyId": "00000000-0000-4000-8000-000000000006",
+                  "branchId": "00000000-0000-4000-8000-000000000007",
+                  "externalProductId": 100002
+                },
+                {
+                  "id": "00000000-0000-4000-8000-000000000009",
+                  "name": "Йогурт «Живинка» без цукру",
+                  "slug": "yohurt-zhyvynka-bez-tsukru",
+                  "price": 39.5,
+                  "stock": 60,
+                  "weighted": false,
+                  "step": 1,
+                  "available": true,
+                  "companyId": "00000000-0000-4000-8000-000000000006",
+                  "branchId": "00000000-0000-4000-8000-000000000007",
+                  "externalProductId": 100003
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "silpo_add_or_update_cart_products:906514c5a503": [
+        {
+          "success": true,
+          "summary": "ok",
+          "products": [
+            {
+              "productId": "00000000-0000-4000-8000-000000000009",
+              "companyId": "00000000-0000-4000-8000-000000000006",
+              "branchId": "00000000-0000-4000-8000-000000000007",
+              "quantity": 1
+            }
+          ]
+        }
+      ]
+    },
+    "mcp_by_tool": {
+      "silpo_get_my_shopping_cart": [
+        {
+          "shoppingCartId": "test_cart_001"
+        },
+        {
+          "shoppingCartId": "test_cart_001"
+        }
+      ],
+      "silpo_get_shopping_cart_by_id": [
+        {
+          "cart": {
+            "calculation": {
+              "delivery": {
+                "total": 33.89
+              },
+              "productsTotal": 560.0,
+              "subDiscount": 0,
+              "subTotal": 133.89,
+              "total": 133.89,
+              "totalAfterDiscounts": 133.89,
+              "validations": [
+                {
+                  "context": {
+                    "orderCostMin": 599
+                  },
+                  "level": "error",
+                  "message": "order.cost.min",
+                  "type": "order"
+                }
+              ]
+            },
+            "deliveryType": "NovaPoshta",
+            "id": "test_cart_001",
+            "shipments": [
+              {
+                "branchId": "test_branch_002",
+                "companyId": "test_company_003",
+                "id": "test_cart_001",
+                "products": [
+                  {
+                    "name": "Synthetic item",
+                    "price": 560.0,
+                    "productId": "test_product_004",
+                    "quantity": 1,
+                    "stock": 10
+                  }
+                ]
+              }
+            ],
+            "timeslot": {
+              "end": "2026-09-08T12:00:00+00:00",
+              "start": "2026-09-08T10:00:00+00:00"
+            }
+          }
+        },
+        {
+          "cart": {
+            "calculation": {
+              "delivery": {
+                "total": 33.89
+              },
+              "productsTotal": 560.0,
+              "subDiscount": 0,
+              "subTotal": 133.89,
+              "total": 133.89,
+              "totalAfterDiscounts": 133.89,
+              "validations": [
+                {
+                  "context": {
+                    "orderCostMin": 599
+                  },
+                  "level": "error",
+                  "message": "order.cost.min",
+                  "type": "order"
+                }
+              ]
+            },
+            "deliveryType": "NovaPoshta",
+            "id": "test_cart_001",
+            "shipments": [
+              {
+                "branchId": "test_branch_002",
+                "companyId": "test_company_003",
+                "id": "test_cart_001",
+                "products": [
+                  {
+                    "name": "Synthetic item",
+                    "price": 560.0,
+                    "productId": "test_product_004",
+                    "quantity": 1,
+                    "stock": 10
+                  }
+                ]
+              }
+            ],
+            "timeslot": {
+              "end": "2026-09-08T12:00:00+00:00",
+              "start": "2026-09-08T10:00:00+00:00"
+            }
+          }
+        },
+        {
+          "cart": {
+            "calculation": {
+              "delivery": {
+                "total": 33.89
+              },
+              "productsTotal": 599.5,
+              "subDiscount": 0,
+              "subTotal": 133.89,
+              "total": 133.89,
+              "totalAfterDiscounts": 133.89,
+              "validations": []
+            },
+            "deliveryType": "NovaPoshta",
+            "id": "test_cart_001",
+            "shipments": [
+              {
+                "branchId": "test_branch_002",
+                "companyId": "test_company_003",
+                "id": "test_cart_001",
+                "products": [
+                  {
+                    "name": "Synthetic item",
+                    "price": 560.0,
+                    "productId": "test_product_004",
+                    "quantity": 1,
+                    "stock": 10
+                  },
+                  {
+                    "productId": "00000000-0000-4000-8000-000000000009",
+                    "name": "Йогурт «Живинка» без цукру",
+                    "quantity": 1,
+                    "price": 39.5
+                  }
+                ]
+              }
+            ],
+            "timeslot": {
+              "end": "2026-09-08T12:00:00+00:00",
+              "start": "2026-09-08T10:00:00+00:00"
+            }
+          }
+        }
+      ],
+      "silpo_find_products_batch": [
+        {
+          "queries": [
+            {
+              "query": "Synthetic item",
+              "products": [
+                {
+                  "id": "00000000-0000-4000-8000-000000000005",
+                  "name": "Хліб «Рум'янець» пшеничний",
+                  "slug": "khlib-rumianets-pshenychnyi",
+                  "price": 45.0,
+                  "stock": 120,
+                  "weighted": false,
+                  "step": 1,
+                  "available": true,
+                  "companyId": "00000000-0000-4000-8000-000000000006",
+                  "branchId": "00000000-0000-4000-8000-000000000007",
+                  "externalProductId": 100001
+                },
+                {
+                  "id": "00000000-0000-4000-8000-000000000008",
+                  "name": "Молоко «Галичина» 2,5%",
+                  "slug": "moloko-halychyna-2-5",
+                  "price": 42.0,
+                  "stock": 90,
+                  "weighted": false,
+                  "step": 1,
+                  "available": true,
+                  "companyId": "00000000-0000-4000-8000-000000000006",
+                  "branchId": "00000000-0000-4000-8000-000000000007",
+                  "externalProductId": 100002
+                },
+                {
+                  "id": "00000000-0000-4000-8000-000000000009",
+                  "name": "Йогурт «Живинка» без цукру",
+                  "slug": "yohurt-zhyvynka-bez-tsukru",
+                  "price": 39.5,
+                  "stock": 60,
+                  "weighted": false,
+                  "step": 1,
+                  "available": true,
+                  "companyId": "00000000-0000-4000-8000-000000000006",
+                  "branchId": "00000000-0000-4000-8000-000000000007",
+                  "externalProductId": 100003
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "silpo_add_or_update_cart_products": [
+        {
+          "success": true,
+          "summary": "ok",
+          "products": [
+            {
+              "productId": "00000000-0000-4000-8000-000000000009",
+              "companyId": "00000000-0000-4000-8000-000000000006",
+              "branchId": "00000000-0000-4000-8000-000000000007",
+              "quantity": 1
+            }
+          ]
+        }
+      ]
+    },
+    "llm": {
+      "planner": [
+        {
+          "search_terms": [
+            "Молоко «Галичина» 2,5%"
+          ],
+          "note": ""
+        }
+      ],
+      "explainer": [
+        {
+          "action_id": "4bc5438d-bf14-44f9-bc5f-8fd5e1204da2",
+          "guest_text_uk": "Додати товар"
+        },
+        {
+          "action_id": "2fae809b-c05b-482d-b19a-bb36de0e3ebc",
+          "guest_text_uk": "Додати товар"
+        },
+        {
+          "action_id": "42c603eb-2eac-4553-a63a-70d45274b77d",
+          "guest_text_uk": "Додати товар"
+        }
+      ]
+    }
+  }
+}

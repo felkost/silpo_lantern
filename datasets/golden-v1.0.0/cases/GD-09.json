@@ -1,0 +1,19 @@
+{
+  "case_id": "GD-09",
+  "scenario": "Two error validations for the SAME product (stock.max and not_found) are deduped to ONE blocker, with not_found winning the priority -- the guest is never shown two contradictory reasons for one item.",
+  "gd_ref": "GD-09",
+  "input": {
+    "fixture_id": "duplicate_validations_same_product",
+    "scenario_kind": "diagnose_only"
+  },
+  "expected_outcome": {
+    "status": "no_action_available",
+    "primary_code": null,
+    "blockers": [{ "code": "product.offer.not_found", "is_known": true }],
+    "candidate_count": 0
+  },
+  "mode": "fake_backend",
+  "source_id": "synthetic-2026-09-09",
+  "pii_status": "synthetic",
+  "rubric": "Grouping is by productId alone, not by code+productId -- grouping by the pair would make the priority unreachable (two codes are two groups by construction, so not_found could never outrank anything). Exactly one blocker survives, and it is the higher-priority code."
+}

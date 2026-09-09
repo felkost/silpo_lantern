@@ -283,7 +283,53 @@ longer matched the one the approval was given for, and the write was refused rat
 than overwriting the change the guest had just made by hand.</div>
 <div class="diagram">{{ g5_refusal_svg }}</div>
 
-<h2>15. Why this is expected to help, not just work</h2>
+<h2>15. Undoing a change the guest did not want</h2>
+<p>Adding an item is only half of a safe change. If the addition turns out not to be
+what the guest wanted, they need a way back that is as controlled as the way forward:
+one offer, one approval, one change, and proof afterwards. The system offers that undo
+only when it knows exactly what it changed &mdash; when the cart moved for some other
+reason in the meantime, it says so instead of guessing.</p>
+<p>Why it matters: an undo built from the same approval machinery as the original
+change cannot become a back door. It is refused for the same reasons, checked against
+the same record of what was done, and proved by the same independent re-read.</p>
+<div class="example"><b>Example.</b> In a live session an item was added, then undone
+across four rounds of approval. The final re-read showed the cart 1.34 lower than
+before the undo, matching the item's own price as the cart had charged it &mdash; not
+the price the search had advertised.</div>
+<div class="diagram">{{ g8_compensation_happy_svg }}</div>
+
+<h2>16. When the undo is refused</h2>
+<p>The undo is refused whenever the system cannot prove what it would be undoing: the
+re-read did not complete, the cart changed for another reason, or the change being
+undone cannot be derived from what was recorded. Each refusal names which of those it
+was.</p>
+<div class="example"><b>Example.</b> Across the recorded runs, every refusal branch was
+exercised at least once in testing, and no refusal ever fell through to a write.</div>
+<div class="diagram">{{ g8_compensation_refusal_svg }}</div>
+
+<h2>17. The full path, including the undo</h2>
+<p>The complete route a session can take, with the undo shown as what it is: a second
+pass through the same approval point, never a shortcut around it.</p>
+<div class="diagram">{{ g8_topology_svg }}</div>
+
+<h2>18. What the measurements say</h2>
+<p>Seven measurements over the recorded runs, each with the population it was measured
+over. Four of them are absolute conditions rather than targets: a write without
+approval, a change never re-read, an approval that did not match what was written, and
+a success claimed against a cart that is still blocked. All four came out clean.</p>
+<p>One did not meet its target, and is reported rather than relaxed: the difference
+between the price the search shows and the price the cart actually charges. The cart
+applies a loyalty discount, per product, that the search result does not carry &mdash;
+so a predicted change and the real one agree less than half the time. This is exactly
+why the system proves every change by re-reading the cart instead of trusting its own
+prediction.</p>
+<div class="example"><b>Example.</b> One live round expected 47.76 and the cart charged
+42.98; the very next round expected 9.99 and the cart charged 9.99. Same session, same
+shop, same delivery slot &mdash; the discount is a property of the product, not of the
+basket.</div>
+<div class="diagram">{{ g9_metrics_svg }}</div>
+
+<h2>19. Why this is expected to help, not just work</h2>
 <p>The mechanism above targets a specific, observed gap: the retailer's own MCP server
 already returns more structured detail about why a cart is blocked than the shopping
 app's screen displays. A cart can carry two independent blocking conditions and the
@@ -297,7 +343,7 @@ their cart was blocked and fixed it in one step spent less time and fewer action
 doing it than one navigating a generic "add more items" prompt with no further
 detail.</p>
 
-<h2>16. Measured outcome</h2>
+<h2>20. Measured outcome</h2>
 {% if metrics %}
 <table>
 <tr><th>Metric</th><th>Value</th><th>n</th></tr>
@@ -356,6 +402,10 @@ def render() -> Path:
         g5_state_svg=_inline_svg("g5_graph_state_with_interrupt"),
         g5_sequence_svg=_inline_svg("g5_consent_write_readback_sequence"),
         g5_refusal_svg=_inline_svg("g5_guard_refusal_sequence"),
+        g8_compensation_happy_svg=_inline_svg("g8_compensation_happy_sequence"),
+        g8_compensation_refusal_svg=_inline_svg("g8_compensation_refusal_sequence"),
+        g8_topology_svg=_inline_svg("g8_graph_topology_with_compensation"),
+        g9_metrics_svg=_inline_svg("g9_metrics_results"),
         metrics=_load_metrics(),
         generated_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
     )

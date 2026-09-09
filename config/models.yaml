@@ -79,14 +79,41 @@ explainer:
   language_criterion: hard # UA-only, guest-facing
 
 eval_judge:
-  # Cross-vendor to the planner (google/*), to limit self-preference bias.
+  # G9 (D-G9-03 shortlist, 2026-09-09): cross-vendor to the planner
+  # (google/*), to limit self-preference bias -- none of these are
+  # Opus/GPT-5-flagship class, per the author's explicit exclusion.
+  # Original x-ai/grok-4.6 candidate replaced: the author called its
+  # $2.00/M input price "already fairly high" against a $20 ceiling that
+  # covers the WHOLE PROJECT, not just this stage.
   candidates:
-    - model: "x-ai/grok-4.6"
-      price_usd_per_million: { input: 2.0, output: 6.0 }
-    - model: "anthropic/claude-opus-5"
-      price_usd_per_million: { input: 5.0, output: 25.0 }
-  selected: null # cost/availability decision, made once a smoke run confirms callability
-  calibrated: false # judge agreement (kappa etc.) comes later, not part of this basket
+    - model: "openai/gpt-5.6-luna"
+      price_usd_per_million: { input: 0.20, output: 1.20 }
+    - model: "deepseek/deepseek-v3.2"
+      price_usd_per_million: { input: 0.269, output: 0.40 }
+    - model: "anthropic/claude-haiku-4.5"
+      price_usd_per_million: { input: 1.00, output: 5.00 }
+    - model: "moonshotai/kimi-k2-0905"
+      price_usd_per_million: { input: 0.60, output: 2.50 }
+      # Smoke test (2026-09-09) failed: "max_tokens: 100352 exceeds
+      # maximum 98304" via the Novita provider route -- a config/routing
+      # issue (OpenRouter's default max_tokens exceeds this provider's
+      # own ceiling), not a quality signal. Left in the candidate list;
+      # excluded from `selected` until the request is capped and retried.
+    - model: "qwen/qwen3-235b-a22b-2507"
+      price_usd_per_million: { input: 0.22, output: 0.88 }
+      # Smoke test (2026-09-09) failed: "Evaluation LLM outputted an
+      # invalid JSON" -- structured-output UNreliability actually
+      # measured, not the `structured_outputs` catalogue flag's claim.
+      # Disqualified for the judge role until/unless re-measured clean.
+  # Smoke-tested live (2026-09-09, one example each, NOT a calibration
+  # run): openai/gpt-5.6-luna, deepseek/deepseek-v3.2, and
+  # anthropic/claude-haiku-4.5 all returned valid structured GEval scores
+  # (0.9/1.0/0.9) in correct Ukrainian. Selected by the author's own
+  # quality-then-cost call among the three that worked cleanly.
+  selected: "openai/gpt-5.6-luna"
+  calibrated: false # real judge agreement (kappa etc.) needs G9.2's golden-case
+  # labeled pairs, which do not exist yet -- see D-G9-09. This selection
+  # is provisional and may change once that calibration runs.
 
 budgets:
   daily_soft_limit_usd: 3

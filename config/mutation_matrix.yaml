@@ -28,3 +28,15 @@ scenarios:
   - id: unavailable_item_zero_price
     description: "a line item with price:0 and an explicit stock/error signal (DR-08)"
     origin: mutated
+  # G9 (GD-02/03/04): carts whose gap shape drives a specific plan
+  # shape -- a two-item fix, several viable single-item fixes, and a
+  # weighted (per-kilogram) item whose quantity is not a whole number.
+  - id: gap_needs_two_items
+    description: "gap larger than any single candidate — the fix needs two items"
+    origin: synthetic
+  - id: gap_has_several_viable_plans
+    description: "gap several candidates could each close alone — ranking must choose"
+    origin: synthetic
+  - id: weighted_item_in_cart
+    description: "a weighted (per-kg) line item — quantity is fractional, not a count"
+    origin: synthetic

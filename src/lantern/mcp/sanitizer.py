@@ -11,6 +11,7 @@ every sanitized fixture still needs a human review pass before commit: does
 an allowed field's *value* look like free text that could carry PII.
 """
 
+import re
 from typing import Any, Dict, Optional
 
 # Product/pricing-level fields only — no address, contact, or free-text
@@ -90,6 +91,17 @@ ALLOWED_KEYS = frozenset(
         "deliveryCostMap",
         "options",
         "summary",
+        # G9: `deliveryCostMap` was allow-listed but the keys INSIDE each
+        # of its entries were not, so every entry sanitized to `{}` and
+        # `channel_snapshot_builder._money_map_entry` then read `None`
+        # for two required Decimal fields -- the replayed
+        # `compare_channels` node raised on it. Same failure shape this
+        # file's own 2026-09-06 and G7 notes already record twice: a
+        # container key allowed without its contents produces an empty
+        # object rather than a loud error. Both are pricing figures, no
+        # PII.
+        "cost",
+        "fromOrderCost",
     }
 )
 
@@ -177,12 +189,33 @@ def _sanitize_dict(raw: Dict[str, Any], aliases: Dict[str, str]) -> Dict[str, An
     return out
 
 
+_UUID_SHAPE = re.compile(
+    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-" r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+)
+
+
 def _pseudonymise(key: str, value: Any, aliases: Dict[str, str]) -> Any:
-    """Same original id -> same replacement, within one sanitize run."""
+    """Same original id -> same replacement, within one sanitize run.
+
+    G9: a UUID-shaped original gets a UUID-shaped pseudonym. The readable
+    `test_id_001` form is not UUID-shaped, and
+    `domain/evidence_gate.gate_candidates` requires `product_uuid`,
+    `company_id` and `branch_id` to BE UUID-shaped (D-G5-03 -- the three
+    arguments the write tool's own inputSchema demands). A sanitized
+    bundle therefore had every candidate rejected by the Evidence Gate on
+    replay, reaching `no_action_available` with no receipts: a bundle
+    unable to pass its own gate. The replacement is still obviously
+    synthetic (an all-zero prefix and a counter) and still deterministic,
+    so no real id is published and referential integrity holds.
+    """
     if not isinstance(value, str):
         return value
     if value not in aliases:
-        aliases[value] = f"{_PSEUDONYMISED_KEYS[key]}_{len(aliases) + 1:03d}"
+        index = len(aliases) + 1
+        if _UUID_SHAPE.match(value):
+            aliases[value] = f"00000000-0000-4000-8000-{index:012d}"
+        else:
+            aliases[value] = f"{_PSEUDONYMISED_KEYS[key]}_{index:03d}"
     return aliases[value]
 
 

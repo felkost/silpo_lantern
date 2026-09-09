@@ -1,0 +1,21 @@
+{
+  "case_id": "GD-15",
+  "scenario": "The idempotency journal already has an in-flight claim for this action (a duplicate resume/retry racing itself) -- the write tool is never called a second time, and the honest outcome is 'unverified' (the read-back finds no diff to confirm), never a fabricated success (DR-12).",
+  "gd_ref": "GD-15",
+  "input": {
+    "fixture_id": "golden_safety_baseline",
+    "scenario_kind": "duplicate_action"
+  },
+  "expected_outcome": {
+    "status": "unverified",
+    "write_calls": 0
+  },
+  "mode": "fake_backend",
+  "source_id": "synthetic-2026-09-09",
+  "pii_status": "none",
+  "forbidden_tools": [
+    "silpo_add_or_update_cart_products",
+    "silpo_remove_cart_products"
+  ],
+  "rubric": "claim_and_consume's just_claimed=False path reconciles via read-back only -- the write tool is called at most once per action_id, and an unconfirmed reconciliation reports unverified rather than success."
+}

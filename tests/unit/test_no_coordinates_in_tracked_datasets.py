@@ -23,6 +23,30 @@ DATASETS_ROOT = PROJECT_ROOT / "datasets"
 FORBIDDEN_KEYS = {"latitude", "longitude", "address"}
 
 
+# G9 (D74): the two documented synthetic constants
+# `scripts/record_replay_bundle.py` substitutes for a real address. A
+# live-recorded replay bundle MUST carry coordinates -- the sanitizer
+# strips the guest's real ones and these are restored in their place,
+# because `compare_channels_node` degrades to a no-op without any -- so a
+# blanket ban on the KEY makes a faithful live bundle uncommittable.
+#
+# Narrowed rather than exempted by directory: any other value under these
+# keys still fails, anywhere under datasets/, which is what the rule was
+# written to catch. A real coordinate is not this pair.
+_ALLOWED_SYNTHETIC_COORDINATES = {"latitude": 50.45, "longitude": 30.52}
+
+
+def _is_allowed_synthetic(key: str, value: Any) -> bool:
+    if key in _ALLOWED_SYNTHETIC_COORDINATES:
+        return bool(value == _ALLOWED_SYNTHETIC_COORDINATES[key])
+    if key == "address":
+        # Allowed only when the address is EXACTLY the synthetic pair and
+        # nothing else -- a real address carries city/street/phone fields
+        # alongside, and any of those makes this fail.
+        return isinstance(value, dict) and value == _ALLOWED_SYNTHETIC_COORDINATES
+    return False
+
+
 def _find_forbidden_keys(value: Any, path: str = "$") -> list[str]:
     """Walks a decoded JSON document for any dict key in FORBIDDEN_KEYS, at
     any nesting depth -- a coordinate pair can arrive nested inside a cart,
@@ -30,7 +54,7 @@ def _find_forbidden_keys(value: Any, path: str = "$") -> list[str]:
     hits: list[str] = []
     if isinstance(value, dict):
         for key, sub in value.items():
-            if key in FORBIDDEN_KEYS:
+            if key in FORBIDDEN_KEYS and not _is_allowed_synthetic(key, sub):
                 hits.append(f"{path}.{key}")
             hits.extend(_find_forbidden_keys(sub, f"{path}.{key}"))
     elif isinstance(value, list):
@@ -64,3 +88,43 @@ def test_no_tracked_dataset_file_carries_a_coordinate_or_address_key() -> None:
         "tracked dataset file(s) carry a coordinate/address key -- sanitize "
         f"before committing: {offenders}"
     )
+
+
+# G9 (D74): the narrowing above must not turn the rule off. These pin that
+# a REAL coordinate still fails, so the allowance covers exactly the two
+# documented synthetic constants and nothing else.
+
+
+def test_the_documented_synthetic_pair_is_allowed() -> None:
+    document = {"cart": {"address": {"latitude": 50.45, "longitude": 30.52}}}
+    assert _find_forbidden_keys(document) == []
+
+
+def test_a_real_looking_coordinate_still_fails() -> None:
+    """The author's own delivery point, as it appeared in a live capture --
+    the exact thing this rule exists to keep out of the repository."""
+    document = {"cart": {"address": {"latitude": 50.7429136, "longitude": 25.3206388}}}
+
+    hits = _find_forbidden_keys(document)
+
+    assert hits, "a real coordinate pair was let through"
+
+
+def test_an_address_carrying_anything_beyond_the_pair_still_fails() -> None:
+    document = {
+        "cart": {
+            "address": {
+                "latitude": 50.45,
+                "longitude": 30.52,
+                "city": "Луцьк",
+                "street": "Відділення #11",
+            }
+        }
+    }
+
+    assert _find_forbidden_keys(document), "a real street address was let through"
+
+
+def test_a_bare_latitude_with_another_value_still_fails() -> None:
+    assert _find_forbidden_keys({"latitude": 49.0})
+    assert _find_forbidden_keys({"longitude": 28.0})
