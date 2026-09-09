@@ -1,0 +1,55 @@
+{
+  "$comment": "Disclosure audit observations, per protocol.md. One row per cart state observed. `visibility_verified` follows the protocol's own rule and is NOT softened to make a row countable: a row where only one of the two in-scope screens was opened leaves the DisclosureRate denominator, because a constraint absent from the cart screen may still appear at checkout.",
+  "observations": [
+    {
+      "state_id": "1",
+      "state": "Baseline cart, below the minimum order sum",
+      "observed_at": "2026-09-10",
+      "observer": "author",
+      "observation_source": "the author's own screenshot of the app's cart screen, sent unprompted beyond the question 'is there any mention of payment'",
+      "screens_checked": ["cart"],
+      "app_showed": [
+        "Товари 461.82 ₴",
+        "Доставка 99.00 ₴",
+        "Сума знижки -87.33 ₴",
+        "Балобонуси -44.93",
+        "До оплати 515.89 ₴",
+        "Додайте товарів на 237.18 ₴  (the primary call to action)"
+      ],
+      "cart_read_at": "2026-09-09T22:13:03Z",
+      "cart_products_total": 461.82,
+      "cart_validations": [
+        {
+          "code": "order.cost.min",
+          "level": "error",
+          "context": {"orderCostMin": 699},
+          "rendered_by_app": true,
+          "note": "Shown as the primary button, and shown PRECISELY: 699 - 461.82 = 237.18, the exact figure the app printed. This is the gap Lantern computes."
+        },
+        {
+          "code": "order.payment_types.disabled",
+          "level": "info",
+          "context": {
+            "reason": "not_available_for_total",
+            "paymentTypes": ["BNPL"],
+            "total": 560.82,
+            "minTotal": 1000
+          },
+          "rendered_by_app": false,
+          "note": "Absent from the cart screen. NOT a blocker: an info-level note that buy-now-pay-later is not offered because the order total is under its own 1000 threshold. Whether the checkout screen mentions it is unknown - that screen was not opened."
+        }
+      ],
+      "blocking_validations": 1,
+      "blocking_validations_rendered": 1,
+      "visibility_verified": false,
+      "visibility_verified_reason": "Only the cart screen was opened. `had_invisible_constraint` cannot be answered without the checkout screen: the one unrendered item might appear there. One further screenshot would complete this row.",
+      "had_invisible_constraint": null,
+      "what_this_state_does_establish": "Every blocking constraint this cart carried was displayed, with the exact amount. For this state the app does what the project claims to add, and the headline claim - that the app hides constraints the data carries - is not observed here.",
+      "what_this_state_cannot_establish": "The claim rests on a cart carrying TWO OR MORE error-level validations where the app renders one. This cart carries a single error, so the state does not test that question at all. States 3 and 4 are the ones that can.",
+      "corrections_made_while_recording": [
+        "scripts/read_cart_validations.py read the validation identifier from `code`; the live server puts it in `message` and leaves `code` absent, so the first run reported two nameless validations.",
+        "The assistant had described `order.payment_types.disabled` to the author as 'payment methods unavailable', and predicted a guest hitting a wall at checkout. Reading the level and context showed an info-level note about BNPL only. The story was built from a code name without reading the record - the exact failure mode this project exists to criticise."
+      ]
+    }
+  ]
+}
