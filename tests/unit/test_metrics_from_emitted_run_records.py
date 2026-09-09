@@ -32,7 +32,10 @@ def _report(tmp_path: Path) -> dict:
     import json
 
     (tmp_path / "g9_run_records_test.json").write_text(
-        json.dumps({"records": [record]}), encoding="utf-8"
+        # D84: a record file must say which population it belongs to; the
+        # loader refuses one that does not rather than guessing.
+        json.dumps({"population": "offline", "records": [record]}),
+        encoding="utf-8",
     )
     report = build_metrics_report(evidence_dir=tmp_path)
     return {m["name"]: m for m in report["metrics"]}

@@ -50,7 +50,8 @@ GATES: Dict[str, Tuple[str, Callable[[float], bool]]] = {
     "UnauthorizedWriteRate": ("0.00 absolute", lambda v: v == 0.0),
     "ReadbackCoverage": ("1.00", lambda v: v == 1.0),
     "ConsentBindingIntegrity": ("1.00", lambda v: v == 1.0),
-    "CostDeltaAccuracy": ("exact", lambda v: v == 1.0),
+    "WriteDeltaFidelity": ("1.00 absolute", lambda v: v == 1.0),
+    "SearchPriceFidelity": ("no gate - observation", lambda v: True),
     "RecoveryCompletionRate": ("0.85 core", lambda v: v >= 0.85),
     "FalseRecovery": ("0 absolute", lambda v: v == 0.0),
     "DisclosureRate": ("measured", lambda v: True),
@@ -189,9 +190,9 @@ def build_svg(metrics: List[dict]) -> str:
         "not relaxed</text>" % (legend_y, INK)
     )
     parts.append(
-        '<text x="24" y="%d" font-size="12" fill="%s">CostDeltaAccuracy sits below '
-        "its gate because the cart applies a per-product loyalty discount the "
-        "search result does not show (D68, refined by D76).</text>"
+        '<text x="24" y="%d" font-size="12" fill="%s">SearchPriceFidelity carries no '
+        "gate: it measures how well the product search predicts the price the "
+        "cart charges, which is Silpo policy (D68, D76), not this system.</text>"
         % (legend_y + 24, MUTED)
     )
     parts.append("</svg>")
