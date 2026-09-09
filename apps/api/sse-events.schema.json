@@ -95,6 +95,38 @@
           }
         }
       }
+    },
+    {
+      "if": { "properties": { "event": { "const": "options" } } },
+      "then": {
+        "properties": {
+          "data": {
+            "required": ["session_id", "trace_id", "version", "candidates"],
+            "properties": {
+              "candidates": {
+                "type": "array",
+                "description": "G8 (D51): kind distinguishes the ordinary add screen from the offer to undo a write this system already performed.",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "action_id", "product_name", "quantity", "expected_delta",
+                    "guest_text_uk", "kind", "compensates_action_id"
+                  ],
+                  "properties": {
+                    "action_id": { "type": "string" },
+                    "product_name": { "type": "string" },
+                    "quantity": { "type": "string" },
+                    "expected_delta": { "type": "string" },
+                    "guest_text_uk": { "type": "string" },
+                    "kind": { "type": "string", "enum": ["add", "compensate"] },
+                    "compensates_action_id": { "type": ["string", "null"] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   ]
 }

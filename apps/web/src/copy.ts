@@ -51,10 +51,67 @@ const ERROR_REASON_UK: Array<[string, string]> = [
   // finalize_write_outcome (same file)
   ["read-back unreachable", "Не вдалося перевірити результат -- перевірте кошик у застосунку Сільпо."],
   ["read-back shows removed line items", "Під час перевірки з кошика зникли товари, яких ви не прибирали."],
-  ["read-back diff does not match the consented product", "Результат не збігається з тим, на що ви погодились -- перевірте кошик."],
-  ["read-back quantity does not match", "Додана кількість не збігається з тим, на що ви погодились."],
+  ["read-back diff does not match", "Результат не збігається з тим, на що ви погодились -- перевірте кошик у застосунку Сільпо."],
+  ["read-back quantity does not match", "Кількість не збігається з тим, на що ви погодились."],
+  ["read-back removed a different quantity", "З кошика прибрано не ту кількість, на яку ви погодились."],
   ["carries a new error-level validation", "Після зміни в кошику з'явилась нова позначка -- перевірте його."],
   ["cart applied a different price", "Кошик застосував іншу ціну, ніж очікувалось -- сума в чеку точна."],
+  // G8 (D51): compensation-specific refusals (authorize_write, C2-C9) --
+  // these must say what we DO and DO NOT know, not a generic "check the
+  // app", since the guest was just offered an undo and needs to know
+  // whether it happened.
+  [
+    "requires the receipt of the write it undoes",
+    "Не можемо знайти запис про попередню зміну -- перевірте кошик у застосунку Сільпо.",
+  ],
+  [
+    "is not compensable",
+    "Ми не змогли підтвердити попередню зміну, тому не будемо змінювати кошик наосліп. Перевірте його у застосунку Сільпо.",
+  ],
+  [
+    "does not name the receipt it was built from",
+    "Внутрішня помилка -- оновіть сторінку й спробуйте ще раз.",
+  ],
+  [
+    "receipt belongs to a different owner or session",
+    "Ця дія належить іншому користувачу.",
+  ],
+  [
+    "cart moved since the write being compensated",
+    "Кошик змінився після нашої зміни -- повернути автоматично не можемо. Перевірте кошик у застосунку Сільпо.",
+  ],
+  [
+    "compensation tool does not match",
+    "Внутрішня помилка -- оновіть сторінку й спробуйте ще раз.",
+  ],
+  [
+    "compensation cart id does not match",
+    "Внутрішня помилка -- оновіть сторінку й спробуйте ще раз.",
+  ],
+  [
+    "compensation product id does not match",
+    "Внутрішня помилка -- оновіть сторінку й спробуйте ще раз.",
+  ],
+  [
+    "compensation quantity does not match",
+    "Внутрішня помилка -- оновіть сторінку й спробуйте ще раз.",
+  ],
+  [
+    "a removal must not carry a quantity",
+    "Внутрішня помилка -- оновіть сторінку й спробуйте ще раз.",
+  ],
+  [
+    "compensation expected_delta does not match",
+    "Внутрішня помилка -- оновіть сторінку й спробуйте ще раз.",
+  ],
+  [
+    "no compensable change is recorded in this receipt",
+    "Ми не змогли підтвердити попередню зміну, тому не будемо змінювати кошик наосліп. Перевірте його у застосунку Сільпо.",
+  ],
+  [
+    "an ordinary proposal may not name a receipt",
+    "Внутрішня помилка -- оновіть сторінку й спробуйте ще раз.",
+  ],
   // node-level aborts (src/lantern/graph/nodes.py) -- prefix match on the
   // stable part of an f-string error.
   ["read failed", "Не вдалося прочитати кошик -- спробуйте ще раз."],

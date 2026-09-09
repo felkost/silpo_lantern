@@ -108,6 +108,18 @@ class RecoveryState(TypedDict):
     consent: Optional[ConsentRecord]
     write_response: Optional[Dict[str, Any]]
     receipt: Optional[Receipt]
+    # G8 (D51/D-G8-06): every COMPENSABLE receipt seen this session,
+    # oldest first. The D42 retry branch clears `receipt` between rounds
+    # so it is not re-emitted -- without a separate accumulator, only the
+    # LAST write would ever be undoable, and a guest could retain up to
+    # `MAX_WRITE_ROUNDS - 1` items with no offer at all.
+    compensable: List[Receipt]
+    # G8 (D51/D-G8-08): a refused COMPENSATION is non-terminal -- unlike
+    # the add path, whose refusal stays fail-closed and permanent
+    # (`submit_consent` only accepts a new consent at `awaiting_consent`,
+    # and `aborted` is a dead end). Bounded to a single re-offer so a
+    # persistently unrecoverable state does not loop forever.
+    compensation_offers_used: int
 
 
 def new_recovery_state(
@@ -153,6 +165,8 @@ def new_recovery_state(
         consent=None,
         write_response=None,
         receipt=None,
+        compensable=[],
+        compensation_offers_used=0,
     )
 
 

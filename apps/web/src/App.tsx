@@ -143,7 +143,14 @@ function App() {
         </section>
       )}
 
-      {(screen === "diagnosis" || screen === "consent") && (
+      {/* G8 (D51): the compensation pass emits no `diagnosis` event (it
+          routes persist_receipt -> write_guard directly, never through
+          diagnose), so the last one in state is the PRE-write gap --
+          showing it beside an offer to undo the very write that
+          partially closed it would be actively misleading. */}
+      {(screen === "diagnosis" ||
+        (screen === "consent" &&
+          !(candidates.length > 0 && candidates.every((c) => c.kind === "compensate")))) && (
         <DiagnosisScreen diagnosis={diagnosis} />
       )}
 

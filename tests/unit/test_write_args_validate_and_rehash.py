@@ -34,6 +34,7 @@ from src.lantern.domain.evidence_gate import (
 from src.lantern.domain.models import Cart
 from src.lantern.graph.nodes import make_write_and_readback_node
 from src.lantern.memory.repository import IdempotencyState
+from src.lantern.policies.loader import load_registry
 
 _NOW = datetime(2026, 9, 8, 12, 0, 0, tzinfo=timezone.utc)
 _TOOLS = PROJECT_ROOT / "tests" / "contract" / "fixtures" / "tools_list_2026-09-05.json"
@@ -172,6 +173,7 @@ def _capture_args_handed_to_the_write_tool(proposal: Any) -> Dict[str, Any]:
         claim_and_consume,
         mark_action,
         lambda: _NOW,
+        load_registry(),
     )
     node(
         {

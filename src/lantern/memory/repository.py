@@ -129,6 +129,16 @@ def load_session_token(
 
 
 def save_consent(pool: ConnectionPool, consent: ConsentRecord) -> None:
+    """G8 (D-G8-07): `ON CONFLICT (action_id) DO NOTHING` -- a double-clicked
+    consent button, or a retried request, used to raise a bare primary-key
+    violation and 500 the endpoint. §12.4's mandatory RG variants name
+    «подвійний клік» explicitly, so this is an RG obligation, not a nicety.
+    A second call with the SAME `action_id` is, by construction, consent to
+    the same proposal (the API recomputes both hashes server-side from the
+    session's own state before calling this, so nothing here can silently
+    diverge) -- the correct response to a duplicate is to leave the first
+    row standing, not to overwrite or reject it.
+    """
     with pool.connection() as conn:
         conn.execute(
             """
@@ -136,6 +146,7 @@ def save_consent(pool: ConnectionPool, consent: ConsentRecord) -> None:
                 (action_id, session_id, owner, cart_id, canonical_args, args_hash,
                  state_hash, prompt_version, policy_version, expires_at)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (action_id) DO NOTHING
             """,
             (
                 consent.action_id,
@@ -292,8 +303,8 @@ def save_receipt(pool: ConnectionPool, receipt: Receipt) -> None:
             INSERT INTO receipts
                 (action_id, session_id, owner, before_state, after_state, verified,
                  status, reason, expected_delta, actual_delta, trace_id,
-                 blocker_cleared, remaining_gap)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                 blocker_cleared, remaining_gap, kind)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (action_id) DO UPDATE SET
                 before_state = EXCLUDED.before_state,
                 after_state = EXCLUDED.after_state,
@@ -304,7 +315,8 @@ def save_receipt(pool: ConnectionPool, receipt: Receipt) -> None:
                 actual_delta = EXCLUDED.actual_delta,
                 trace_id = EXCLUDED.trace_id,
                 blocker_cleared = EXCLUDED.blocker_cleared,
-                remaining_gap = EXCLUDED.remaining_gap
+                remaining_gap = EXCLUDED.remaining_gap,
+                kind = EXCLUDED.kind
             """,
             (
                 receipt.action_id,
@@ -332,6 +344,7 @@ def save_receipt(pool: ConnectionPool, receipt: Receipt) -> None:
                     if receipt.remaining_gap is not None
                     else None
                 ),
+                receipt.kind,
             ),
         )
 

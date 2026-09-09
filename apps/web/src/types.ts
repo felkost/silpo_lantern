@@ -12,6 +12,13 @@ export interface Candidate {
   expected_delta: string;
   /** The explainer's rendered Ukrainian sentence -- framing only. */
   guest_text_uk: string;
+  /** G8 (D51): "add" is the ordinary consent screen; "compensate" is the
+   * offer to undo a write this system already performed -- the client
+   * branches its copy on this, never inferring it from anything else. */
+  kind: "add" | "compensate";
+  /** Set only for kind="compensate": the action_id of the receipt this
+   * candidate undoes. */
+  compensates_action_id: string | null;
 }
 
 export interface CreateSessionResponse {

@@ -27,23 +27,46 @@ export function ConsentScreen({
   submitting,
   priorReceipts = [],
 }: Props) {
+  // G8 (D51): every candidate on this screen is either an ordinary "add"
+  // or a compensation offer -- never a mix (persist_receipt_node REPLACES
+  // candidates, never appends across kinds), so checking the first entry
+  // is enough to decide which screen this is.
+  const isCompensationOffer =
+    candidates.length > 0 && candidates.every((c) => c.kind === "compensate");
+
   return (
     <section aria-labelledby="consent-heading">
       {priorReceipts.length > 0 && (
         <div data-testid="prior-receipts">
           <h3>Попередні зміни цього сеансу</h3>
           <ul>
-            {priorReceipts.map((receipt, index) => (
-              <li key={index} data-testid={`prior-receipt-${index}`}>
-                {receipt.status === "receipt"
-                  ? `Додано на ${receipt.actual_delta} ₴`
-                  : "Не підтверджено"}
-              </li>
-            ))}
+            {priorReceipts.map((receipt, index) => {
+              const delta = receipt.actual_delta ? Number(receipt.actual_delta) : null;
+              const isCompensation = delta !== null && delta < 0;
+              return (
+                <li key={index} data-testid={`prior-receipt-${index}`}>
+                  {receipt.status !== "receipt"
+                    ? "Не підтверджено"
+                    : isCompensation
+                      ? `Повернуто на ${Math.abs(delta as number)} ₴`
+                      : `Додано на ${receipt.actual_delta} ₴`}
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
-      <h2 id="consent-heading">Оберіть, що додати</h2>
+      <h2 id="consent-heading">
+        {isCompensationOffer ? "Повернути кошик як було?" : "Оберіть, що додати"}
+      </h2>
+      {isCompensationOffer && (
+        <p data-testid="compensation-lede">
+          Оформлення досі недоступне. Можемо прибрати те, що ми додали, і повернути
+          кошик до попереднього стану — це окрема дія, і потрібна ваша нова згода.
+          Це стосується лише нашої власної зміни, нічого іншого в кошику не
+          торкнеться.
+        </p>
+      )}
       <ul>
         {candidates.map((candidate) => (
           <li key={candidate.action_id} data-testid={`candidate-${candidate.action_id}`}>
@@ -54,7 +77,7 @@ export function ConsentScreen({
               Кількість: <span data-testid="quantity">{candidate.quantity}</span>
             </p>
             <p>
-              Очікувана сума:{" "}
+              Очікувана зміна суми:{" "}
               <span data-testid="expected-delta">{candidate.expected_delta} ₴</span>
             </p>
             {candidate.guest_text_uk !== "" && (
@@ -67,7 +90,9 @@ export function ConsentScreen({
               disabled={submitting}
               onClick={() => onConsent(candidate.action_id)}
             >
-              Додати «{candidate.product_name}» за {candidate.expected_delta} ₴
+              {isCompensationOffer
+                ? "Повернути як було"
+                : `Додати «${candidate.product_name}» за ${candidate.expected_delta} ₴`}
             </button>
           </li>
         ))}
