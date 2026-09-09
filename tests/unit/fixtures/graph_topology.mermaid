@@ -26,6 +26,7 @@ graph TD;
 	explain -. &nbsp;continue&nbsp; .-> write_guard;
 	persist_receipt -. &nbsp;end&nbsp; .-> __end__;
 	persist_receipt -. &nbsp;retry&nbsp; .-> diagnose;
+	persist_receipt -. &nbsp;compensate&nbsp; .-> write_guard;
 	plan -. &nbsp;end&nbsp; .-> __end__;
 	plan -. &nbsp;continue&nbsp; .-> collect_and_gate;
 	rank --> explain;
@@ -34,6 +35,7 @@ graph TD;
 	write_and_readback --> persist_receipt;
 	write_guard -. &nbsp;end&nbsp; .-> __end__;
 	write_guard -. &nbsp;continue&nbsp; .-> write_and_readback;
+	write_guard -. &nbsp;retry_guard&nbsp; .-> write_guard;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0
 	classDef last fill:#bfb6fc

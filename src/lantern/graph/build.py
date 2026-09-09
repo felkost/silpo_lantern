@@ -17,12 +17,12 @@ from langgraph.graph import END, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
 from src.lantern.domain.models import ConsentRecord, Receipt
+from src.lantern.graph.compensation_nodes import make_persist_receipt_node
 from src.lantern.graph.nodes import (
     make_collect_and_gate_node,
     make_compare_channels_node,
     make_diagnose_node,
     make_explain_node,
-    make_persist_receipt_node,
     make_plan_node,
     make_read_node,
     make_write_and_readback_node,
@@ -121,12 +121,37 @@ def _continue_or_end(state: RecoveryState) -> str:
     return "end" if state["status"] in terminal else "continue"
 
 
-def _another_round_or_end(state: RecoveryState) -> str:
-    """`persist_receipt_node` signals a further round by clearing the spent
-    consent and returning the state to `diagnosed`; anything terminal ends
-    the graph.
+def _write_guard_outcome(state: RecoveryState) -> str:
+    """G8 (D51/D-G8-08): `write_guard`'s OWN outgoing edge, distinct from
+    `_continue_or_end` -- a refused COMPENSATION returns `status=
+    "awaiting_consent"` with a re-derived offer, and that must route back
+    to `write_guard` ITSELF, not fall through to `write_and_readback`
+    (which `_continue_or_end`'s plain "continue"/"end" menu would have
+    done, since "awaiting_consent" is neither "aborted" nor
+    "no_action_available" -- found live in this stage's own test suite:
+    the graph proceeded straight into the write node with no consent).
+    The self-loop is what makes `interrupt_before=["write_guard"]`
+    re-pause on the retry, the same mechanism D51's compensate branch and
+    D42's second round both already rely on (measured, M1).
     """
-    return "retry" if state["status"] == "diagnosed" else "end"
+    if state["status"] == "awaiting_consent":
+        return "retry_guard"
+    terminal = ("aborted", "no_action_available")
+    return "end" if state["status"] in terminal else "continue"
+
+
+def _another_round_or_end(state: RecoveryState) -> str:
+    """`persist_receipt_node` signals a further add round by clearing the
+    spent consent and returning the state to `diagnosed`; a compensation
+    offer is signalled by `awaiting_consent` (G8, D51) -- `interrupt_before`
+    still applies on every pass, either way, so neither outcome writes
+    without a fresh consent. Anything else terminal ends the graph.
+    """
+    if state["status"] == "diagnosed":
+        return "retry"
+    if state["status"] == "awaiting_consent":
+        return "compensate"
+    return "end"
 
 
 def build_recovery_graph(
@@ -234,9 +259,14 @@ def build_recovery_graph(
         load_consent, fetch_my_cart, fetch_cart_by_id, tool_schema_hashes, now
     )
     write_and_readback_node = make_write_and_readback_node(
-        traced_call_write_tool, fetch_cart_by_id, claim_and_consume, mark_action, now
+        traced_call_write_tool,
+        fetch_cart_by_id,
+        claim_and_consume,
+        mark_action,
+        now,
+        registry,
     )
-    persist_receipt_node = make_persist_receipt_node(save_receipt)
+    persist_receipt_node = make_persist_receipt_node(save_receipt, now)
 
     _add_node(graph, "read", read_node)
     _add_node(graph, "diagnose", diagnose_node)
@@ -273,7 +303,9 @@ def build_recovery_graph(
         "explain", _continue_or_end, {"end": END, "continue": "write_guard"}
     )
     graph.add_conditional_edges(
-        "write_guard", _continue_or_end, {"end": END, "continue": "write_and_readback"}
+        "write_guard",
+        _write_guard_outcome,
+        {"end": END, "continue": "write_and_readback", "retry_guard": "write_guard"},
     )
     graph.add_edge("write_and_readback", "persist_receipt")
     # The write path can loop back for a second consent+write round when
@@ -281,8 +313,15 @@ def build_recovery_graph(
     # `persist_receipt_node`, which is the only thing that decides it.
     # `interrupt_before=["write_guard"]` still applies on every pass, so a
     # further write is impossible without a further consent.
+    # G8 (D51): a compensation offer routes back to `write_guard`, the
+    # same interrupt point every other write proposal must clear --
+    # measured (M1): `interrupt_before` re-fires on this second entry
+    # within one invocation, so a compensation cannot execute without a
+    # fresh consent, for the same reason D42's second round cannot.
     graph.add_conditional_edges(
-        "persist_receipt", _another_round_or_end, {"end": END, "retry": "diagnose"}
+        "persist_receipt",
+        _another_round_or_end,
+        {"end": END, "retry": "diagnose", "compensate": "write_guard"},
     )
 
     # D-G5-08: static interrupt before the ONLY node that may authorize a

@@ -234,6 +234,10 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
             )
 
         def _options_line(candidates: Any) -> str:
+            # G8 (D51): `kind`/`compensates_action_id` tell the client
+            # whether this is the ordinary "add" screen or the "undo what
+            # we just added" screen -- a compensation candidate's own
+            # `kind` is never inferred client-side from anything else.
             return _sse_line(
                 "options",
                 {
@@ -245,6 +249,8 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
                             "quantity": str(p.quantity),
                             "expected_delta": str(p.expected_delta),
                             "guest_text_uk": p.guest_text_uk,
+                            "kind": p.kind,
+                            "compensates_action_id": p.compensates_action_id,
                         }
                         for p in candidates
                     ],
@@ -292,7 +298,12 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
                             pending_diagnosis["disclosure"],
                             partial.get("channel_comparison") or [],
                         )
-                    if node_name == "explain" and partial.get("candidates"):
+                    # G8 (D51): the compensation offer arrives on
+                    # `persist_receipt`'s own chunk, not `explain` --
+                    # `explain` is not on the compensation path at all.
+                    # Emitting from any node chunk that carries candidates
+                    # covers both without naming a second node explicitly.
+                    if partial.get("candidates"):
                         yield _options_line(partial["candidates"])
                     if partial.get("receipt") is not None:
                         # Emitted per node, not only from the final state:
@@ -320,6 +331,13 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
                     existing_state.get("disclosure"),
                     existing_state.get("channel_comparison") or [],
                 )
+            # G8 (D51): a compensation offer's checkpoint still carries the
+            # receipt it undoes -- replaying it here means a browser
+            # refresh at the offer shows the receipt above it, the same
+            # gap D42's own second-round offer had (never a declared test
+            # for it either) closed for both at once.
+            if existing_state.get("receipt") is not None:
+                yield _receipt_line(existing_state["receipt"], status or "")
             if existing_state.get("candidates"):
                 yield _options_line(existing_state["candidates"])
             if status == "aborted":

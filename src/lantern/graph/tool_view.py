@@ -16,6 +16,7 @@ surfaces the planner/explainer prompts must never see raw.
    block before they reach any prompt.
 """
 
+import copy
 from dataclasses import dataclass
 from typing import Any, Dict, List, Mapping
 
@@ -51,13 +52,36 @@ class PlannerVisibleTool:
     input_schema: Mapping[str, Any]
 
 
+def _strip_nested_descriptions(node: Any) -> Any:
+    """G8 (D-G8-09): a tool's own description is untrusted input at EVERY
+    level, not only the top level -- the top-level description was
+    already replaced by a human paraphrase, but `inputSchema` used to
+    pass through raw, and a server-authored imperative inside a PROPERTY
+    description reached the planner today (measured:
+    `silpo_get_product_details`'s `slug` property literally says "MUST be
+    taken from ... Never construct from name"). Recurses through dicts
+    and lists, dropping every `description` key regardless of depth --
+    types, `required`, and property names are untouched, since the
+    planner still needs the tool's real argument shape.
+    """
+    if isinstance(node, dict):
+        return {
+            key: _strip_nested_descriptions(value)
+            for key, value in node.items()
+            if key != "description"
+        }
+    if isinstance(node, list):
+        return [_strip_nested_descriptions(item) for item in node]
+    return copy.deepcopy(node)
+
+
 def build_planner_tool_view(
     tools_raw: List[Mapping[str, Any]],
 ) -> List[PlannerVisibleTool]:
     """The planner's entire view of the MCP tool surface: name + reviewed
     paraphrase + JSON Schema, built fresh from the raw `tools/list` array on
-    every call — never a description field, regardless of what the live
-    server's own text says.
+    every call — never a description field, at any depth, regardless of
+    what the live server's own text says.
     """
     view = []
     for tool in tools_raw:
@@ -71,7 +95,7 @@ def build_planner_tool_view(
             PlannerVisibleTool(
                 name=name,
                 paraphrase=paraphrase,
-                input_schema=tool.get("inputSchema", {}),
+                input_schema=_strip_nested_descriptions(tool.get("inputSchema", {})),
             )
         )
     return view

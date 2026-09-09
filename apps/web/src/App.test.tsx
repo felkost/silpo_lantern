@@ -21,6 +21,8 @@ const CANDIDATE: Candidate = {
   quantity: "1",
   expected_delta: "39.99",
   guest_text_uk: "Додамо молоко, щоб дотягнути до мінімальної суми.",
+  kind: "add",
+  compensates_action_id: null,
 };
 
 function sseStream(frames: string[]): ReadableStream<Uint8Array> {
@@ -301,6 +303,122 @@ describe("receipt screen", () => {
     expect(screen.getByTestId("receipt-reason")).toHaveTextContent(
       "перевірте кошик",
     );
+  });
+});
+
+describe("compensation offer (G8, D51)", () => {
+  const COMPENSATION_CANDIDATE: Candidate = {
+    action_id: "comp-1",
+    product_name: "Молоко «Галичина» 2,5%",
+    quantity: "-6",
+    expected_delta: "-86.84",
+    guest_text_uk: "Повернути «Молоко «Галичина» 2,5%» до попередньої кількості.",
+    kind: "compensate",
+    compensates_action_id: "a1",
+  };
+
+  it("renders the undo copy and suppresses the stale pre-write diagnosis", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (init?.method === "POST" && url.endsWith("/session")) {
+          return new Response(
+            JSON.stringify({
+              session_id: "s1",
+              status: "created",
+              authorized: true,
+              auth_url: "/auth/start?session_id=s1",
+            }),
+            { status: 200 },
+          );
+        }
+        return new Response(
+          sseStream([
+            frame("diagnosis", {
+              ...ENVELOPE,
+              primary_code: "order.cost.min",
+              gap: "4.00",
+              gap_is_borderline: true,
+              validations: [],
+              channels: [],
+            }),
+            frame("receipt", {
+              ...ENVELOPE,
+              status: "receipt",
+              reason: "",
+              actual_delta: "18.40",
+              blocker_cleared: false,
+              remaining_gap: "4.00",
+            }),
+            // No further "diagnosis" event -- persist_receipt routes
+            // straight to write_guard for the offer, never through
+            // diagnose again.
+            frame("options", { ...ENVELOPE, candidates: [COMPENSATION_CANDIDATE] }),
+            frame("consent_required", ENVELOPE),
+          ]),
+          { status: 200 },
+        );
+      }),
+    );
+
+    render(<App />);
+    await act(async () => {
+      screen.getByRole("button", { name: /перевірити мій кошик/i }).click();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("compensation-lede")).toBeInTheDocument();
+    });
+    expect(screen.getByRole("heading", { name: /повернути кошик як було/i })).toBeInTheDocument();
+    // The stale pre-write diagnosis is not rendered on this screen.
+    expect(screen.queryByTestId("primary-code")).not.toBeInTheDocument();
+    // The offer is opt-in: a real button, not an auto-triggered action.
+    expect(screen.getByRole("button", { name: /повернути як було/i })).toBeEnabled();
+  });
+
+  it("shows a negative prior-receipt delta as a returned amount, not a raw negative", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (init?.method === "POST" && url.endsWith("/session")) {
+          return new Response(
+            JSON.stringify({
+              session_id: "s1",
+              status: "created",
+              authorized: true,
+              auth_url: "/auth/start?session_id=s1",
+            }),
+            { status: 200 },
+          );
+        }
+        return new Response(
+          sseStream([
+            frame("receipt", {
+              ...ENVELOPE,
+              status: "receipt",
+              reason: "",
+              actual_delta: "-86.84",
+              blocker_cleared: false,
+              remaining_gap: "500.77",
+            }),
+            frame("options", { ...ENVELOPE, candidates: [COMPENSATION_CANDIDATE] }),
+            frame("consent_required", ENVELOPE),
+          ]),
+          { status: 200 },
+        );
+      }),
+    );
+
+    render(<App />);
+    await act(async () => {
+      screen.getByRole("button", { name: /перевірити мій кошик/i }).click();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("prior-receipt-0")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("prior-receipt-0")).toHaveTextContent("Повернуто на 86.84");
+    expect(screen.getByTestId("prior-receipt-0")).not.toHaveTextContent("-86.84");
   });
 });
 

@@ -1,7 +1,7 @@
 {
-  "source": "tests/contract/fixtures/tools_list_2026-09-05.json",
-  "source_schema_hash": "c914be0ad5ba84d1cc3fc269759f972d43cdbe58f67ac607c31c7cf4aee3db16",
-  "reviewed_at": "2026-09-06",
+  "source": "tests/contract/fixtures/tools_list_2026-09-07.json",
+  "source_schema_hash": "75a5b1078a7b4df2400e4d8a0d2bb59ef45313940b2db849fac86b5ffdc85d9b",
+  "reviewed_at": "2026-09-07",
   "names": [
     "silpo_add_or_update_cart_products",
     "silpo_add_or_update_certificates",

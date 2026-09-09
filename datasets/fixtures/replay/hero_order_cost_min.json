@@ -19,7 +19,8 @@
         "expected_delta": "599.85",
         "actual_delta": "599.85",
         "blocker_cleared": false,
-        "remaining_gap": "-35.85"
+        "remaining_gap": "-35.85",
+        "kind": "add"
       },
       {
         "session_id": "replay-owner-session",
@@ -30,7 +31,8 @@
         "expected_delta": "0.00",
         "actual_delta": "0.00",
         "blocker_cleared": false,
-        "remaining_gap": "-35.85"
+        "remaining_gap": "-35.85",
+        "kind": "add"
       }
     ]
   },

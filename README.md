@@ -46,11 +46,28 @@ reason; five of its refusal branches have been observed against the live server.
 server's own success flag is recorded and believed for nothing: an independent
 read-back decides the outcome, and the receipt separates "the write did what we agreed"
 from "the cart can now be checked out". A verified write that leaves the blocker
-standing offers a further round rather than reporting success. The recovery card
-(login, diagnosis, consent, receipt) is built and tested.
+standing offers a further round rather than reporting success — proven live twice this
+stage, both times landing on a cleared blocker. The recovery card (login, diagnosis,
+consent, receipt) shows every validation the cart carries and the delivery-channel
+comparison in Ukrainian, not raw codes; a second consent round no longer loses the
+first round's receipt.
+
+The hero flow also replays fully offline against a tracked bundle — no MCP, LLM, or
+Postgres call — reusing the same compiled graph the live path runs. Render's Frankfurt
+egress reaches the live MCP server (IV-06), and the full hero flow, including a second
+consent round, has been run end to end through a public Render deployment (IV-07).
+
+The write segment now offers a guest-facing undo. When a consented write leaves a known,
+unwanted diff — the wrong quantity landed, or the write cleared nothing and surfaced a
+new problem — the guest is offered a compensation (a second, separately allowlisted
+write tool, re-authorized and independently read back the same way as the original), not
+left to fix it by hand. A refused compensation gets one bounded retry rather than ending
+the session outright; every other refusal stays permanent. Reused the same single write
+call site and the same single authorization function as the original add path — no
+second place a write can happen from. 500 offline tests, `make gate` green.
 
 Golden and regression datasets for the write path, and the metrics computed from them,
-are deferred to G8+G9 where the project's evaluation work lives.
+are deferred to G9, cut from this stage.
 
 ## Problem
 

@@ -30,6 +30,7 @@ from decimal import Decimal
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from src.lantern.domain.action_proposal_builder import build_action_proposals
+from src.lantern.domain.compensation import build_compensation_proposal
 from src.lantern.domain.channel_snapshot_builder import (
     AmbiguousTimeSlotDataError,
     NoTimeSlotsAvailableError,
@@ -51,11 +52,7 @@ from src.lantern.domain.models import Cart, ConsentRecord, Money, Receipt
 from src.lantern.domain.normalizer import CartShapeError, normalize_cart
 from src.lantern.domain.rank import rank_candidates
 from src.lantern.graph.schemas import ExplainerOutput, SearchIntent
-from src.lantern.graph.state import (
-    MAX_WRITE_ROUNDS,
-    RecoveryState,
-    has_write_reserve,
-)
+from src.lantern.graph.state import RecoveryState, has_write_reserve
 from src.lantern.mcp.errors import McpAdapterError
 from src.lantern.memory.repository import IdempotencyState
 from src.lantern.policies.loader import PolicyRegistry
@@ -434,6 +431,33 @@ def make_write_guard_node(
         )
         quarantined = frozenset({proposal.tool_name}) if is_quarantined else frozenset()
 
+        # G8 (D51/D-G8-12): a compensation's receipt lives in
+        # `state["compensable"]` (still present -- `persist_receipt_node`
+        # carries it through, never clears it), but the ORIGINAL write's
+        # own `canonical_args` do not: `candidates` was already replaced
+        # with the compensation proposal itself by the time the guest
+        # consents. So `written_args` is re-loaded from Neon by the
+        # ORIGINAL write's own `action_id` -- the durable record, not
+        # in-memory state that has since moved on.
+        receipt = None
+        written_args = None
+        if proposal.kind == "compensate":
+            receipt = next(
+                (
+                    r
+                    for r in state.get("compensable", [])
+                    if r.action_id == proposal.compensates_action_id
+                ),
+                None,
+            )
+            if proposal.compensates_action_id is not None:
+                original_consent, _ = load_consent(proposal.compensates_action_id)
+                written_args = (
+                    original_consent.canonical_args
+                    if original_consent is not None
+                    else None
+                )
+
         decision = authorize_write(
             proposal=proposal,
             consent=consent,
@@ -445,8 +469,36 @@ def make_write_guard_node(
             live_tool_hash=live_hash,
             quarantined=quarantined,
             budget_reserve_ok=has_write_reserve(state, current_time),
+            receipt=receipt,
+            written_args=written_args,
         )
         if not decision.authorized:
+            # G8 (D51/D-G8-08): the add path stays fail-closed and
+            # terminal, unchanged -- a session that hits this refusal
+            # cannot be resurrected (`submit_consent` only accepts a new
+            # consent at `awaiting_consent`). A refused COMPENSATION would
+            # otherwise strand the guest holding an unwanted item with no
+            # recourse at all, so it gets ONE re-derived offer against the
+            # cart just re-read, bounded by `compensation_offers_used`.
+            if (
+                proposal.kind == "compensate"
+                and receipt is not None
+                and state.get("compensation_offers_used", 0) < 1
+            ):
+                retry_proposal = build_compensation_proposal(
+                    receipt, written_args or {}
+                )
+                if retry_proposal is not None:
+                    return {
+                        "status": "awaiting_consent",
+                        "candidates": [retry_proposal],
+                        "consent_action_id": None,
+                        "consent": None,
+                        "compensation_offers_used": (
+                            state.get("compensation_offers_used", 0) + 1
+                        ),
+                        "error": f"compensation refused, re-offered: {decision.reason}",
+                    }
             return {"status": "aborted", "error": f"write refused: {decision.reason}"}
 
         return {
@@ -465,6 +517,7 @@ def make_write_and_readback_node(
     claim_and_consume: Callable[[str, str, str, str], Tuple[bool, IdempotencyState]],
     mark_action: Callable[[str, str, str, IdempotencyState], None],
     now: Callable[[], datetime],
+    registry: PolicyRegistry,
 ) -> Node:
     """The ONLY node that calls a write tool (`CLAUDE.md` section 4).
     Claims the idempotency journal row and consumes the consent in one
@@ -503,13 +556,31 @@ def make_write_and_readback_node(
         except (CartShapeError, KeyError, McpAdapterError):
             read_back_cart = None
 
+        # G8 (D-G8-04): derived from the proposal's own args shape, on
+        # EVERY branch that reaches `_finalize` -- including the
+        # `just_claimed=False` reconciliation branch. A remove-form
+        # compensation's `canonical_args` has no `quantity` key at all
+        # (`{"productId": ...}` only), so reading `product["quantity"]`
+        # unconditionally raised `KeyError` AFTER the consent was consumed
+        # and the idempotency row claimed, and BEFORE `mark_action` --
+        # stranding the row `in_flight` forever. `abs(proposal.quantity)`
+        # is the removed quantity for a remove-form (the ActionProposal's
+        # own `quantity` is signed, D51); the restore-form keeps reading
+        # the wire `quantity` directly, since it IS present there.
+        expect_absent = "quantity" not in product
+        expected_quantity = (
+            abs(proposal.quantity)
+            if expect_absent
+            else Decimal(str(product["quantity"]))
+        )
         outcome = finalize_write_outcome(
             write_response,
             read_back_result=read_back_cart,
             before=cart,
             expected_delta=proposal.expected_delta,
             expected_product_id=product["productId"],
-            expected_quantity=Decimal(str(product["quantity"])),
+            expected_quantity=expected_quantity,
+            expect_absent=expect_absent,
         )
         journal_next: IdempotencyState = (
             "confirmed" if outcome.status == "receipt" else "unknown"
@@ -521,7 +592,20 @@ def make_write_and_readback_node(
         # exactly as consented and the cart stayed blocked by 2.98 UAH.
         # Recorded here so the receipt can answer the one the guest
         # actually asked -- can I check out now?
-        primary_code = state["diagnosis"].primary_code if state["diagnosis"] else None
+        #
+        # G8 (D51): for a COMPENSATION, `state["diagnosis"]` is the
+        # PRE-write diagnosis -- undoing a write can drop `productsTotal`
+        # below a DIFFERENT threshold than the one that write was closing,
+        # and both live order-level codes carry no `productId` for the
+        # new-error-validation check above to catch. Re-diagnosing the
+        # read-back cart is pure (`diagnose` takes no I/O), so it costs no
+        # MCP attempts and does not touch `has_write_reserve`'s budget.
+        if proposal.kind == "compensate" and read_back_cart is not None:
+            primary_code = diagnose(read_back_cart, registry).primary_code
+        else:
+            primary_code = (
+                state["diagnosis"].primary_code if state["diagnosis"] else None
+            )
         blocker_cleared, remaining_gap = _recovery_outcome(read_back_cart, primary_code)
 
         receipt = Receipt(
@@ -541,6 +625,7 @@ def make_write_and_readback_node(
             created_at=now(),
             blocker_cleared=blocker_cleared,
             remaining_gap=remaining_gap,
+            kind=proposal.kind,
         )
         updates: Dict[str, Any] = {
             "write_response": write_response,
@@ -621,47 +706,10 @@ def make_write_and_readback_node(
     return write_and_readback_node
 
 
-def make_persist_receipt_node(save_receipt: Callable[[Receipt], None]) -> Node:
-    """Thin persistence step: the domain decision (`WriteOutcome` ->
-    `Receipt`, and the idempotency journal transition) is already made in
-    `make_write_and_readback_node` -- this node's only job is writing the
-    already-built `Receipt` to Neon."""
-
-    def persist_receipt_node(state: RecoveryState) -> Dict[str, Any]:
-        receipt = state["receipt"]
-        if receipt is None:
-            return {"status": "aborted", "error": "persist_receipt_node: no receipt"}
-        save_receipt(receipt)
-
-        # A write can be correct and still leave the guest blocked: how much
-        # a write actually moves the cart cannot be known beforehand,
-        # because no catalogue endpoint exposes the price the cart will
-        # apply (measured live -- 96.49 advertised, 86.84 charged, 2.98
-        # short). Rather than guess a margin, the graph offers another
-        # round: re-diagnose the cart the write produced, propose against
-        # the remaining gap, and ask for consent again. Never a silent
-        # second write -- `interrupt_before` still stops at `write_guard`.
-        rounds_used = state.get("write_rounds_used", 0) + 1
-        if (
-            receipt.blocker_cleared
-            or state["status"] != "verified"
-            or rounds_used >= MAX_WRITE_ROUNDS
-        ):
-            return {"write_rounds_used": rounds_used}
-
-        return {
-            "write_rounds_used": rounds_used,
-            # Cleared so the next pass cannot reuse a consumed consent: the
-            # guard loads consent by this id, and the previous one is spent.
-            "consent_action_id": None,
-            "consent": None,
-            "candidates": [],
-            # Cleared with the consent: a receipt from the previous round
-            # left in place would be re-emitted as this round's outcome if
-            # the next one never reaches a write.
-            "receipt": None,
-            "write_response": None,
-            "status": "diagnosed",
-        }
-
-    return persist_receipt_node
+# `make_persist_receipt_node` moved to `graph/compensation_nodes.py` (G8,
+# D-G8-11): `nodes.py` was already past `CLAUDE.md` section 5's file-size
+# ceiling, and that node's own logic grew materially once it had to decide
+# whether to offer a compensation. `call_write_tool` stays a parameter of
+# exactly one factory in exactly this module -- see
+# `tests/unit/test_write_node_is_only_call_site_of_write_tool.py`, widened
+# in the same commit to scan all of `src/lantern/graph/**`.

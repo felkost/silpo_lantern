@@ -117,12 +117,13 @@ def test_data_missing_the_required_envelope_fields_is_rejected() -> None:
         jsonschema.validate({"event": "diagnosis", "data": {}}, _schema())
 
 
-@pytest.mark.parametrize("event_name", ["options", "consent_required", "error"])
+@pytest.mark.parametrize("event_name", ["consent_required", "error"])
 def test_every_event_name_without_its_own_shape_validates_minimally(
     event_name: str,
 ) -> None:
-    """`diagnosis` and `receipt` have their own required-field branches
-    (tested above); the other three still only need the shared envelope."""
+    """`diagnosis`, `receipt` and `options` have their own required-field
+    branches (tested above/below); the other two still only need the
+    shared envelope."""
     jsonschema.validate(
         {
             "event": event_name,
@@ -130,3 +131,51 @@ def test_every_event_name_without_its_own_shape_validates_minimally(
         },
         _schema(),
     )
+
+
+def _options_data(**overrides: object) -> dict:
+    data = {
+        "session_id": "s1",
+        "trace_id": "t1",
+        "version": {},
+        "candidates": [
+            {
+                "action_id": "a1",
+                "product_name": "Товар",
+                "quantity": "1",
+                "expected_delta": "86.84",
+                "guest_text_uk": "Додати товар",
+                "kind": "add",
+                "compensates_action_id": None,
+            }
+        ],
+    }
+    data.update(overrides)
+    return data
+
+
+def test_a_real_options_event_validates() -> None:
+    jsonschema.validate({"event": "options", "data": _options_data()}, _schema())
+
+
+def test_a_compensation_candidate_validates() -> None:
+    data = _options_data()
+    data["candidates"][0]["kind"] = "compensate"
+    data["candidates"][0]["compensates_action_id"] = "orig-1"
+    jsonschema.validate({"event": "options", "data": data}, _schema())
+
+
+def test_an_options_event_missing_kind_is_rejected() -> None:
+    """G8 (D51): a candidate whose kind is absent could be silently
+    rendered as the wrong screen -- the client must never guess."""
+    data = _options_data()
+    del data["candidates"][0]["kind"]
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate({"event": "options", "data": data}, _schema())
+
+
+def test_an_options_event_with_an_unknown_kind_is_rejected() -> None:
+    data = _options_data()
+    data["candidates"][0]["kind"] = "wipe"
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate({"event": "options", "data": data}, _schema())

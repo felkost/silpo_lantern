@@ -79,7 +79,12 @@ from src.lantern.mcp.auth import (  # noqa: E402
     build_redirect_handler,
     callback_handler,
 )
-from src.lantern.mcp.client import raise_on_tool_error  # noqa: E402
+from src.lantern.mcp.client import (  # noqa: E402
+    compute_per_tool_schema_hashes,
+    compute_schema_hash,
+    raise_on_tool_error,
+)
+from src.lantern.mcp.session import list_tools_raw  # noqa: E402
 from src.lantern.mcp.sanitizer import sanitize_payload  # noqa: E402
 from src.lantern.observability.tracer import install_trace_redaction  # noqa: E402
 from src.lantern.policies.loader import load_registry  # noqa: E402
@@ -290,6 +295,15 @@ def run_capture() -> None:
         "for the exact command sequence, shown before each run."
     )
 
+    # G8 (D-G8-03/T5): a live `tools/list` snapshot, taped alongside the
+    # MCP/LLM calls -- without it, `run_build` had nothing to compute
+    # `tool_schema_hashes`/`schema_hash` from and left both empty for
+    # hand-filling, which made `BundlePlayer`'s replayed drift check
+    # vacuous (it fell back to `("reviewed-hash", "reviewed-hash",
+    # False)` for every tool, per `graph/replay.py`).
+    print("  MCP call: tools/list")
+    tools_list_raw = list_tools_raw(server_url=DEFAULT_MCP_URL)
+
     RAW_DIR.mkdir(parents=True, exist_ok=True)
     out = RAW_DIR / f"replay_tape_{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}.json"
     out.write_text(
@@ -299,6 +313,7 @@ def run_capture() -> None:
                 "planner": planner_tape,
                 "explainer": explainer_tape,
                 "final_status": state["status"],
+                "tools_list": tools_list_raw,
             },
             indent=2,
             ensure_ascii=False,
@@ -312,9 +327,21 @@ def run_capture() -> None:
 # ------------------------------------------------------------------ build --
 
 
-def run_build(tape_path: Path) -> None:
-    raw = json.loads(tape_path.read_text(encoding="utf-8"))
+def _build_draft_from_tape(raw: Dict[str, Any]) -> Dict[str, Any]:
+    """Pure transform: raw tape -> the unsanitized-nothing-yet-replayed
+    draft bundle dict. Split out from `run_build` so it can be tested
+    offline against a synthetic tape, with no live call, no replay, and
+    no file write (`tests/unit/test_recorder_emits_tool_schema_hashes.py`).
 
+    G8 (D-G8-03/T5): `tool_schema_hashes` and both `schema_hash` fields
+    used to be left empty "for hand-filling" -- `BundlePlayer` then fell
+    back to `("reviewed-hash", "reviewed-hash", False)` for every tool,
+    making the replayed schema-drift check vacuous. Filled here from the
+    tape's own `tools_list` snapshot (`run_capture` tapes it via
+    `mcp.session.list_tools_raw`) whenever present; a tape recorded before
+    this fix (no `tools_list` key) still builds, with both fields left
+    empty exactly as before -- an old raw tape does not become unusable.
+    """
     shared_aliases: Dict[str, str] = {}
     mcp_queues: Dict[str, List[Dict[str, Any]]] = {}
     for tool_name, args, response in raw["mcp"]:
@@ -334,10 +361,25 @@ def run_build(tape_path: Path) -> None:
         key = response_key(tool_name, sanitized_args)
         mcp_queues.setdefault(key, []).append(sanitized_response)
 
+    tools_list_raw = raw.get("tools_list")
+    if tools_list_raw:
+        whole_hash = compute_schema_hash(tools_list_raw)
+        per_tool = compute_per_tool_schema_hashes(tools_list_raw)
+        # reviewed == live: this capture IS the live baseline the write
+        # was authorized against at record time, so both sides of the
+        # drift check agree -- exactly what a genuine "reviewed" state
+        # means, not a placeholder pretending to be one.
+        tool_schema_hashes = {
+            name: (tool_hash, tool_hash, False) for name, tool_hash in per_tool.items()
+        }
+    else:
+        whole_hash = ""
+        tool_schema_hashes = {}
+
     bundle_payload = {
         "recorded_at": datetime.now(timezone.utc).isoformat(),
         "versions": {
-            "schema_hash": "",  # filled by hand from the live tools/list capture
+            "schema_hash": whole_hash,
             "policy_registry_version": policy_registry_version(),
         },
         "inputs": {
@@ -345,15 +387,15 @@ def run_build(tape_path: Path) -> None:
             "trace_id": "replay-trace",
             "owner": "replay-owner",
         },
-        "tool_schema_hashes": {},
+        "tool_schema_hashes": tool_schema_hashes,
         "mcp": mcp_queues,
         "llm": {"planner": raw["planner"], "explainer": raw["explainer"]},
     }
 
-    draft = {
+    return {
         "fixture_id": "replay_hero_order_cost_min",
         "origin": "recorded",
-        "source_schema_hash": "",
+        "source_schema_hash": whole_hash,
         "generator_version": "replay-recorder-v1",
         "seed": None,
         "transformations": [
@@ -362,9 +404,14 @@ def run_build(tape_path: Path) -> None:
             "synthetic coordinates substituted for the real address, "
             "post-sanitization",
         ],
-        "expected_outcome": {},  # filled below, from replaying this bundle
+        "expected_outcome": {},  # filled by run_build, from replaying this bundle
         "payload": bundle_payload,
     }
+
+
+def run_build(tape_path: Path) -> None:
+    raw = json.loads(tape_path.read_text(encoding="utf-8"))
+    draft = _build_draft_from_tape(raw)
 
     # Self-consistency: replay this draft bundle and use ITS OWN result
     # as the expected outcome, per graph/replay.py's module docstring.

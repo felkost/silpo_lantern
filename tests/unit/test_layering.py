@@ -254,20 +254,25 @@ def test_domain_and_safety_never_import_io_libraries():
     assert not violations, "\n".join(violations)
 
 
-def test_write_allowlist_constant_only_imported_within_safety():
-    """Project invariant: only one node in the graph may call a write
-    tool — enforced here by making the write-allowlist constant itself
-    unimportable from outside `lantern/safety/**`. Once
-    `src/lantern/safety/write_guard.py` defines `WRITE_TOOL_ALLOWLIST`, any
-    module outside `safety` importing it directly (instead of going through
-    the Write Guard's own authorization function) fails this test.
-    """
-    allowlist_module = SRC / "lantern" / "safety" / "write_guard.py"
-    if not allowlist_module.exists():
-        return
+# G8 (D-G8-11 audit): widened from the single literal `WRITE_TOOL_ALLOWLIST`
+# to all three write-allowlist constants `write_guard.py` now defines --
+# `COMPENSATION_TOOL_ALLOWLIST` and `_ALLOWLIST_BY_KIND` are exactly as
+# security-relevant as the original: importing either directly bypasses
+# `authorize_write`'s own binding checks the same way.
+_ALLOWLIST_CONSTANT_NAMES = {
+    "WRITE_TOOL_ALLOWLIST",
+    "COMPENSATION_TOOL_ALLOWLIST",
+    "_ALLOWLIST_BY_KIND",
+}
+
+
+def _write_allowlist_violations(files) -> list[str]:
     violations: list[str] = []
-    for path in _iter_write_allowlist_scan_files():
-        rel = path.relative_to(SRC.parent)
+    for path in files:
+        try:
+            rel = path.relative_to(SRC.parent)
+        except ValueError:
+            rel = path  # a synthetic file outside the real tree (test-only)
         if "safety" in path.parts:
             continue
         tree = ast.parse(path.read_text(encoding="utf-8"))
@@ -275,8 +280,39 @@ def test_write_allowlist_constant_only_imported_within_safety():
             if isinstance(node, ast.ImportFrom) and node.module:
                 if "write_guard" in node.module:
                     for alias in node.names:
-                        if alias.name == "WRITE_TOOL_ALLOWLIST":
-                            violations.append(
-                                f"{rel}: imports WRITE_TOOL_ALLOWLIST directly"
-                            )
+                        if alias.name in _ALLOWLIST_CONSTANT_NAMES:
+                            violations.append(f"{rel}: imports {alias.name} directly")
+    return violations
+
+
+def test_write_allowlist_constant_only_imported_within_safety():
+    """Project invariant: only one node in the graph may call a write
+    tool — enforced here by making the write-allowlist constants
+    themselves unimportable from outside `lantern/safety/**`. Once
+    `src/lantern/safety/write_guard.py` defines them, any module outside
+    `safety` importing one directly (instead of going through the Write
+    Guard's own authorization function) fails this test.
+    """
+    allowlist_module = SRC / "lantern" / "safety" / "write_guard.py"
+    if not allowlist_module.exists():
+        return
+    violations = _write_allowlist_violations(_iter_write_allowlist_scan_files())
     assert not violations, "\n".join(violations)
+
+
+def test_write_allowlist_tripwire_detects_a_synthetic_violation():
+    """Proves the tripwire actually fires, independent of whether any real
+    file currently violates it -- mirrors this project's own DR-09
+    synthetic-violation practice above."""
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        bad_file = Path(tmp) / "src" / "lantern" / "graph" / "bad_module.py"
+        bad_file.parent.mkdir(parents=True)
+        bad_file.write_text(
+            "from src.lantern.safety.write_guard import COMPENSATION_TOOL_ALLOWLIST\n",
+            encoding="utf-8",
+        )
+        violations = _write_allowlist_violations([bad_file])
+    assert len(violations) == 1
+    assert "COMPENSATION_TOOL_ALLOWLIST" in violations[0]

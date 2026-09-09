@@ -215,6 +215,10 @@ class ActionProposal(BaseModel):
     action_id: str
     tool_name: str
     product_name: str
+    # Signed change to the line: a positive increment for `kind="add"`, a
+    # negative reduction for `kind="compensate"` (G8, D51). Never the wire
+    # `quantity` itself, which for a restore-form compensation is the
+    # RESTORED total, not the delta.
     quantity: Decimal
     expected_delta: Money
     canonical_args: dict[str, Any]
@@ -224,6 +228,17 @@ class ActionProposal(BaseModel):
     # `model_copy(update=...)` since this model is frozen. Default keeps
     # every existing construction site unbroken.
     guest_text_uk: str = ""
+    # G8 (D51): `kind` selects the per-kind write allowlist inside
+    # `safety/write_guard.py` -- it never enters `canonical_args`, which is
+    # the byte-exact wire payload `args_hash` binds; a routing hint inside
+    # it would make the hashed object diverge from the call. Defaulted so
+    # every existing construction site (the ordinary add path) is
+    # untouched.
+    kind: Literal["add", "compensate"] = "add"
+    # Set only for `kind="compensate"`: the `action_id` of the `Receipt`
+    # this proposal undoes. The Write Guard refuses any `add` proposal
+    # that sets this (C8) and any `compensate` proposal that does not (C4).
+    compensates_action_id: Optional[str] = None
 
 
 class ConsentRecord(BaseModel):
@@ -283,3 +298,9 @@ class Receipt(BaseModel):
     blocker_cleared: bool = False
     remaining_gap: Optional[Money] = None
     created_at: datetime
+    # G8 (D51/D-G8-15): distinguishes an ordinary add-path receipt from a
+    # compensation one, so G9's `CostDeltaAccuracy` can exclude
+    # compensation rows -- their `expected_delta` is derived from the same
+    # figure as `actual_delta`, so every such row is a guaranteed-zero-error
+    # sample. Defaulted so every existing construction site is untouched.
+    kind: Literal["add", "compensate"] = "add"

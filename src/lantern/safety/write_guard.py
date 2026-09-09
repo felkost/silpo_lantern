@@ -15,10 +15,14 @@ refuse silently is indistinguishable from one that has a bug.
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Any, Final, FrozenSet, Literal, Optional
+from typing import Any, Final, FrozenSet, Literal, Mapping, Optional
 
 from pydantic import BaseModel, ConfigDict
 
+from src.lantern.domain.compensation import (
+    compensation_arg_errors,
+    receipt_is_compensable,
+)
 from src.lantern.domain.consent_hash import compute_args_hash, compute_state_hash
 from src.lantern.domain.diagnosis import canonical_diff
 from src.lantern.domain.models import (
@@ -28,6 +32,7 @@ from src.lantern.domain.models import (
     CartDiff,
     ConsentRecord,
     Money,
+    Receipt,
 )
 
 # G5+G6 (D-G5-04): never derived from a live `tools/list` annotation --
@@ -38,6 +43,26 @@ from src.lantern.domain.models import (
 WRITE_TOOL_ALLOWLIST: Final[frozenset[str]] = frozenset(
     {"silpo_add_or_update_cart_products"}
 )
+
+# G8 (D51/D-G8-01): the compensation kind's own allowlist -- a dated
+# divergence from plan section 11.1's "hero keeps one write-tool" sentence
+# (amendment A9), not silent scope creep.
+# `silpo_remove_cart_products` is needed because the add tool's own schema
+# (`quantity: exclusiveMinimum 0`) cannot express "set this line to zero"
+# -- a write that ADDED a line (the common case, since candidates come
+# from a product search) has no inverse without it.
+COMPENSATION_TOOL_ALLOWLIST: Final[frozenset[str]] = frozenset(
+    {"silpo_add_or_update_cart_products", "silpo_remove_cart_products"}
+)
+
+# Selected by `ActionProposal.kind`. `.get(kind, frozenset())` in
+# `authorize_write` below means an unrecognised kind gets the EMPTY set --
+# refused by default, never inheriting the widest list -- so a future
+# third kind is safe until explicitly given its own allowlist here.
+_ALLOWLIST_BY_KIND: Final[dict[str, FrozenSet[str]]] = {
+    "add": WRITE_TOOL_ALLOWLIST,
+    "compensate": COMPENSATION_TOOL_ALLOWLIST,
+}
 
 
 class WriteDecision(BaseModel):
@@ -69,7 +94,7 @@ class WriteOutcome(BaseModel):
     actual_delta: Optional[Money]
 
 
-def _canonical_args_shape_errors(canonical_args: dict[str, Any]) -> list[str]:
+def _add_args_shape_errors(canonical_args: dict[str, Any]) -> list[str]:
     """D-G5-17: the guard's own strict shape check is the authority, not
     the live `inputSchema` -- measured (M4) that schema has no
     `additionalProperties: false`, does not require `addQuantity`, and
@@ -77,6 +102,13 @@ def _canonical_args_shape_errors(canonical_args: dict[str, Any]) -> list[str]:
     never intended to send (extra keys, a missing `addQuantity`, more
     than one product) must be refused here even though the live schema
     alone would accept it.
+
+    G8 (D-G8-03): renamed from `_canonical_args_shape_errors` -- body
+    byte-for-byte unchanged (`test_write_guard_compensation.py`'s own
+    `test_add_shape_check_is_unchanged` pins that) -- because a second
+    write-capable tool with a genuinely different argument shape now
+    exists (`_remove_args_shape_errors` below), and this function is no
+    longer the only one `authorize_write` may need.
     """
     errors: list[str] = []
     allowed_top = {"shoppingCartId", "products"}
@@ -107,6 +139,40 @@ def _canonical_args_shape_errors(canonical_args: dict[str, Any]) -> list[str]:
     return errors
 
 
+def _remove_args_shape_errors(canonical_args: dict[str, Any]) -> list[str]:
+    """G8 (D-G8-03): the remove tool's live schema is `minItems: 1` with
+    NO `maxItems` -- this local check is what stops one malformed args
+    object from naming every product in the cart. Exactly
+    `{shoppingCartId, products}`, exactly one product, product keys
+    exactly `{productId}` -- no `quantity` key at all, since a removal
+    cannot express one and its presence would only invite confusion with
+    the add tool's shape.
+    """
+    errors: list[str] = []
+    allowed_top = {"shoppingCartId", "products"}
+    if set(canonical_args) != allowed_top:
+        errors.append(f"canonical_args top-level keys must be exactly {allowed_top}")
+        return errors
+
+    products = canonical_args.get("products")
+    if not isinstance(products, list) or len(products) != 1:
+        errors.append("canonical_args.products must contain exactly one product")
+        return errors
+
+    product = products[0]
+    allowed_product = {"productId"}
+    if set(product) != allowed_product:
+        errors.append(f"removal product keys must be exactly {allowed_product}")
+
+    return errors
+
+
+def _shape_errors(tool_name: str, canonical_args: dict[str, Any]) -> list[str]:
+    if tool_name == "silpo_remove_cart_products":
+        return _remove_args_shape_errors(canonical_args)
+    return _add_args_shape_errors(canonical_args)
+
+
 def authorize_write(
     proposal: ActionProposal,
     consent: ConsentRecord,
@@ -118,18 +184,42 @@ def authorize_write(
     live_tool_hash: str,
     quarantined: FrozenSet[str],
     budget_reserve_ok: bool,
+    *,
+    receipt: Optional[Receipt] = None,
+    written_args: Optional[Mapping[str, Any]] = None,
 ) -> WriteDecision:
     """`owner`/`session_id`/`consent_expired`/`budget_reserve_ok` are
     explicit parameters rather than derived inside this function, because
     none of them is recoverable from `ActionProposal`, `Cart`, or
     `ConsentRecord` alone -- the caller (the Write Guard node) is the one
-    place that has all four."""
+    place that has all four.
+
+    G8 (D51): `receipt`/`written_args` are keyword-only and default to
+    `None` so every existing call site (the ordinary add path) is
+    untouched. `receipt` is the write a `kind="compensate"` proposal
+    claims to undo; `written_args` is that ORIGINAL write's own
+    `canonical_args`, re-loaded by the caller from Neon by
+    `proposal.compensates_action_id` (D-G8-12) -- never from in-memory
+    state, which by the time a guest consents to a compensation has
+    already been replaced with the compensation proposal itself.
+    """
     canonical_args = proposal.canonical_args
 
-    if proposal.tool_name not in WRITE_TOOL_ALLOWLIST:
+    # G8 (D51): selecting the allowlist by kind, rather than checking
+    # `proposal.tool_name in WRITE_TOOL_ALLOWLIST` directly, is what keeps
+    # the add path's behaviour byte-for-byte unchanged (`kind="add"` maps
+    # to exactly `WRITE_TOOL_ALLOWLIST`, the identical object) while also
+    # folding "unrecognised kind" into this same refusal: `.get` with an
+    # empty-set default means a future third kind is refused by default,
+    # never inheriting the widest list.
+    allowlist = _ALLOWLIST_BY_KIND.get(proposal.kind, frozenset())
+    if proposal.tool_name not in allowlist:
         return WriteDecision(
             authorized=False,
-            reason=f"tool '{proposal.tool_name}' is not on the write allowlist",
+            reason=(
+                f"tool '{proposal.tool_name}' is not on the write allowlist "
+                f"for kind '{proposal.kind}'"
+            ),
             canonical_args=canonical_args,
         )
     if proposal.tool_name in GUEST_ONLY_ACTIONS:
@@ -194,11 +284,69 @@ def authorize_write(
             canonical_args=canonical_args,
         )
 
-    shape_errors = _canonical_args_shape_errors(canonical_args)
+    shape_errors = _shape_errors(proposal.tool_name, canonical_args)
     if shape_errors:
         return WriteDecision(
             authorized=False,
             reason="; ".join(shape_errors),
+            canonical_args=canonical_args,
+        )
+
+    # G8 (D51): compensation-specific binding, checked only for
+    # `kind="compensate"` -- C1 (no allowlist for the kind) is already
+    # folded into the allowlist check above.
+    if proposal.kind == "compensate":
+        if receipt is None:
+            return WriteDecision(
+                authorized=False,
+                reason="compensation requires the receipt of the write it undoes",
+                canonical_args=canonical_args,
+            )
+        if not receipt_is_compensable(receipt):
+            return WriteDecision(
+                authorized=False,
+                reason=(
+                    "compensation refused: the write it would undo is not "
+                    "compensable (never verified, or already cleared the "
+                    "blocker)"
+                ),
+                canonical_args=canonical_args,
+            )
+        if proposal.compensates_action_id != receipt.action_id:
+            return WriteDecision(
+                authorized=False,
+                reason="compensation does not name the receipt it was built from",
+                canonical_args=canonical_args,
+            )
+        if receipt.owner != owner or receipt.session_id != session_id:
+            return WriteDecision(
+                authorized=False,
+                reason="receipt belongs to a different owner or session",
+                canonical_args=canonical_args,
+            )
+        # plan section 11: "жодної автокомпенсації при паралельній зміні
+        # кошика" -- binds the compensation to the RECEIPT's own
+        # after_state, not merely the consent's state_hash above (which
+        # binds to the state at CONSENT time, a different window). Either
+        # window moving refuses.
+        after_cart = Cart.model_validate(receipt.after_state)
+        if compute_state_hash(re_read_cart) != compute_state_hash(after_cart):
+            return WriteDecision(
+                authorized=False,
+                reason="cart moved since the write being compensated",
+                canonical_args=canonical_args,
+            )
+        errors = compensation_arg_errors(proposal, receipt, written_args or {})
+        if errors:
+            return WriteDecision(
+                authorized=False,
+                reason="; ".join(errors),
+                canonical_args=canonical_args,
+            )
+    elif proposal.compensates_action_id is not None:
+        return WriteDecision(
+            authorized=False,
+            reason="an ordinary proposal may not name a receipt",
             canonical_args=canonical_args,
         )
 
@@ -220,6 +368,7 @@ def finalize_write_outcome(
     expected_delta: Money,
     expected_product_id: str,
     expected_quantity: Decimal,
+    expect_absent: bool = False,
 ) -> WriteOutcome:
     """`mcp_write_response["success"]` is recorded nowhere in this
     function's decision -- the tool's own schema documents it as proof
@@ -228,6 +377,12 @@ def finalize_write_outcome(
     read-back whose diff matches the consented action by *identity*, not
     merely by total (D-G5-19): a coincidentally equal total from an
     unrelated concurrent change is `unverified`, not a receipt.
+
+    G8 (D51): `expect_absent=True` is the compensation remove-form's own
+    identity rule, mirrored from the add path's -- exactly one REMOVED
+    entry matching `expected_product_id` at `expected_quantity`, nothing
+    else changed. Defaults to `False`, so every existing call site (the
+    add path) is byte-for-byte unchanged.
     """
     del mcp_write_response  # deliberately unused -- see the docstring above
 
@@ -251,44 +406,85 @@ def finalize_write_outcome(
             status="unverified", reason=str(exc), diff=None, actual_delta=None
         )
 
-    if diff.removed:
-        return WriteOutcome(
-            status="unverified",
-            reason="read-back shows removed line items, none were consented",
-            diff=diff,
-            actual_delta=diff.total_delta,
-        )
+    if expect_absent:
+        matched = [
+            item for item in diff.removed if item.product_id == expected_product_id
+        ]
+        other_changes = [
+            item for item in diff.removed if item.product_id != expected_product_id
+        ]
+        other_changes += list(diff.added)
+        # A price-only change on an UNTOUCHED sibling line (a multi-buy
+        # promotion re-pricing the rest of the cart once our product
+        # leaves) is tolerated, not treated as "something else changed" --
+        # otherwise a compensation that actually happened would be
+        # reported `unverified`. Only a QUANTITY change on another line is
+        # still an unexplained concurrent change.
+        other_changes += [
+            after
+            for before_item, after in diff.changed
+            if before_item.quantity != after.quantity
+        ]
 
-    matched = [item for item in diff.added if item.product_id == expected_product_id]
-    matched += [
-        after
-        for _before, after in diff.changed
-        if after.product_id == expected_product_id
-    ]
-    other_changes = [
-        item for item in diff.added if item.product_id != expected_product_id
-    ]
-    other_changes += [
-        after
-        for _before, after in diff.changed
-        if after.product_id != expected_product_id
-    ]
+        if len(matched) != 1 or other_changes:
+            return WriteOutcome(
+                status="unverified",
+                reason=(
+                    "read-back diff does not match the consented removal " "by identity"
+                ),
+                diff=diff,
+                actual_delta=diff.total_delta,
+            )
+        if matched[0].quantity != expected_quantity:
+            return WriteOutcome(
+                status="unverified",
+                reason="read-back removed a different quantity than the consented one",
+                diff=diff,
+                actual_delta=diff.total_delta,
+            )
+    else:
+        if diff.removed:
+            return WriteOutcome(
+                status="unverified",
+                reason="read-back shows removed line items, none were consented",
+                diff=diff,
+                actual_delta=diff.total_delta,
+            )
 
-    if len(matched) != 1 or other_changes:
-        return WriteOutcome(
-            status="unverified",
-            reason="read-back diff does not match the consented product by identity",
-            diff=diff,
-            actual_delta=diff.total_delta,
-        )
+        matched = [
+            item for item in diff.added if item.product_id == expected_product_id
+        ]
+        matched += [
+            after
+            for _before, after in diff.changed
+            if after.product_id == expected_product_id
+        ]
+        other_changes = [
+            item for item in diff.added if item.product_id != expected_product_id
+        ]
+        other_changes += [
+            after
+            for _before, after in diff.changed
+            if after.product_id != expected_product_id
+        ]
 
-    if matched[0].quantity != expected_quantity:
-        return WriteOutcome(
-            status="unverified",
-            reason="read-back quantity does not match the consented quantity",
-            diff=diff,
-            actual_delta=diff.total_delta,
-        )
+        if len(matched) != 1 or other_changes:
+            return WriteOutcome(
+                status="unverified",
+                reason=(
+                    "read-back diff does not match the consented product " "by identity"
+                ),
+                diff=diff,
+                actual_delta=diff.total_delta,
+            )
+
+        if matched[0].quantity != expected_quantity:
+            return WriteOutcome(
+                status="unverified",
+                reason="read-back quantity does not match the consented quantity",
+                diff=diff,
+                actual_delta=diff.total_delta,
+            )
 
     # A differing total is NOT a verification failure. The identity checks
     # above already established that exactly the consented product landed,
