@@ -55,7 +55,12 @@ first round's receipt.
 The hero flow also replays fully offline against a tracked bundle — no MCP, LLM, or
 Postgres call — reusing the same compiled graph the live path runs. Render's Frankfurt
 egress reaches the live MCP server (IV-06), and the full hero flow, including a second
-consent round, has been run end to end through a public Render deployment (IV-07).
+consent round, has been run end to end against the deployed API (IV-07).
+
+**The web interface itself is not yet served.** The deployment runs the API only: the root
+URL returns a 404 and the recovery card, which exists and is tested, has never been openable
+in a browser. Making it reachable — together with a logout, a session cookie in place of an
+id in the URL, and a cap on what an anonymous visitor can spend — is the next piece of work.
 
 The write segment now offers a guest-facing undo. When a consented write leaves a known,
 unwanted diff — the wrong quantity landed, or the write cleared nothing and surfaced a
