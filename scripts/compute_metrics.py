@@ -37,6 +37,7 @@ from src.lantern.domain.metrics import (
     FalseRecoveryRow,
     JournalClaim,
     RecoveryEpisode,
+    WriteDeltaRow,
     consent_binding_integrity,
     cost_delta_accuracy,
     disclosure_rate,
@@ -44,6 +45,7 @@ from src.lantern.domain.metrics import (
     readback_coverage,
     recovery_completion_rate,
     unauthorized_write_rate,
+    write_delta_fidelity,
 )
 
 
@@ -54,22 +56,42 @@ def _decimal_or_none(value: Any) -> Optional[Decimal]:
 METRICS_OUTPUT_PATH = PROJECT_ROOT / "docs" / "evidence" / "metrics.json"
 
 
-def _load_run_records(evidence_dir: Path) -> List[Dict[str, Any]]:
-    """Reads every `g9_run_records_*.json` the repeat runs emitted (D80).
-    A missing directory is an empty population, not an error -- the
-    metrics then honestly report N/A, which is what a repository with no
-    run yet should say."""
+def _load_run_records(
+    evidence_dir: Path, population: str = "offline"
+) -> List[Dict[str, Any]]:
+    """Reads the repeat runs' emitted records for ONE population (D80,
+    D84).
+
+    Both configurations write `g9_run_records_*.json` into the same
+    directory, so globbing the pattern merged them: running the offline
+    and live repeats once each doubled every denominator from 33 to 66
+    and produced numbers describing neither population. Nothing would have
+    flagged it -- the values stay 1.00 and 0.00 either way.
+
+    A missing directory is an empty population, not an error. A file that
+    declares no population is an error: guessing which one it belongs to
+    is exactly the silent merge this exists to prevent.
+    """
     records: List[Dict[str, Any]] = []
     if not evidence_dir.is_dir():
         return records
     for path in sorted(evidence_dir.glob("g9_run_records_*.json")):
         document = json.loads(path.read_text(encoding="utf-8"))
-        records.extend(document.get("records", []))
+        declared = document.get("population")
+        if declared is None:
+            raise ValueError(
+                f"{path.name} declares no population -- it predates D84 and "
+                "cannot be assigned to one without guessing"
+            )
+        if declared == population:
+            records.extend(document.get("records", []))
     return records
 
 
-def build_metrics_report(*, evidence_dir: Path) -> Dict[str, Any]:
-    records = _load_run_records(evidence_dir)
+def build_metrics_report(
+    *, evidence_dir: Path, population: str = "offline"
+) -> Dict[str, Any]:
+    records = _load_run_records(evidence_dir, population)
 
     claims: List[JournalClaim] = []
     consents_by_action_id: Dict[str, object] = {}
@@ -78,6 +100,7 @@ def build_metrics_report(*, evidence_dir: Path) -> Dict[str, Any]:
     cost_delta_rows: List[CostDeltaRow] = []
     episodes: List[RecoveryEpisode] = []
     disclosure_rows: List[DisclosureRow] = []
+    write_delta_rows: List[WriteDeltaRow] = []
     false_recovery_rows: List[FalseRecoveryRow] = []
 
     for record in records:
@@ -113,6 +136,14 @@ def build_metrics_report(*, evidence_dir: Path) -> Dict[str, Any]:
                     actual_delta=_decimal_or_none(receipt.get("actual_delta")),
                 )
             )
+            cart_delta = receipt.get("cart_delta")
+            if cart_delta is not None:
+                write_delta_rows.append(
+                    WriteDeltaRow(
+                        actual_delta=_decimal_or_none(receipt.get("actual_delta")),
+                        cart_delta=Decimal(str(cart_delta)),
+                    )
+                )
             consented = receipt.get("consented_args_hash")
             written = receipt.get("written_args_hash")
             if consented is not None and written is not None:
@@ -134,7 +165,15 @@ def build_metrics_report(*, evidence_dir: Path) -> Dict[str, Any]:
         "UnauthorizedWriteRate": unauthorized_write_rate(claims, consents_by_action_id),
         "ReadbackCoverage": readback_coverage(claims, receipts_by_action_id),
         "ConsentBindingIntegrity": consent_binding_integrity(consent_binding_rows),
-        "CostDeltaAccuracy": cost_delta_accuracy(cost_delta_rows),
+        # D82: what WE control -- the recorded delta against the cart's
+        # own movement. Gated at 1.00 absolute.
+        "WriteDeltaFidelity": write_delta_fidelity(write_delta_rows),
+        # D82: section 13.3's `CostDeltaAccuracy`, unchanged in
+        # computation and renamed for what it actually measures -- how
+        # well the SEARCH price predicts the price the cart charges.
+        # Reported without a gate: it is an observation of Silpo's
+        # discount policy (D68/D76), not of this system's behaviour.
+        "SearchPriceFidelity": cost_delta_accuracy(cost_delta_rows),
         "RecoveryCompletionRate": recovery_completion_rate(episodes),
         "FalseRecovery": false_recovery(false_recovery_rows),
         "DisclosureRate": disclosure_rate(disclosure_rows),

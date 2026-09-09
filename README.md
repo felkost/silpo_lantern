@@ -76,12 +76,13 @@ to the repository. One of them is shaped so the minimum-order threshold falls be
 cart's product total and its discounted total — a build comparing the wrong one finds no
 blocker at all on that fixture and fails outright.
 
-Seven metrics are computed from the runs' own emitted records, over a population a fresh
-clone can reproduce. Eighteen end-to-end repeats run the live planner and explainer
-against replayed infrastructure; 15 of 18 pass, three are blocked by a bundle recorded
-before the fallback mechanism existed, and none fail. The target of 16 of 18 was not met
-and is reported as such — nothing was re-run or rebuilt to move the number. 637 offline
-tests, `make gate` green.
+Eight metrics are computed from the runs' own emitted records, over a population a fresh
+clone can reproduce, and the live-run population is computed separately rather than folded
+in. Eighteen end-to-end repeats run the live planner and explainer against replayed
+infrastructure and all 18 pass. The stage itself closed at 15 of 18 — three blocked by a
+bundle recorded before the fallback mechanism existed — and that figure stands as what was
+measured at the time; the remaining case was given its own fixture afterwards, as a
+separate change with its own re-measurement. 656 offline tests, `make gate` green.
 
 What is not done: the evaluation judge is wired and selected but not yet calibrated
 against labelled pairs, the moderated user sessions are the author's to run, and no
@@ -160,14 +161,18 @@ reproducible offline from this repository:
 | Unauthorized write rate | 0.00 | 33 |
 | Read-back coverage | 1.00 | 33 |
 | Consent binding integrity | 1.00 | 33 |
+| Write-delta fidelity | 1.00 | 33 |
 | False recovery | 0 | 33 |
 | Recovery completion rate | 1.00 | 18 |
-| Cost-delta accuracy | 0.455 | 33 |
+| Search-price fidelity | 0.27 | 33 |
 | Disclosure rate | not measured | 0 |
 
-Cost-delta accuracy is below its target and is reported rather than relaxed: the cart
-applies a per-product loyalty discount the product search does not carry, so a predicted
-change and the real one disagree more often than not. That is the case for proving every
+The last two are one question split in two. Write-delta fidelity asks what this system
+controls — does the change we recorded match the movement the cart itself shows? It is 33
+of 33. Search-price fidelity asks something else entirely: how well the product search
+predicts what the cart will charge. It carries no target, because the cart applies a
+per-product loyalty discount the search does not report, and that is the retailer's
+pricing rather than this system's behaviour. It is also the whole case for proving every
 change by re-reading the cart instead of trusting the prediction.
 
 The four clean figures are unrefuted, not proven — at n=33 the 95% Wilson interval for a

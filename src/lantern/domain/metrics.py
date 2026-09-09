@@ -140,6 +140,40 @@ def cost_delta_accuracy(rows: Sequence[CostDeltaRow]) -> MetricResult:
 
 
 @dataclass(frozen=True)
+class WriteDeltaRow:
+    """One receipt's recorded delta versus the cart's OWN before/after
+    movement (D82).
+
+    Split out from `cost_delta_accuracy`, which compares the delta against
+    the price the product SEARCH advertised. That comparison was gated at
+    "exact" on an assumption D68 disproved: the cart applies a per-product
+    loyalty discount the search does not carry (D76), so the two disagree
+    on most receipts no matter how correct the implementation is.
+
+    This one asks the question the project actually controls -- does the
+    number we recorded match what the cart did? -- and is gated at 1.00
+    absolute. `actual_delta` is `None` on an unverified write, where no
+    delta was recorded at all; such a row is EXCLUDED rather than counted
+    as a mismatch, because an honest "we do not know" must not be turned
+    into a manufactured defect.
+    """
+
+    actual_delta: Optional[Decimal]
+    cart_delta: Decimal
+
+
+def write_delta_fidelity(rows: Sequence[WriteDeltaRow]) -> MetricResult:
+    eligible = [r for r in rows if r.actual_delta is not None]
+    n = len(eligible)
+    if n == 0:
+        return MetricResult(value=None, n=0)
+    # Decimal equality, not string equality: 14.30 and 14.3 are the same
+    # money, and a receipt must not fail on trailing-zero formatting.
+    matched = sum(1 for r in eligible if r.actual_delta == r.cart_delta)
+    return MetricResult(value=matched / n, n=n)
+
+
+@dataclass(frozen=True)
 class RecoveryEpisode:
     """One participant/cart/task/condition episode (plan section 13.1) --
     retries and resumes within one episode do not create a new one."""

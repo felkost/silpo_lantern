@@ -12,11 +12,25 @@ import json
 from src.lantern.config import PROJECT_ROOT
 from scripts.compute_metrics import METRICS_OUTPUT_PATH, build_metrics_report
 
+# D82: `CostDeltaAccuracy` (plan section 13.3's name) became TWO entries.
+# It compared the recorded delta against the price the product SEARCH
+# advertised and was gated at "exact" -- on an assumption D68 disproved,
+# since the cart applies a per-product loyalty discount the search does
+# not carry (D76). One question was really two:
+#
+#   WriteDeltaFidelity  -- recorded delta vs the cart's own before/after
+#                          movement. Ours, gated 1.00 absolute.
+#   SearchPriceFidelity -- the original computation, unchanged, reported
+#                          without a gate as the observation of Silpo's
+#                          pricing that it is.
+#
+# The 0.455 figure is relabelled, never deleted.
 EXPECTED_METRIC_NAMES = {
     "UnauthorizedWriteRate",
     "ReadbackCoverage",
     "ConsentBindingIntegrity",
-    "CostDeltaAccuracy",
+    "WriteDeltaFidelity",
+    "SearchPriceFidelity",
     "RecoveryCompletionRate",
     "FalseRecovery",
     "DisclosureRate",

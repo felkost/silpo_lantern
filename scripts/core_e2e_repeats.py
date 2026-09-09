@@ -228,6 +228,8 @@ def build_run_record(
     receipt's `blocker_cleared` claim -- otherwise FalseRecovery compares
     a number with itself and can never be anything but zero.
     """
+    from decimal import Decimal
+
     from src.lantern.domain.consent_hash import compute_args_hash
 
     player = result.player
@@ -258,7 +260,14 @@ def build_run_record(
     receipt_rows = []
     for index, receipt in enumerate(receipts):
         after = receipt.after_state or {}
+        before = receipt.before_state or {}
         validations = after.get("validations") or []
+        # D82: the cart's OWN movement, independent of whatever delta the
+        # receipt recorded -- comparing the receipt against itself would
+        # make WriteDeltaFidelity a tautology.
+        cart_delta = Decimal(str(after.get("products_total", "0"))) - Decimal(
+            str(before.get("products_total", "0"))
+        )
         consent = consents.get(receipt.action_id)
         written = (
             write_args_by_order[index] if index < len(write_args_by_order) else None
@@ -277,6 +286,7 @@ def build_run_record(
                     if receipt.actual_delta is not None
                     else None
                 ),
+                "cart_delta": str(cart_delta),
                 "claimed_blocker_cleared": bool(receipt.blocker_cleared),
                 "actually_cleared": not any(
                     v.get("level") == "error" for v in validations
@@ -371,6 +381,7 @@ def run_repeats(*, estimate_only: bool, offline: bool = False) -> Dict[str, Any]
             explainer_call=explainer_call,
             usage_log=usage_log,
             prices=prices,
+            population="offline",
         )
 
     load_env()
@@ -390,6 +401,7 @@ def run_repeats(*, estimate_only: bool, offline: bool = False) -> Dict[str, Any]
         explainer_call=explainer_call,
         usage_log=usage_log,
         prices=prices,
+        population="live",
     )
 
 
@@ -401,6 +413,7 @@ def _execute(
     explainer_call: Any,
     usage_log: List[Tuple[str, TokenUsage]],
     prices: Dict[str, Any],
+    population: str,
 ) -> Dict[str, Any]:
     runs: List[Dict[str, Any]] = []
     outcomes: List[RepeatOutcome] = []
@@ -474,6 +487,7 @@ def _execute(
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "expected_total": expected_total,
         "runs": runs,
+        "population": population,
         "records": records,
         "llm_calls": len(usage_log),
         "input_tokens": sum(u.input_tokens for _, u in usage_log),
@@ -525,7 +539,17 @@ def main() -> None:
         stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         records_out = EVIDENCE_DIR / f"g9_run_records_{stamp}.json"
         records_out.write_text(
-            json.dumps({"records": report.pop("records", [])}, indent=2),
+            json.dumps(
+                {
+                    # D84: which population these belong to. Both
+                    # configurations write into one directory under one
+                    # filename pattern, and the metrics loader must take
+                    # exactly one of them.
+                    "population": report.get("population", "unknown"),
+                    "records": report.pop("records", []),
+                },
+                indent=2,
+            ),
             encoding="utf-8",
         )
         print(f"wrote {records_out.relative_to(PROJECT_ROOT)}")

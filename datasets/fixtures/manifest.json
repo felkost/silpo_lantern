@@ -131,6 +131,12 @@
       "provenance": "G7: replays the REAL compiled graph offline (tests/e2e/test_replay_hero_bundle.py) -- built from the same synthetic cart tests/unit/test_write_path_interrupt_and_resume.py uses, not a live capture. A live-recorded bundle is scripts/record_replay_bundle.py's job, pending the author's go-ahead for a live MCP write."
     },
     {
+      "fixture_id": "replay_resume_unverified",
+      "origin": "synthetic",
+      "path": "datasets/fixtures/replay/replay_resume_unverified.json",
+      "provenance": "G9 follow-up (GD-06, D83): synthesized OFFLINE from the gap_needs_two_items cart with applied_price_ratio=0.9 and round 2 declared a silent write -- the tool reports success and the cart does not move, so the read-back completes and disagrees. Replaces the G7 bundle as GD-06's fixture: that one predates the tool-name fallback queue, so a live planner had nothing to fall back to and GD-06 was blocked in all three of G9.6's repeats. Reproduces the same outcome shape (receipt, then unverified on a read-back identity mismatch), now from a MODELLED failure rather than from a fixture running out of recorded cart states. The G7 bundle stays tracked: tests/e2e/test_replay_hero_bundle.py asserts against it."
+    },
+    {
       "fixture_id": "replay_weighted_item_in_cart",
       "origin": "synthetic",
       "path": "datasets/fixtures/replay/replay_weighted_item_in_cart.json",

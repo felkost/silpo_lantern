@@ -67,6 +67,12 @@ class WriteBackendFixture:
     # quantity exceeds stock is DROPPED by the proposal builder, never
     # reduced, so "not enough of one item" cannot produce a partial fix.
     applied_price_ratio: float = 1.0
+    # D83: rounds (1-based) in which the write tool reports success and
+    # the cart does NOT move -- the one case the server's own success flag
+    # cannot rule out (CLAUDE.md's fourth invariant), and the only way to
+    # reach `unverified` through a read-back that actually COMPLETED
+    # rather than one that crashed.
+    silent_write_rounds: Tuple[int, ...] = ()
     search_terms: Tuple[str, ...] = ("Молоко «Галичина» 2,5%",)
     now: datetime = datetime(2026, 9, 8, 12, 0, 0, tzinfo=timezone.utc)
 
@@ -195,6 +201,14 @@ class FakeWriteBackend:
             else self.fixture.raw_cart
         )
         self.write_calls.append((tool_name, args))
+        if len(self.write_calls) in self.fixture.silent_write_rounds:
+            # D83: the server says yes and the cart stays put. The write
+            # is still RECORDED -- a silent write is not an absent one,
+            # and the journal claim behind it is real, so the metrics'
+            # denominators must keep counting it.
+            self.write_side_effect_applied = True
+            self.cart_after_write = raw_cart
+            return {"success": True, "summary": "ok", "products": [product]}
         self.write_side_effect_applied = True
         existing_products = raw_cart["shipments"][0]["products"]
         existing_total = sum(p["price"] * p["quantity"] for p in existing_products)

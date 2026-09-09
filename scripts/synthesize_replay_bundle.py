@@ -182,6 +182,7 @@ def synthesize(
     fixture_id: str,
     find_products_response: Dict[str, Any],
     applied_price_ratio: float = 1.0,
+    silent_write_rounds: Tuple[int, ...] = (),
 ) -> Dict[str, Any]:
     """Runs the graph to completion against the fake backend, consenting
     to the first candidate of every round the graph offers (mirroring
@@ -189,11 +190,18 @@ def synthesize(
 
     `applied_price_ratio` < 1.0 reproduces D68's measured live effect (the
     cart applies a loyalty discount the catalogue does not report), which
-    is what makes a genuine two-round scenario reachable."""
+    is what makes a genuine two-round scenario reachable.
+
+    `silent_write_rounds` (D83) names rounds where the write tool reports
+    success and the cart does not move -- the read-back then completes and
+    disagrees, producing an honest `unverified`. GD-06's declared rubric
+    needs exactly that, and it must come from a modelled failure rather
+    than from a fixture running out of recorded cart states."""
     fixture = WriteBackendFixture(
         raw_cart=_load_raw_cart(fixture_id),
         find_products_response=find_products_response,
         applied_price_ratio=applied_price_ratio,
+        silent_write_rounds=silent_write_rounds,
     )
     backend = FakeWriteBackend(fixture)
     tape: List[Tuple[str, Dict[str, Any], Dict[str, Any]]] = []
@@ -304,10 +312,25 @@ def main() -> None:
             "(D68: Silpo's own loyalty discount measured at ~0.90 live)"
         ),
     )
+    parser.add_argument(
+        "--silent-write-round",
+        type=int,
+        action="append",
+        default=[],
+        help=(
+            "round number (1-based) whose write reports success without "
+            "moving the cart, so the read-back completes and disagrees (D83)"
+        ),
+    )
     args = parser.parse_args()
 
     products = json.loads(Path(args.products_json).read_text(encoding="utf-8"))
-    draft = synthesize(args.fixture_id, products, args.applied_price_ratio)
+    draft = synthesize(
+        args.fixture_id,
+        products,
+        args.applied_price_ratio,
+        tuple(args.silent_write_round),
+    )
     write_bundle(draft, args.bundle_id)
 
 
