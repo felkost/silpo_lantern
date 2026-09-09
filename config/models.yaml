@@ -90,6 +90,13 @@ eval_judge:
       price_usd_per_million: { input: 0.20, output: 1.20 }
     - model: "deepseek/deepseek-v3.2"
       price_usd_per_million: { input: 0.269, output: 0.40 }
+      # G9 follow-up (2026-09-10): measured on the FULL T20 calibration
+      # set, not a smoke test -- "Evaluation LLM outputted an invalid
+      # JSON", the same structured-output failure qwen3-235b showed. A
+      # mechanical disqualification for the judge role, not a quality
+      # signal: the run never produced a score to judge. The earlier
+      # single-example smoke test passed, so one clean example is not
+      # evidence of reliability across a real set.
     - model: "anthropic/claude-haiku-4.5"
       price_usd_per_million: { input: 1.00, output: 5.00 }
     - model: "moonshotai/kimi-k2-0905"

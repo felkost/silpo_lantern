@@ -1,0 +1,45 @@
+{
+  "labeller": "author",
+  "labels": {
+    "CAL-01": "B",
+    "CAL-02": "B",
+    "CAL-03": "tie",
+    "CAL-04": "A",
+    "CAL-05": "A",
+    "CAL-06": "A",
+    "CAL-07": "B",
+    "CAL-08": "A",
+    "CAL-09": "A",
+    "CAL-10": "A",
+    "CAL-11": "B",
+    "CAL-12": "B",
+    "CAL-13": "B",
+    "CAL-14": "B",
+    "CAL-15": "B",
+    "CAL-16": "B",
+    "CAL-17": "A",
+    "CAL-18": "A",
+    "CAL-19": "B",
+    "CAL-20": "A",
+    "CAL-21": "A",
+    "CAL-22": "B",
+    "CAL-23": "B"
+  },
+  "$comment": "The author's own labels, collected blind on 2026-09-10: the sheet showed neither which model wrote which member nor which member was constructed, and A/B order was shuffled per pair. 'tie' is a real answer, not a skip -- forcing a choice where none exists manufactures disagreement. Agreement with the 7 constructed pairs' own construction was 7/7, and the natural pairs split 8 A / 7 B / 1 tie, so the set carries no position bias.",
+  "corrections": [
+    {
+      "pair_id": "CAL-08",
+      "was": "B",
+      "now": "A",
+      "date": "2026-09-10",
+      "reason": "The unchosen member reads 'Кількість молоком ...' -- the instrumental where the genitive 'молока' is required, and it also drops the final full stop. An objective error of case, not a matter of taste; the author confirmed the correction explicitly. The pair was surfaced by TEXT SIMILARITY (0.97), a criterion independent of what any judge said -- selecting labels to re-check by where a judge disagreed would tilt the reference toward that judge. The author's other near-identical pairs (CAL-20, CAL-09) were labelled consistently with this correction, so it reads as a single slip across 23 dense pairs, not a pattern."
+    }
+  ],
+  "excluded": [
+    {
+      "pair_id": "CAL-03",
+      "date": "2026-09-10",
+      "reason": "DEGENERATE: both members are byte-identical -- two different models produced exactly the same sentence. The pair can discriminate nothing and belongs in no denominator. A defect in the set builder, which sampled two models per prompt without checking they had written different text; fixed in scripts/build_judge_calibration_set.py. Kept in the file rather than deleted so the exclusion is visible."
+    }
+  ]
+}
