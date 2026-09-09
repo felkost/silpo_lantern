@@ -24,7 +24,7 @@ from scripts.core_e2e_repeats import build_run_record
 BUNDLE = PROJECT_ROOT / "datasets" / "fixtures" / "replay" / "hero_order_cost_min.json"
 
 
-def _report(tmp_path: Path) -> dict:
+def _report(tmp_path: Path, golden_dir: Path | None = None) -> dict:
     result = replay(load_bundle(BUNDLE))
     record = build_run_record(
         case_id="GD-06", repeat=1, thread_id="t", status="pass", result=result
@@ -37,7 +37,7 @@ def _report(tmp_path: Path) -> dict:
         json.dumps({"population": "offline", "records": [record]}),
         encoding="utf-8",
     )
-    report = build_metrics_report(evidence_dir=tmp_path)
+    report = build_metrics_report(evidence_dir=tmp_path, golden_dir=golden_dir)
     return {m["name"]: m for m in report["metrics"]}
 
 
@@ -57,11 +57,17 @@ def test_the_absolute_gates_hold_on_a_real_run(tmp_path: Path) -> None:
     assert metrics["FalseRecovery"]["value"] == 0.0
 
 
-def test_disclosure_stays_na_because_visibility_was_never_verified(
+def test_a_replayed_run_contributes_nothing_to_disclosure(
     tmp_path: Path,
 ) -> None:
-    """A replay cannot audit what the Silpo UI renders, so no row is
-    `visibility_verified` -- and the honest answer is N/A, not 0.00."""
-    metrics = _report(tmp_path)
+    """A replay cannot audit what the Silpo app renders, so the row it
+    emits is never `visibility_verified` and never reaches the numerator
+    or the denominator.
+
+    The metric itself is no longer N/A -- a real UI audit now supplies its
+    population -- so this asserts the property that still belongs to the
+    RUN records: they add nothing. Pointing the whole audit at an empty
+    tmp directory isolates them."""
+    metrics = _report(tmp_path, golden_dir=tmp_path)
     assert metrics["DisclosureRate"]["value"] is None
     assert metrics["DisclosureRate"]["n"] == 0
