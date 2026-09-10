@@ -10,6 +10,10 @@
 # updates `verified_at`/`verified_price_*` once run.
 
 snapshot_date: "2026-09-03" # dated catalogue snapshot, not re-fetched yet
+# G10 (D90): the project's own spend ceiling, shown beside a session's
+# measured spend -- a decision, not a balance; the provider's dashboard is
+# the only authority on what remains.
+budget_ceiling_usd: 20
 # IV-05 narrow smoke (2026-09-06): planner + fallback both returned valid
 # structured output live (datasets/evidence/iv05_smoke_20260906T152356Z.json,
 # gitignored). This confirms CALLABILITY only.

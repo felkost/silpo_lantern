@@ -12,9 +12,10 @@ an empty population reports N/A, never a misleading 0% or 100%.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Literal, Mapping, Optional, Sequence
+from typing import Literal, Mapping, Optional, Sequence, Tuple
 
 IdempotencyState = Literal["prepared", "in_flight", "confirmed", "failed", "unknown"]
 
@@ -23,6 +24,56 @@ IdempotencyState = Literal["prepared", "in_flight", "confirmed", "failed", "unkn
 class MetricResult:
     value: Optional[float]
     n: int
+
+
+def wilson(p: float, n: int, z: float = 1.96) -> Tuple[float, float]:
+    """95% Wilson score interval. Wilson rather than the normal
+    approximation because at n=33 with p at 0 or 1 the normal interval
+    collapses to zero width -- infinite confidence from 33 samples -- and
+    at 1 of 1 it would say [1, 1]; Wilson says [0.21, 1.00], which is what
+    one observation is worth (D81). One helper for the chart and the
+    console, so they cannot disagree (G10)."""
+    if n == 0:
+        return (0.0, 0.0)
+    denominator = 1 + z * z / n
+    centre = (p + z * z / (2 * n)) / denominator
+    half = (z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n))) / denominator
+    return (max(0.0, centre - half), min(1.0, centre + half))
+
+
+# A COUNT gets no interval: FalseRecovery is "how many false claims", not
+# a proportion of anything.
+COUNT_METRICS = frozenset({"FalseRecovery"})
+
+# G10: what a reader must know before reading each number. Rendered beside
+# it on every surface; a metric without one is not shown (D81/D82/§12.3).
+METRIC_CAVEATS: Mapping[str, str] = {
+    "UnauthorizedWriteRate": ("Gate 0.00 absolute. Denominator: idempotency claims."),
+    "ReadbackCoverage": (
+        "Gate 1.00. Every claimed write followed by an independent read-back."
+    ),
+    "ConsentBindingIntegrity": (
+        "Gate 1.00. Consent hashes match what the guard authorised."
+    ),
+    "WriteDeltaFidelity": (
+        "Gate 1.00 absolute. The recorded delta against the cart's own movement"
+        " -- what this system controls (D82)."
+    ),
+    "SearchPriceFidelity": (
+        "No gate. NOT a success rate: how often the search price equalled the"
+        " price the cart charged. Low because the cart applies a per-product"
+        " loyalty discount the search does not carry (D68/D76/D82)."
+    ),
+    "RecoveryCompletionRate": "Gate 0.85 on the core cases. Offline population.",
+    "FalseRecovery": (
+        "Gate 0 absolute. A count of false 'recovered' claims, not a rate."
+    ),
+    "DisclosureRate": (
+        "One audited observation, not a rate (section 12.3): the app showed the"
+        " blocking constraint and showed order.payment_types.disabled on no"
+        " reachable surface."
+    ),
+}
 
 
 @dataclass(frozen=True)

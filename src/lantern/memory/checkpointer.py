@@ -52,6 +52,9 @@ async def get_checkpointer(
         max_size=MAX_POOL_SIZE,
         open=False,
         kwargs={"autocommit": True, "row_factory": dict_row},
+        # Same reason as `repository.open_repository_pool`: a server-side
+        # dropped connection is only detected on use unless checked here.
+        check=AsyncConnectionPool.check_connection,
     )
     await pool.open()
     try:

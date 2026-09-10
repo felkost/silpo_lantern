@@ -37,3 +37,9 @@ class ConsentAckResponse(BaseModel):
 
     status: str = "consent_recorded"
     action_id: str
+    # G10 (claim 3): the binding as recorded, so the console can show the
+    # hash the guard will compare against the candidate's. No `cart_id`,
+    # ever (D-G10-08).
+    args_hash: str = ""
+    state_hash: str = ""
+    expires_at: str = ""

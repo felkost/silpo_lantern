@@ -1,0 +1,441 @@
+/* G10 delivery C: the only stylesheet. Imported from main.tsx, never from
+   App.tsx, so Vitest (which never loads main.tsx) stays out of the CSS
+   pipeline. Colour family echoes Silpo's surfaces (D-G10-07: echo, never
+   imitate -- no logo, no brand typography). Mono is semantics here: what
+   is set in it was measured or computed, not written. */
+
+:root {
+  --ink: #24242e;
+  --ink-2: #5b5f6b;
+  --ground: #f4f6fb;
+  --card: #ffffff;
+  --hairline: #e3e7f0;
+  --accent: #f26b21;
+  --action: #2563eb;
+  --action-ink: #ffffff;
+  --io-mcp: #f26b21;
+  --io-llm: #7c5cbf;
+  --io-db: #1e8e5a;
+  --io-pure: #8a8f9c;
+  --danger: #c0392b;
+  --font-text: "IBM Plex Sans", "Segoe UI", Arial, sans-serif;
+  --font-data: "IBM Plex Mono", "Cascadia Mono", Consolas, monospace;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #eceef3;
+    --ink-2: #a3a8b5;
+    --ground: #141518;
+    --card: #1e2025;
+    --hairline: #2f323a;
+    --action-ink: #ffffff;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --ink: #eceef3;
+  --ink-2: #a3a8b5;
+  --ground: #141518;
+  --card: #1e2025;
+  --hairline: #2f323a;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-text);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+code,
+.data {
+  font-family: var(--font-data);
+  font-size: 0.92em;
+}
+
+/* ---- shell ---- */
+
+.shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.shell-header {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  padding: 18px 28px 10px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.shell-header h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.shell-header h1::before {
+  /* the lantern: one warm point, not a logo */
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent);
+  vertical-align: 2px;
+}
+
+.shell-header .spacer {
+  flex: 1;
+}
+
+.shell-body {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 24px;
+  padding: 24px 28px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .shell-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+.shell-footer {
+  margin-top: auto;
+  padding: 16px 28px;
+  border-top: 1px solid var(--hairline);
+  color: var(--ink-2);
+  font-family: var(--font-data);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+}
+
+/* ---- panel (left, English) ---- */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.panel h2 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.panel-block {
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.panel-block p {
+  margin: 6px 0;
+}
+
+.muted {
+  color: var(--ink-2);
+}
+
+/* claims: native <details>, one per claim */
+
+.panel details {
+  border-top: 1px solid var(--hairline);
+  padding: 8px 0;
+}
+
+.panel details:first-of-type {
+  border-top: 0;
+}
+
+.panel summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.panel .plain {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+}
+
+.panel .plain li {
+  margin: 4px 0;
+  overflow-wrap: anywhere;
+}
+
+.tag {
+  display: inline-block;
+  font-family: var(--font-data);
+  font-size: 11px;
+  padding: 1px 7px;
+  margin-left: 4px;
+  border-radius: 999px;
+  border: 1px solid var(--hairline);
+  color: var(--ink-2);
+}
+
+.tag-ok {
+  border-color: var(--io-db);
+  color: var(--io-db);
+}
+
+.tag-warn {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.metrics li {
+  padding: 6px 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.caveat {
+  font-size: 13px;
+}
+
+.select-all {
+  user-select: all;
+}
+
+/* rating: five quiet buttons, the chosen one filled */
+
+.rating-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rate {
+  min-width: 36px;
+  padding: 6px 0;
+  font-family: var(--font-data);
+}
+
+.rate.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.panel textarea {
+  width: 100%;
+  margin-top: 8px;
+  font: inherit;
+  font-size: 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  background: var(--ground);
+  color: var(--ink);
+  resize: vertical;
+}
+
+/* the stage feed: one row per observed node, io as a coloured badge */
+
+.stage-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.stage-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.stage-row:first-child {
+  border-top: 0;
+}
+
+.io {
+  font-family: var(--font-data);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--io-pure);
+}
+
+.io-mcp,
+.io-mcp-db {
+  background: var(--io-mcp);
+}
+
+.io-llm {
+  background: var(--io-llm);
+}
+
+.io-db {
+  background: var(--io-db);
+}
+
+.working::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .working::before {
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    50% {
+      opacity: 0.3;
+    }
+  }
+}
+
+/* ---- guest card (right, Ukrainian) ---- */
+
+.guest {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* a lone control on the card sits at its natural width, not stretched */
+.guest > button,
+.guest > p {
+  align-self: flex-start;
+  margin: 0;
+}
+
+.guest section {
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 20px 24px;
+}
+
+.guest h2 {
+  margin: 0 0 12px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.guest h3 {
+  margin: 18px 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.guest p {
+  margin: 8px 0;
+}
+
+.guest ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.guest li {
+  margin: 4px 0;
+}
+
+.guest li[data-testid^="candidate-"] {
+  list-style: none;
+  margin: 12px 0 12px -20px;
+  padding: 14px 16px;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+}
+
+.guest strong {
+  font-family: var(--font-data);
+}
+
+.guest a {
+  color: var(--action);
+}
+
+/* buttons: one primary shape; the guest's decisive actions are blue */
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 9px 16px;
+  border: 1px solid var(--hairline);
+  background: var(--card);
+  color: var(--ink);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: 2px;
+}
+
+.guest button {
+  background: var(--action);
+  border-color: var(--action);
+  color: var(--action-ink);
+  font-weight: 600;
+}
+
+.guest .quiet {
+  background: var(--card);
+  border-color: var(--hairline);
+  color: var(--ink);
+  font-weight: 400;
+}
+
+.guest section[aria-labelledby="error-heading"] {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--hairline));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .guest section {
+    animation: rise 220ms ease-out;
+  }
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}

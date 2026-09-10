@@ -144,6 +144,27 @@
         }
       }
     },
+    "/evidence": {
+      "get": {
+        "summary": "Evidence",
+        "description": "G10 (claims 1 and 5): what a jury may be shown -- the tracked\nmetrics with `n`, interval and caveat, and the sanitised disclosure\nobservation. On `router`, not `app`: anything registered after the\nroot mount in `main.py` is shadowed by it.",
+        "operationId": "evidence_evidence_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Evidence Evidence Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/start": {
       "get": {
         "summary": "Auth Start",
@@ -272,6 +293,21 @@
           "action_id": {
             "type": "string",
             "title": "Action Id"
+          },
+          "args_hash": {
+            "type": "string",
+            "title": "Args Hash",
+            "default": ""
+          },
+          "state_hash": {
+            "type": "string",
+            "title": "State Hash",
+            "default": ""
+          },
+          "expires_at": {
+            "type": "string",
+            "title": "Expires At",
+            "default": ""
           }
         },
         "type": "object",

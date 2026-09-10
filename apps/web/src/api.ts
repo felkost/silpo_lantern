@@ -10,6 +10,7 @@
 import type {
   ConsentAckResponse,
   CreateSessionResponse,
+  EvidenceResponse,
 } from "./types";
 
 export const API_BASE = import.meta.env?.VITE_API_BASE ?? "";
@@ -64,6 +65,15 @@ export async function submitConsent(
     throw new Error(String(detail.detail ?? response.status));
   }
   return (await response.json()) as ConsentAckResponse;
+}
+
+/** G10: fetched only when the jury asks -- never on mount. */
+export async function getEvidence(): Promise<EvidenceResponse> {
+  const response = await fetch(`${API_BASE}/evidence`);
+  if (!response.ok) {
+    throw failed("GET /evidence", response.status);
+  }
+  return (await response.json()) as EvidenceResponse;
 }
 
 export interface SseEvent {

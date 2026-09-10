@@ -62,7 +62,18 @@ def open_repository_pool(dsn: str) -> Iterator[ConnectionPool]:
     """Opens a small sync pool for the lifetime of the `with` block.
     `apps/api`'s own lifespan owns one instance for the process; tests use
     a short-lived one per test via this same entry point."""
-    pool = ConnectionPool(conninfo=dsn, min_size=1, max_size=MAX_POOL_SIZE, open=True)
+    # `check`: a connection Neon dropped server-side (idle-suspend, a host
+    # waking from sleep) looks open on the client until it is used -- the
+    # first request after ~20 idle minutes answered 500 with "SSL connection
+    # has been closed unexpectedly" (G10). The check is one round trip on
+    # checkout and replaces the dead connection instead of handing it out.
+    pool = ConnectionPool(
+        conninfo=dsn,
+        min_size=1,
+        max_size=MAX_POOL_SIZE,
+        open=True,
+        check=ConnectionPool.check_connection,
+    )
     try:
         yield pool
     finally:

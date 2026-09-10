@@ -19,6 +19,10 @@ export interface Candidate {
   /** Set only for kind="compensate": the action_id of the receipt this
    * candidate undoes. */
   compensates_action_id: string | null;
+  /** G10 (claim 3): computed server-side with the guard's own canonicalizer. */
+  args_hash: string;
+  tool_name: string;
+  evidence: EvidenceTuple[];
 }
 
 export interface CreateSessionResponse {
@@ -33,6 +37,42 @@ export interface CreateSessionResponse {
 export interface ConsentAckResponse {
   status: string;
   action_id: string;
+  /** G10 (claim 3): the binding as recorded server-side. No cart id, ever. */
+  args_hash: string;
+  state_hash: string;
+  expires_at: string;
+}
+
+/** G10: one evidence tuple behind a candidate -- price, its source and its
+ * age. Deliberately without a product id. */
+export interface EvidenceTuple {
+  price: string;
+  availability: boolean;
+  source_tool: string;
+  captured_at: string;
+}
+
+/** G10: `GET /evidence` -- measured earlier, never this session. */
+export interface MetricRow {
+  name: string;
+  value: number | null;
+  n: number;
+  interval: [number, number] | null;
+  caveat: string;
+}
+
+export interface EvidenceResponse {
+  population: string;
+  generated_at: string;
+  regenerate: string;
+  metrics: MetricRow[];
+  disclosure: {
+    state: string;
+    observed_at: string;
+    products_total: number | null;
+    app_showed: string[];
+    validations: Array<{ code: string; level: string; rendered_by_app: boolean }>;
+  };
 }
 
 export interface EventEnvelope {
@@ -47,6 +87,8 @@ export interface DisclosedValidation {
   code: string;
   level: "error" | "warning" | "info";
   type: string;
+  /** G10: whether the policy registry knows this code. */
+  is_known?: boolean;
 }
 
 /** One row of the delivery-channel comparison (amendment A7). */
@@ -62,6 +104,9 @@ export interface DiagnosisEvent extends EventEnvelope {
   primary_code: string | null;
   gap: string | null;
   gap_is_borderline: boolean;
+  /** G10 (claim 2): the arithmetic's inputs, as decimal strings. */
+  products_total: string | null;
+  threshold_source: "validation_context" | "time_slots" | "unverified";
   validations: DisclosedValidation[];
   channels: ChannelComparisonRow[];
 }
@@ -73,6 +118,10 @@ export interface OptionsEvent extends EventEnvelope {
 export interface ReceiptEvent extends EventEnvelope {
   status: string;
   reason: string | null;
+  /** G10 (claim 4): expected against actual, and the typed outcome. */
+  expected_delta: string | null;
+  verified: boolean;
+  kind: "add" | "compensate" | null;
   actual_delta: string | null;
   /** D42: a verified write is not a recovered cart -- distinguishes
    * "the write landed" from "you can check out". */
