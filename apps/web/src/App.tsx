@@ -17,12 +17,20 @@ import {
   streamSessionEvents,
   submitConsent,
 } from "./api";
+import { AnswerRating } from "./components/AnswerRating";
+import { ClaimPanel } from "./components/ClaimPanel";
 import { ConsentScreen } from "./components/ConsentScreen";
+import { MeasuredEarlier } from "./components/MeasuredEarlier";
 import { DiagnosisScreen } from "./components/DiagnosisScreen";
 import { ReceiptScreen } from "./components/ReceiptScreen";
+import { StageFeed } from "./components/StageFeed";
+import { ThemeToggle } from "./components/ThemeToggle";
+import type { StageRow } from "./stages";
 import type {
   Candidate,
+  ConsentAckResponse,
   DiagnosisEvent,
+  EvidenceResponse,
   ReceiptEvent,
   Screen,
 } from "./types";
@@ -70,6 +78,12 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [authUrl, setAuthUrl] = useState<string>("");
   const [busy, setBusy] = useState(false);
+  const [stages, setStages] = useState<StageRow[]>([]);
+  // G10: what the panel argues from -- the recorded consent binding, the
+  // guard's own refusal word, and the measured evidence (loaded on request).
+  const [consentAck, setConsentAck] = useState<ConsentAckResponse | null>(null);
+  const [refusal, setRefusal] = useState<string | null>(null);
+  const [evidence, setEvidence] = useState<EvidenceResponse | null>(null);
   // Seen live on Render: a cold start keeps `/events` open for 20+ s, and
   // «Вийти» pressed meanwhile left `busy` stuck and let the late stream
   // overwrite the idle screen. Every stream checks it is still the
@@ -81,7 +95,9 @@ function App() {
       if (activeSession.current !== id) {
         return;
       }
-      if (event.event === "diagnosis") {
+      if (event.event === "stage") {
+        setStages((prev) => [...prev, event.data as unknown as StageRow]);
+      } else if (event.event === "diagnosis") {
         setDiagnosis(event.data as unknown as DiagnosisEvent);
         setScreen("diagnosis");
       } else if (event.event === "options") {
@@ -92,7 +108,9 @@ function App() {
         setReceipts((prev) => [...prev, event.data as unknown as ReceiptEvent]);
         setScreen("receipt");
       } else if (event.event === "error") {
-        setError(String((event.data as { error?: string }).error ?? "невідома помилка"));
+        const reason = String((event.data as { error?: string }).error ?? "невідома помилка");
+        setRefusal(reason);
+        setError(reason);
         setScreen("error");
       }
     });
@@ -171,6 +189,9 @@ function App() {
     setDiagnosis(null);
     setCandidates([]);
     setReceipts([]);
+    setStages([]);
+    setConsentAck(null);
+    setRefusal(null);
     setError(null);
     setScreen("idle");
     if (id !== null) {
@@ -185,7 +206,7 @@ function App() {
       }
       setBusy(true);
       try {
-        await submitConsent(sessionId, actionId);
+        setConsentAck(await submitConsent(sessionId, actionId));
         // The write itself runs on this second stream, not in the POST.
         await consume(sessionId);
       } catch (exc) {
@@ -198,76 +219,109 @@ function App() {
     [consume, sessionId],
   );
 
+  // One predicate for the card and the panel: the panel must drop the
+  // stale pre-write diagnosis on the compensation screen for the same
+  // reason the card does (D51) -- a persistent left-column gap beside an
+  // undo offer would pass the card's test and still mislead.
+  const compensationOffer =
+    candidates.length > 0 && candidates.every((c) => c.kind === "compensate");
+  const showDiagnosis =
+    screen === "diagnosis" || (screen === "consent" && !compensationOffer);
+
   return (
-    <main>
-      <h1>Ліхтарик</h1>
+    <div className="shell">
+      <header className="shell-header">
+        <h1>Ліхтарик</h1>
+        <span className="spacer" />
+        <ThemeToggle />
+      </header>
 
-      {/* «Вийти» only once there is a login to end; on the login screen
-          the same action is a cancel, not an exit (the author, live). */}
-      {sessionId !== null && screen !== "auth_required" && (
-        <p>
-          <button type="button" onClick={logout} data-testid="logout">
-            Вийти
-          </button>
-        </p>
-      )}
+      <div className="shell-body">
+        {/* G10 (A-G10-02): the left third is an English technical surface
+            for a jury; the guest card on the right stays Ukrainian and is
+            not edited beyond classNames. */}
+        <aside className="panel" aria-label="Observer panel">
+          <StageFeed rows={stages} streaming={busy} />
+          <ClaimPanel
+            diagnosis={showDiagnosis ? diagnosis : null}
+            candidates={candidates}
+            consent={consentAck}
+            receipts={receipts}
+            refusal={refusal}
+            evidence={evidence}
+          />
+          <MeasuredEarlier evidence={evidence} onLoaded={setEvidence} />
+          <AnswerRating />
+        </aside>
 
-      {screen === "idle" && (
-        <button type="button" onClick={start} disabled={busy}>
-          Перевірити мій кошик
-        </button>
-      )}
+        <main className="guest">
 
-      {screen === "auth_required" && (
-        <section aria-labelledby="auth-heading">
-          <h2 id="auth-heading">Потрібен вхід у Сільпо</h2>
-          <p>
-            Щоб побачити саме ваш кошик, увійдіть у Сільпо за номером телефону.
-            Застосунок ніколи не бачить ваш пароль чи код із SMS. Після входу ви
-            автоматично повернетеся сюди.
-          </p>
-          <a href={authUrl} data-testid="auth-link">
-            Увійти за номером телефону
-          </a>
-          <p>
-            <button type="button" onClick={logout}>
-              Скасувати
+          {/* «Вийти» only once there is a login to end; on the login screen
+              the same action is a cancel, not an exit (the author, live). */}
+          {sessionId !== null && screen !== "auth_required" && (
+            <p>
+              <button type="button" onClick={logout} data-testid="logout">
+                Вийти
+              </button>
+            </p>
+          )}
+
+          {screen === "idle" && (
+            <button type="button" onClick={start} disabled={busy}>
+              Перевірити мій кошик
             </button>
-          </p>
-        </section>
-      )}
+          )}
 
-      {/* G8 (D51): the compensation pass emits no `diagnosis` event (it
-          routes persist_receipt -> write_guard directly, never through
-          diagnose), so the last one in state is the PRE-write gap --
-          showing it beside an offer to undo the very write that
-          partially closed it would be actively misleading. */}
-      {(screen === "diagnosis" ||
-        (screen === "consent" &&
-          !(candidates.length > 0 && candidates.every((c) => c.kind === "compensate")))) && (
-        <DiagnosisScreen diagnosis={diagnosis} />
-      )}
+          {screen === "auth_required" && (
+            <section aria-labelledby="auth-heading">
+              <h2 id="auth-heading">Потрібен вхід у Сільпо</h2>
+              <p>
+                Щоб побачити саме ваш кошик, увійдіть у Сільпо за номером телефону.
+                Застосунок ніколи не бачить ваш пароль чи код із SMS. Після входу ви
+                автоматично повернетеся сюди.
+              </p>
+              <a href={authUrl} data-testid="auth-link">
+                Увійти за номером телефону
+              </a>
+              <p>
+                <button type="button" className="quiet" onClick={logout}>
+                  Скасувати
+                </button>
+              </p>
+            </section>
+          )}
 
-      {screen === "consent" && (
-        <ConsentScreen
-          candidates={candidates}
-          onConsent={consent}
-          submitting={busy}
-          priorReceipts={receipts}
-        />
-      )}
+          {/* G8 (D51): the compensation pass emits no `diagnosis` event (it
+              routes persist_receipt -> write_guard directly, never through
+              diagnose), so the last one in state is the PRE-write gap --
+              showing it beside an offer to undo the very write that
+              partially closed it would be actively misleading. */}
+          {showDiagnosis && <DiagnosisScreen diagnosis={diagnosis} />}
 
-      {screen === "receipt" && receipts.length > 0 && (
-        <ReceiptScreen receipts={receipts} />
-      )}
+          {screen === "consent" && (
+            <ConsentScreen
+              candidates={candidates}
+              onConsent={consent}
+              submitting={busy}
+              priorReceipts={receipts}
+            />
+          )}
 
-      {screen === "error" && (
-        <section aria-labelledby="error-heading">
-          <h2 id="error-heading">Не вдалося</h2>
-          <p data-testid="error-message">{error}</p>
-        </section>
-      )}
-    </main>
+          {screen === "receipt" && receipts.length > 0 && (
+            <ReceiptScreen receipts={receipts} />
+          )}
+
+          {screen === "error" && (
+            <section aria-labelledby="error-heading">
+              <h2 id="error-heading">Не вдалося</h2>
+              <p data-testid="error-message">{error}</p>
+            </section>
+          )}
+        </main>
+      </div>
+
+      <footer className="shell-footer">silpo lantern</footer>
+    </div>
   );
 }
 

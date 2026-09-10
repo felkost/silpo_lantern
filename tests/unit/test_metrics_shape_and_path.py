@@ -47,8 +47,10 @@ def test_report_shape_matches_what_render_report_reads() -> None:
     assert "metrics" in report
     names = {m["name"] for m in report["metrics"]}
     assert EXPECTED_METRIC_NAMES <= names
+    # G10: the console may show no proportion without its interval and
+    # its caveat (D81/D82), so the report carries both from the source.
     for metric in report["metrics"]:
-        assert set(metric.keys()) == {"name", "value", "n"}
+        assert set(metric.keys()) == {"name", "value", "n", "interval", "caveat"}
 
 
 def test_an_empty_population_reports_every_metric_as_not_applicable(

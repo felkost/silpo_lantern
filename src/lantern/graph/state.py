@@ -96,6 +96,10 @@ class RecoveryState(TypedDict):
     write_rounds_used: int
     mcp_attempts_used: int
     tokens_used: int
+    # G10 (D90): priced from the same usage `tokens_used` counts; both are
+    # written by `apps/api/routes.py` after each `/events` run, from the
+    # provider's own usage block -- never estimated.
+    llm_cost_usd: float
     deadline: datetime
     # G5+G6 additions. `consent_action_id` is the ONLY thing the API sets
     # before resuming the graph (via `graph.update_state`, never via the
@@ -159,6 +163,7 @@ def new_recovery_state(
         write_rounds_used=0,
         mcp_attempts_used=0,
         tokens_used=0,
+        llm_cost_usd=0.0,
         deadline=now + timedelta(seconds=ACTIVE_EXECUTION_SECONDS),
         owner=owner,
         consent_action_id=None,

@@ -12,21 +12,26 @@ by any automated test.
 """
 
 import json
+from contextvars import ContextVar
 from pathlib import Path
 from typing import (
     Any,
     Callable,
+    Dict,
     List,
     Mapping,
     Optional,
     Protocol,
     Sequence,
+    Tuple,
     cast,
 )
 
+import yaml
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 
 from src.lantern.domain.models import ActionProposal
+from src.lantern.domain.repeat_accounting import TokenUsage
 from src.lantern.graph.schemas import EvalJudgeScore, ExplainerOutput, SearchIntent
 from src.lantern.graph.state import RecoveryState
 from src.lantern.graph.tool_view import (
@@ -36,6 +41,70 @@ from src.lantern.graph.tool_view import (
 )
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+_MODELS_PATH = Path(__file__).resolve().parents[3] / "config" / "models.yaml"
+
+# G10 (D90): where a live session's token usage lands. `apps/api` binds a
+# fresh list per `/events` call, the same ContextVar pattern
+# `mcp.session.current_token_storage` uses (measured to reach sync nodes
+# through LangGraph); unbound -- scripts, tests, offline fakes -- means
+# nobody is counting, and nothing is recorded.
+current_usage_log: ContextVar[Optional[List[Tuple[str, TokenUsage]]]] = ContextVar(
+    "current_usage_log", default=None
+)
+
+
+def usage_from_response(response: Any) -> TokenUsage:
+    """Reads the provider's own usage block off a raw LangChain message.
+
+    A response carrying none records ZEROS, never an estimate: an
+    unmeasured call must stay visibly unmeasured rather than contribute a
+    guessed number to a cost report. Lived in `scripts/core_e2e_repeats.py`
+    until G10; the live session needed it too."""
+    metadata = getattr(response, "usage_metadata", None)
+    if not isinstance(metadata, dict):
+        return TokenUsage(0, 0)
+    return TokenUsage(
+        input_tokens=int(metadata.get("input_tokens") or 0),
+        output_tokens=int(metadata.get("output_tokens") or 0),
+    )
+
+
+def load_llm_prices() -> Dict[str, Any]:
+    """The pinned price table for the planner and the selected explainer,
+    plus the project's own spend ceiling -- one reader for the repeats
+    script, the route and the console, so no surface prices a token
+    differently from another."""
+    models = yaml.safe_load(_MODELS_PATH.read_text(encoding="utf-8"))
+    planner = models["planner"]
+    selected = models["explainer"]["selected"]
+    explainer_price = next(
+        c["price_usd_per_million"]
+        for c in models["explainer"]["candidates"]
+        if c["model"] == selected
+    )
+    return {
+        "planner": {"model": planner["model"], **planner["price_usd_per_million"]},
+        "explainer": {"model": selected, **explainer_price},
+        "ceiling_usd": models["budget_ceiling_usd"],
+    }
+
+
+def _unwrap(role: str, result: Any) -> Any:
+    """`with_structured_output(..., include_raw=True)` returns
+    `{raw, parsed, parsing_error}`; the offline fakes return the parsed
+    model directly. Both are accepted. A parsing error is raised as it
+    would have been without `include_raw`; usage is recorded only when a
+    session bound a log."""
+    if not (isinstance(result, dict) and "parsed" in result):
+        return result
+    if result.get("parsing_error") is not None:
+        raise result["parsing_error"]
+    log = current_usage_log.get()
+    if log is not None:
+        log.append((role, usage_from_response(result.get("raw"))))
+    return result["parsed"]
+
+
 _PROMPTS_DIR = Path(__file__).resolve().parent.parent / "prompts"
 
 # G7 (D-G7-02): the single source for which prompt file version is live.
@@ -168,7 +237,7 @@ def make_planner_call(
             SystemMessage(content=system_text),
             HumanMessage(content=prompt),
         ]
-        return cast(SearchIntent, llm.invoke(messages))
+        return cast(SearchIntent, _unwrap("planner", llm.invoke(messages)))
 
     return planner_call
 
@@ -184,7 +253,7 @@ def make_explainer_call(
             SystemMessage(content=system_text),
             HumanMessage(content=prompt),
         ]
-        return cast(ExplainerOutput, llm.invoke(messages))
+        return cast(ExplainerOutput, _unwrap("explainer", llm.invoke(messages)))
 
     return explainer_call
 
@@ -204,7 +273,9 @@ def build_planner_llm(model: str, api_key: str, fallback: Optional[str] = None) 
     llm = ChatOpenAI(
         model=model, base_url=OPENROUTER_BASE_URL, api_key=SecretStr(api_key)
     )
-    return llm.with_structured_output(SearchIntent)
+    # G10 (D90): `include_raw` so the provider's usage block reaches
+    # `_unwrap`; the parsed model is what the node still receives.
+    return llm.with_structured_output(SearchIntent, include_raw=True)
 
 
 def build_explainer_llm(model: str, api_key: str) -> Any:
@@ -216,4 +287,4 @@ def build_explainer_llm(model: str, api_key: str) -> Any:
     llm = ChatOpenAI(
         model=model, base_url=OPENROUTER_BASE_URL, api_key=SecretStr(api_key)
     )
-    return llm.with_structured_output(ExplainerOutput)
+    return llm.with_structured_output(ExplainerOutput, include_raw=True)

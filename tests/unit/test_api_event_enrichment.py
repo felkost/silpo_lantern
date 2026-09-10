@@ -1,0 +1,148 @@
+"""G10 delivery C: the console's evidence rides on the existing events,
+additively -- every value stringified at the boundary (a `Decimal` or
+`datetime` reaching `json.dumps` raises INSIDE the streaming generator,
+after a write may have landed: the G7 precedent). And no personal data
+on the wire, asserted over every frame rather than reviewed (D-G10-08).
+"""
+
+import json
+import re
+from typing import Any, Dict, List
+
+import pytest
+
+from src.lantern.domain.consent_hash import compute_args_hash
+from tests.unit.test_api_emits_compensation_option import _receipt
+from tests.unit.test_api_session_routes import (
+    _awaiting_consent_state,
+    _client,
+    _consented_state,
+    _FakeGraph,
+    _make_app,
+    _proposal,
+    _read_pipeline_chunks,
+)
+
+FORBIDDEN_KEYS = {
+    "address",
+    "phone",
+    "email",
+    "first_name",
+    "last_name",
+    "firstName",
+    "lastName",
+    "cart_id",
+    "shoppingCartId",
+    "latitude",
+    "longitude",
+    "before_state",
+    "after_state",
+    "canonical_args",
+}
+
+
+def _frames(body: str, event: str) -> List[Dict[str, Any]]:
+    return [
+        json.loads(m)
+        for m in re.findall(rf"event: {event}\ndata: (.*?)\n\n", body, re.S)
+    ]
+
+
+def _keys(value: Any) -> set:
+    if isinstance(value, dict):
+        return set(value) | {k for v in value.values() for k in _keys(v)}
+    if isinstance(value, list):
+        return {k for v in value for k in _keys(v)}
+    return set()
+
+
+def test_diagnosis_carries_the_arithmetic_inputs_and_is_known(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    graph = _FakeGraph(
+        chunks=_read_pipeline_chunks(), final_state=_awaiting_consent_state()
+    )
+    client = _client(_make_app(graph, monkeypatch))
+
+    (frame,) = _frames(client.get("/session/s1/events").text, "diagnosis")
+
+    # Claim 2: money is computed by code -- the panel shows the inputs.
+    assert frame["products_total"] == "404.89"
+    assert frame["threshold_source"] == "validation_context"
+    # `is_known` per validation: the quarantined codes render as unknown.
+    for v in frame["validations"]:
+        assert v["is_known"] in (True, False)
+
+
+def test_options_carry_the_hash_and_the_evidence_but_no_product_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    graph = _FakeGraph(
+        chunks=_read_pipeline_chunks(), final_state=_awaiting_consent_state()
+    )
+    client = _client(_make_app(graph, monkeypatch))
+
+    (frame,) = _frames(client.get("/session/s1/events").text, "options")
+
+    (candidate,) = frame["candidates"]
+    # Claim 3: the hash the guard will compare, computed with the guard's
+    # own canonicalizer at emit time -- there is no such field in state.
+    assert candidate["args_hash"] == compute_args_hash(_proposal().canonical_args)
+    assert candidate["tool_name"] == "silpo_add_or_update_cart_products"
+    (evidence,) = candidate["evidence"]
+    assert evidence == {
+        "price": "39.99",
+        "availability": True,
+        "source_tool": "silpo_find_products_batch",
+        "captured_at": "2026-09-07T12:00:00+00:00",
+    }
+
+
+def test_receipt_carries_expected_delta_verified_and_kind(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    graph = _FakeGraph(
+        chunks=[{"write_and_readback": {"receipt": _receipt(), "status": "verified"}}],
+        final_state={**_consented_state(), "status": "verified", "receipt": _receipt()},
+        initial_state=_consented_state(),
+    )
+    client = _client(_make_app(graph, monkeypatch))
+
+    (frame,) = _frames(client.get("/session/s1/events").text, "receipt")
+
+    assert frame["expected_delta"] == "86.84"
+    assert frame["verified"] is True
+    assert frame["kind"] == "add"
+
+
+def test_consent_ack_carries_the_binding_but_no_cart_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    graph = _FakeGraph(
+        chunks=[], final_state={}, initial_state=_awaiting_consent_state()
+    )
+    client = _client(_make_app(graph, monkeypatch))
+
+    body = client.post("/session/s1/consent", json={"action_id": "a1"}).json()
+
+    assert body["args_hash"] == compute_args_hash(_proposal().canonical_args)
+    assert re.fullmatch(r"[0-9a-f]{64}", body["state_hash"])
+    assert body["expires_at"].endswith("+00:00")
+    assert not FORBIDDEN_KEYS & set(body)
+
+
+def test_no_frame_carries_a_forbidden_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    """D-G10-08 on the wire: walk every frame of a read run and a write
+    run for the keys that could carry a guest's identity or location."""
+    read = _FakeGraph(
+        chunks=_read_pipeline_chunks(), final_state=_awaiting_consent_state()
+    )
+    write = _FakeGraph(
+        chunks=[{"write_and_readback": {"receipt": _receipt(), "status": "verified"}}],
+        final_state={**_consented_state(), "status": "verified", "receipt": _receipt()},
+        initial_state=_consented_state(),
+    )
+    for graph in (read, write):
+        body = _client(_make_app(graph, monkeypatch)).get("/session/s1/events").text
+        for match in re.findall(r"data: (.*?)\n\n", body, re.S):
+            assert not FORBIDDEN_KEYS & _keys(json.loads(match)), match

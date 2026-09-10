@@ -23,6 +23,9 @@ const CANDIDATE: Candidate = {
   guest_text_uk: "Додамо молоко, щоб дотягнути до мінімальної суми.",
   kind: "add",
   compensates_action_id: null,
+  args_hash: "a".repeat(64),
+  tool_name: "silpo_add_or_update_cart_products",
+  evidence: [],
 };
 
 function sseStream(frames: string[]): ReadableStream<Uint8Array> {
@@ -288,6 +291,9 @@ describe("receipt screen", () => {
             ...ENVELOPE,
             status: "unverified",
             reason: "read-back unreachable",
+            expected_delta: "39.99",
+            verified: false,
+            kind: "add",
             actual_delta: null,
             blocker_cleared: false,
             remaining_gap: null,
@@ -318,6 +324,9 @@ describe("compensation offer (G8, D51)", () => {
     guest_text_uk: "Повернути «Молоко «Галичина» 2,5%» до попередньої кількості.",
     kind: "compensate",
     compensates_action_id: "a1",
+    args_hash: "b".repeat(64),
+    tool_name: "silpo_remove_cart_products",
+    evidence: [],
   };
 
   it("renders the undo copy and suppresses the stale pre-write diagnosis", async () => {
@@ -673,5 +682,297 @@ describe("session round trip and logout", () => {
     await waitFor(() => {
       expect(screen.getByTestId("error-message")).toHaveTextContent(/ліміт/i);
     });
+  });
+});
+
+// G10 delivery C: the console shell. Theme is the one control on the
+// shared header; it writes `data-theme` so an explicit choice wins over
+// `prefers-color-scheme` in both directions.
+describe("console shell", () => {
+  it("toggles the theme both ways and survives blocked storage", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("nothing fetches on mount"); }));
+    document.documentElement.removeAttribute("data-theme");
+    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+
+    render(<App />);
+    const toggle = screen.getByRole("button", { name: /theme/i });
+    await act(async () => { toggle.click(); });
+    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+    await act(async () => { screen.getByRole("button", { name: /theme/i }).click(); });
+    expect(document.documentElement.getAttribute("data-theme")).toBe("light");
+
+    setItem.mockRestore();
+  });
+
+  it("names the product and nothing else in the footer", () => {
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("nothing fetches on mount"); }));
+    render(<App />);
+    expect(screen.getByRole("contentinfo")).toHaveTextContent(/^silpo lantern$/);
+  });
+});
+
+// G10 delivery C: the stage feed is an append-only log of nodes the
+// stream reported -- repeats shown as repeats, nothing pre-drawn, nothing
+// pending -- because the graph's own paths (retry -> diagnose again, a
+// compensation round entering write_guard directly) make any checklist a
+// promise the run may not keep.
+describe("stage feed", () => {
+  it("lists observed nodes in arrival order with their io kind, repeats included", async () => {
+    sessionStorage.setItem("lantern_session_id", "s1");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          sseStream([
+            frame("stage", { ...ENVELOPE, node: "read", io: "mcp" }),
+            frame("stage", { ...ENVELOPE, node: "diagnose", io: "pure" }),
+            frame("stage", { ...ENVELOPE, node: "plan", io: "llm" }),
+            frame("stage", { ...ENVELOPE, node: "diagnose", io: "pure" }),
+            frame("consent_required", ENVELOPE),
+          ]),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("stage-row")).toHaveLength(4);
+    });
+    const rows = screen.getAllByTestId("stage-row").map((r) => r.textContent);
+    expect(rows[0]).toMatch(/read/);
+    expect(rows[0]).toMatch(/mcp/i);
+    expect(rows[2]).toMatch(/plan/);
+    expect(rows[2]).toMatch(/llm/i);
+    expect(rows[3]).toMatch(/diagnose/);
+    expect(screen.queryByText(/pending/i)).toBeNull();
+  });
+});
+
+// G10 delivery C: the claim panel is organised by what a field PROVES,
+// not where it came from (D-G10-03). Live evidence only; anything not seen
+// in this session says so.
+describe("claim panel", () => {
+  function sessionStream() {
+    return sseStream([
+      frame("diagnosis", {
+        ...ENVELOPE,
+        primary_code: "order.cost.min",
+        gap: "194.11",
+        gap_is_borderline: false,
+        products_total: "404.89",
+        threshold_source: "validation_context",
+        validations: [
+          { code: "order.cost.min", level: "error", type: "cost", is_known: true },
+          { code: "timeslot.not_found", level: "error", type: "slot", is_known: false },
+        ],
+        channels: [],
+      }),
+      frame("options", {
+        ...ENVELOPE,
+        candidates: [
+          {
+            ...CANDIDATE,
+            args_hash: "c".repeat(64),
+            tool_name: "silpo_add_or_update_cart_products",
+            evidence: [
+              { price: "39.99", availability: true, source_tool: "silpo_find_products_batch", captured_at: "2026-09-07T12:00:00+00:00" },
+            ],
+          },
+        ],
+      }),
+      frame("consent_required", ENVELOPE),
+    ]);
+  }
+
+  it("says what was not observed before anything runs", () => {
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("nothing fetches on mount"); }));
+    render(<App />);
+    expect(screen.getAllByText(/not observed in this session/i).length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("shows the arithmetic inputs, the unknown code and the candidate hash from the live stream", async () => {
+    sessionStorage.setItem("lantern_session_id", "s1");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(sessionStream(), { status: 200 })));
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("claim-arithmetic")).toHaveTextContent("404.89");
+    });
+    expect(screen.getByTestId("claim-arithmetic")).toHaveTextContent("194.11");
+    expect(screen.getByTestId("claim-arithmetic")).toHaveTextContent("validation_context");
+    expect(screen.getByTestId("claim-disclosure")).toHaveTextContent("timeslot.not_found");
+    expect(screen.getByTestId("claim-disclosure")).toHaveTextContent(/unknown/i);
+    expect(screen.getByTestId("claim-consent")).toHaveTextContent("c".repeat(64).slice(0, 12));
+  });
+
+  it("shows the recorded binding after consent, and the read-back after the receipt", async () => {
+    sessionStorage.setItem("lantern_session_id", "s1");
+    let phase = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (init?.method === "POST" && url.endsWith("/consent")) {
+          return new Response(
+            JSON.stringify({ status: "consent_recorded", action_id: "a1", args_hash: "c".repeat(64), state_hash: "d".repeat(64), expires_at: "2026-09-07T12:05:00+00:00" }),
+            { status: 200 },
+          );
+        }
+        phase += 1;
+        if (phase === 1) {
+          return new Response(sessionStream(), { status: 200 });
+        }
+        return new Response(
+          sseStream([
+            frame("receipt", { ...ENVELOPE, status: "receipt", reason: "", expected_delta: "39.99", actual_delta: "35.99", verified: true, kind: "add", blocker_cleared: false, remaining_gap: "4.00" }),
+          ]),
+          { status: 200 },
+        );
+      }),
+    );
+
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /39\.99/ })).toBeInTheDocument();
+    });
+    await act(async () => {
+      screen.getByRole("button", { name: /39\.99/ }).click();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("claim-consent")).toHaveTextContent("d".repeat(64).slice(0, 12));
+    });
+    expect(screen.getByTestId("claim-readback")).toHaveTextContent("39.99");
+    expect(screen.getByTestId("claim-readback")).toHaveTextContent("35.99");
+    expect(screen.getByTestId("claim-readback")).toHaveTextContent(/verified/i);
+  });
+
+  it("loads measured evidence only on request and shows n, interval and the command", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.endsWith("/evidence")) {
+          return new Response(
+            JSON.stringify({
+              population: "offline",
+              generated_at: "2026-09-10T17:43:23+00:00",
+              regenerate: "python -m scripts.compute_metrics --tracked",
+              metrics: [
+                { name: "ReadbackCoverage", value: 1.0, n: 33, interval: [0.8957, 1.0], caveat: "Gate 1.00." },
+                { name: "FalseRecovery", value: 0.0, n: 33, interval: null, caveat: "A count." },
+              ],
+              disclosure: {
+                state: "Baseline cart, below the minimum order sum",
+                observed_at: "2026-09-10",
+                products_total: 461.82,
+                app_showed: ["Мінімальна сума замовлення 699.00 ₴"],
+                validations: [
+                  { code: "order.cost.min", level: "error", rendered_by_app: true },
+                  { code: "order.payment_types.disabled", level: "info", rendered_by_app: false },
+                ],
+              },
+            }),
+            { status: 200 },
+          );
+        }
+        throw new Error(`unexpected fetch ${url}`);
+      }),
+    );
+
+    render(<App />);
+    expect(fetch).not.toHaveBeenCalled();
+    await act(async () => {
+      screen.getByRole("button", { name: /load measured evidence/i }).click();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("measured-earlier")).toHaveTextContent("ReadbackCoverage");
+    });
+    const block = screen.getByTestId("measured-earlier");
+    expect(block).toHaveTextContent("n = 33");
+    expect(block).toHaveTextContent("[0.90, 1.00]");
+    expect(block).toHaveTextContent("python -m scripts.compute_metrics --tracked");
+    expect(block).toHaveTextContent("2026-09-10");
+    expect(block).toHaveTextContent("offline");
+    // claim 1's audited check: which code the app rendered, and which it did not
+    expect(screen.getByTestId("claim-disclosure")).toHaveTextContent("order.payment_types.disabled");
+    expect(screen.getByTestId("claim-disclosure")).toHaveTextContent(/not rendered/i);
+  });
+
+  it("drops the stale diagnosis from the panel on the compensation screen", async () => {
+    sessionStorage.setItem("lantern_session_id", "s1");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          sseStream([
+            frame("diagnosis", { ...ENVELOPE, primary_code: "order.cost.min", gap: "194.11", gap_is_borderline: false, products_total: "404.89", threshold_source: "validation_context", validations: [], channels: [] }),
+            frame("receipt", { ...ENVELOPE, status: "receipt", reason: "", expected_delta: "39.99", actual_delta: "39.99", verified: true, kind: "add", blocker_cleared: false, remaining_gap: "154.12" }),
+            frame("options", { ...ENVELOPE, candidates: [{ ...CANDIDATE, action_id: "c1", kind: "compensate", compensates_action_id: "a1", args_hash: "e".repeat(64), tool_name: "silpo_remove_cart_products", evidence: [] }] }),
+            frame("consent_required", ENVELOPE),
+          ]),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("compensation-lede")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("claim-arithmetic")).not.toHaveTextContent("194.11");
+  });
+});
+
+// G10: the answer rating lives in React state only (author's decision:
+// session state, never Neon). Nothing leaves the browser.
+describe("answer rating", () => {
+  it("records a score and a comment without any request", async () => {
+    const fetchSpy = vi.fn(async () => { throw new Error("nothing fetches"); });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    render(<App />);
+    await act(async () => {
+      screen.getByRole("button", { name: /rate 4 of 5/i }).click();
+    });
+
+    expect(screen.getByTestId("rating-value")).toHaveTextContent("4 / 5");
+    expect(screen.getByRole("button", { name: /rate 4 of 5/i })).toHaveAttribute("aria-pressed", "true");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+});
+
+// G10 step 7b (D90): spend is shown as spend -- tokens, dollars, the
+// project's ceiling -- never as a remaining balance.
+describe("token economics", () => {
+  it("shows the session's cumulative spend from the last stage frame, never a remainder", async () => {
+    sessionStorage.setItem("lantern_session_id", "s1");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          sseStream([
+            frame("stage", { ...ENVELOPE, node: "read", io: "mcp", usage: { tokens: 0, cost_usd: 0, ceiling_usd: 20 } }),
+            frame("stage", { ...ENVELOPE, node: "plan", io: "llm", usage: { tokens: 1100, cost_usd: 0.001125, ceiling_usd: 20 } }),
+            frame("consent_required", ENVELOPE),
+          ]),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("spend")).toHaveTextContent("1100 tokens");
+    });
+    expect(screen.getByTestId("spend")).toHaveTextContent("$0.0011");
+    expect(screen.getByTestId("spend")).toHaveTextContent("ceiling $20");
+    expect(screen.getByTestId("spend")).not.toHaveTextContent(/remaining/i);
   });
 });

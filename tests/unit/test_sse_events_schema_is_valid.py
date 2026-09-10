@@ -39,7 +39,17 @@ def _diagnosis_data(**overrides: object) -> dict:
         "primary_code": "order.cost.min",
         "gap": "194.11",
         "gap_is_borderline": False,
-        "validations": [{"code": "order.cost.min", "level": "error", "type": "cost"}],
+        # G10: the arithmetic's inputs and per-code `is_known` ride along.
+        "products_total": "404.89",
+        "threshold_source": "validation_context",
+        "validations": [
+            {
+                "code": "order.cost.min",
+                "level": "error",
+                "type": "cost",
+                "is_known": True,
+            }
+        ],
         "channels": [
             {
                 "delivery_type": "SelfPickup",
@@ -63,6 +73,10 @@ def _receipt_data(**overrides: object) -> dict:
         "actual_delta": "39.99",
         "blocker_cleared": False,
         "remaining_gap": "2.98",
+        # G10 (claim 4): expected against actual, outcome as typed fields.
+        "expected_delta": "39.99",
+        "verified": True,
+        "kind": "add",
     }
     data.update(overrides)
     return data
@@ -147,6 +161,17 @@ def _options_data(**overrides: object) -> dict:
                 "guest_text_uk": "Додати товар",
                 "kind": "add",
                 "compensates_action_id": None,
+                # G10 (claim 3): the guard's hash and the evidence, no product_id.
+                "args_hash": "a" * 64,
+                "tool_name": "silpo_add_or_update_cart_products",
+                "evidence": [
+                    {
+                        "price": "86.84",
+                        "availability": True,
+                        "source_tool": "silpo_find_products_batch",
+                        "captured_at": "2026-09-07T12:00:00+00:00",
+                    }
+                ],
             }
         ],
     }
@@ -179,3 +204,36 @@ def test_an_options_event_with_an_unknown_kind_is_rejected() -> None:
     data["candidates"][0]["kind"] = "wipe"
     with pytest.raises(jsonschema.ValidationError):
         jsonschema.validate({"event": "options", "data": data}, _schema())
+
+
+# G10 (A-G10-01): the sixth event. `stage` carries which node completed and
+# what kind of I/O it does -- nothing else: no index (the graph's own paths
+# regress on one), no counters (D59), no start signal.
+def _stage(io: str) -> dict:
+    return {
+        "event": "stage",
+        "data": {
+            "session_id": "s1",
+            "trace_id": "t1",
+            "version": {},
+            "node": "collect_and_gate",
+            "io": io,
+            "usage": {"tokens": 1100, "cost_usd": 0.001125, "ceiling_usd": 20},
+        },
+    }
+
+
+def test_a_real_stage_event_validates() -> None:
+    jsonschema.validate(_stage("mcp"), _schema())
+
+
+def test_a_stage_event_with_an_unknown_io_kind_is_rejected() -> None:
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(_stage("network"), _schema())
+
+
+def test_a_stage_event_without_a_node_is_rejected() -> None:
+    frame = _stage("mcp")
+    del frame["data"]["node"]
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(frame, _schema())

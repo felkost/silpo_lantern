@@ -31,6 +31,8 @@ from typing import Any, Dict, List, Optional
 
 from src.lantern.config import PROJECT_ROOT
 from src.lantern.domain.metrics import (
+    COUNT_METRICS,
+    METRIC_CAVEATS,
     ConsentBindingRow,
     CostDeltaRow,
     DisclosureRow,
@@ -45,6 +47,7 @@ from src.lantern.domain.metrics import (
     readback_coverage,
     recovery_completion_rate,
     unauthorized_write_rate,
+    wilson,
     write_delta_fidelity,
 )
 
@@ -54,6 +57,10 @@ def _decimal_or_none(value: Any) -> Optional[Decimal]:
 
 
 METRICS_OUTPUT_PATH = PROJECT_ROOT / "docs" / "evidence" / "metrics.json"
+# G10: the console's source. `docs/` is gitignored, so the deployed service
+# has no `METRICS_OUTPUT_PATH`; this copy is tracked, regenerated from the
+# tracked bundles alone (`--tracked`), and pinned by an agreement test.
+TRACKED_METRICS_PATH = PROJECT_ROOT / "datasets" / "golden-v1.0.0" / "metrics.json"
 
 
 def _load_run_records(
@@ -215,13 +222,61 @@ def build_metrics_report(
 
     return {
         "metrics": [
-            {"name": name, "value": result.value, "n": result.n}
+            {
+                "name": name,
+                "value": result.value,
+                "n": result.n,
+                # G10: the interval and the caveat travel WITH the number,
+                # so no surface can render one without the other.
+                "interval": (
+                    None
+                    if name in COUNT_METRICS or result.value is None
+                    else [round(x, 4) for x in wilson(result.value, result.n)]
+                ),
+                "caveat": METRIC_CAVEATS[name],
+            }
             for name, result in results.items()
         ]
     }
 
 
+def build_tracked_metrics_report() -> Dict[str, Any]:
+    """The report a fresh clone can reproduce: the 18 offline repeats over
+    the tracked bundles, in memory, then the same computation as the
+    evidence-directory path. ~3 s. `generated_at` is the only field two
+    runs differ in."""
+    import tempfile
+    from datetime import datetime, timezone
+
+    from scripts.core_e2e_repeats import run_repeats
+
+    repeats = run_repeats(estimate_only=False, offline=True)
+    with tempfile.TemporaryDirectory() as tmp:
+        records = Path(tmp) / "g9_run_records_offline.json"
+        records.write_text(
+            json.dumps({"population": "offline", "records": repeats["records"]}),
+            encoding="utf-8",
+        )
+        report = build_metrics_report(evidence_dir=Path(tmp))
+    return {
+        "population": "offline",
+        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "regenerate": "python -m scripts.compute_metrics --tracked",
+        **report,
+    }
+
+
 def main() -> None:
+    import sys
+
+    if "--tracked" in sys.argv:
+        TRACKED_METRICS_PATH.write_text(
+            json.dumps(build_tracked_metrics_report(), ensure_ascii=False, indent=2)
+            + "\n",
+            encoding="utf-8",
+        )
+        print(f"wrote {TRACKED_METRICS_PATH.relative_to(PROJECT_ROOT)}")
+        return
     report = build_metrics_report(evidence_dir=PROJECT_ROOT / "datasets" / "evidence")
     METRICS_OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     METRICS_OUTPUT_PATH.write_text(

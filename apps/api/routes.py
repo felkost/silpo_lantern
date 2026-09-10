@@ -28,11 +28,12 @@ import asyncio
 import json
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Any, AsyncIterator, Dict, Optional, Sequence
+from typing import Any, AsyncIterator, Dict, List, Optional, Sequence, Tuple
 
 from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse
 
+from apps.api.evidence import load_evidence
 from apps.api.schemas import ConsentAckResponse, ConsentRequest, CreateSessionResponse
 from apps.api.session_cookie import (
     clear_session_cookie,
@@ -45,6 +46,8 @@ from src.lantern.domain.consent_hash import (
     compute_state_hash,
 )
 from src.lantern.domain.models import ConsentRecord
+from src.lantern.domain.repeat_accounting import TokenUsage, cost_usd
+from src.lantern.graph.llm_adapter import current_usage_log, load_llm_prices
 from src.lantern.graph.state import (
     ACTIVE_EXECUTION_SECONDS,
     RecoveryState,
@@ -53,10 +56,29 @@ from src.lantern.graph.state import (
 from src.lantern.mcp.session import current_token_storage
 from src.lantern.mcp.session_token_storage import SessionTokenStorage
 from src.lantern.memory import repository
+from src.lantern.policies.loader import PolicyRegistry, load_registry
 
 router = APIRouter()
 
 CONSENT_TTL = timedelta(minutes=5)  # plan section 11.1
+
+# G10 (A-G10-01): what kind of I/O each graph node does, for the `stage`
+# event -- so the console's loader can say "MCP" / "model" / "database"
+# from an observation, not a guess. Keys are the ten names `build.py`
+# registers; `write_guard` reads the live tool schema (MCP) and the
+# consent row (db). Mirrored client-side in `apps/web/src/stages.ts`.
+NODE_IO: Dict[str, str] = {
+    "read": "mcp",
+    "diagnose": "pure",
+    "compare_channels": "mcp",
+    "plan": "llm",
+    "collect_and_gate": "mcp",
+    "rank": "pure",
+    "explain": "llm",
+    "write_guard": "mcp+db",
+    "write_and_readback": "mcp+db",
+    "persist_receipt": "db",
+}
 
 
 def _config(thread_id: str) -> Dict[str, Any]:
@@ -76,6 +98,19 @@ async def _get_graph(request: Request) -> Any:
 
 def _version_tuple(request: Request) -> Dict[str, str]:
     return dict(getattr(request.app.state, "version_tuple", {}))
+
+
+_registry: Optional[PolicyRegistry] = None
+
+
+def _is_known(code: str) -> bool:
+    # G10: `is_known` per validation on the diagnosis frame -- the same
+    # exact-match registry `diagnose()` uses, so the console's "unknown"
+    # and the domain's "unknown" cannot disagree. Loaded once.
+    global _registry
+    if _registry is None:
+        _registry = load_registry()
+    return _registry.lookup(code) is not None
 
 
 def _sse_line(event: str, data: Dict[str, Any]) -> str:
@@ -196,6 +231,36 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
 
     version_tuple = _version_tuple(request)
 
+    # G10 (D90): this run's model calls land here; the frames show the
+    # session's cumulative SPEND (checkpoint + this run), never a
+    # remainder -- the ceiling is a project decision, the provider's
+    # dashboard is the only real balance.
+    usage_log: List[Tuple[str, TokenUsage]] = []
+    current_usage_log.set(usage_log)
+    prices = load_llm_prices()
+    prior_tokens = int(existing_state.get("tokens_used", 0) if existing_state else 0)
+    prior_cost = float(
+        existing_state.get("llm_cost_usd", 0.0) if existing_state else 0.0
+    )
+
+    def _spend() -> Dict[str, Any]:
+        tokens = prior_tokens + sum(
+            u.input_tokens + u.output_tokens for _, u in usage_log
+        )
+        cost = prior_cost + sum(
+            cost_usd(
+                u,
+                input_usd_per_million=prices[role]["input"],
+                output_usd_per_million=prices[role]["output"],
+            )
+            for role, u in usage_log
+        )
+        return {
+            "tokens": tokens,
+            "cost_usd": round(cost, 6),
+            "ceiling_usd": prices["ceiling_usd"],
+        }
+
     async def stream() -> AsyncIterator[str]:
         base = {
             "session_id": session_id,
@@ -204,7 +269,7 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
         }
 
         def _diagnosis_line(
-            diagnosis: Any, disclosure: Any, channels: Sequence[Any]
+            diagnosis: Any, disclosure: Any, channels: Sequence[Any], cart: Any
         ) -> str:
             # G7 (D-G7-03): carries the disclosure layer and the
             # delivery-channel comparison, not just primary_code/gap --
@@ -222,8 +287,21 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
                     "gap_is_borderline": bool(
                         disclosure and disclosure.gap_is_borderline
                     ),
+                    # G10 (claim 2): the arithmetic's inputs, so the panel
+                    # can show `threshold - products_total = gap` as code
+                    # did it. `products_total` is money, not identity;
+                    # the cart's id and coordinates never leave the server.
+                    "products_total": (
+                        str(cart.products_total) if cart is not None else None
+                    ),
+                    "threshold_source": diagnosis.threshold_source,
                     "validations": [
-                        {"code": v.code, "level": v.level, "type": v.type}
+                        {
+                            "code": v.code,
+                            "level": v.level,
+                            "type": v.type,
+                            "is_known": _is_known(v.code),
+                        }
                         for v in (
                             list(disclosure.blockers) + list(disclosure.disclosures)
                             if disclosure
@@ -249,6 +327,15 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
                     **base,
                     "status": receipt.status if receipt else fallback_status,
                     "reason": receipt.reason if receipt else None,
+                    # G10 (claim 4): expected against actual, and the
+                    # outcome as the receipt's own typed fields.
+                    "expected_delta": (
+                        str(receipt.expected_delta)
+                        if receipt and receipt.expected_delta is not None
+                        else None
+                    ),
+                    "verified": bool(receipt and receipt.verified),
+                    "kind": receipt.kind if receipt else None,
                     "actual_delta": (
                         str(receipt.actual_delta)
                         if receipt and receipt.actual_delta is not None
@@ -285,6 +372,22 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
                             "guest_text_uk": p.guest_text_uk,
                             "kind": p.kind,
                             "compensates_action_id": p.compensates_action_id,
+                            # G10 (claim 3): the hash the guard will bind
+                            # to, computed here with the guard's own
+                            # canonicalizer -- state holds no such field.
+                            "args_hash": compute_args_hash(p.canonical_args),
+                            "tool_name": p.tool_name,
+                            # Evidence without `product_id`: the jury needs
+                            # the price, its source and its age, not an id.
+                            "evidence": [
+                                {
+                                    "price": str(e.price),
+                                    "availability": e.availability,
+                                    "source_tool": e.source_tool,
+                                    "captured_at": e.captured_at.isoformat(),
+                                }
+                                for e in p.evidence
+                            ],
                         }
                         for p in candidates
                     ],
@@ -305,21 +408,37 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
             # only the (never-advancing) replay branch below -- which
             # reads the merged checkpoint -- would have shown it working.
             pending_diagnosis: Dict[str, Any] = {}
+            cart_seen: Any = existing_state.get("cart") if existing_state else None
             async for chunk in graph.astream(
                 resume_input, config, stream_mode="updates"
             ):
                 for node_name, partial in chunk.items():
                     if node_name == "__interrupt__":
                         continue
-                    # A node that updates no channel (`persist_receipt`
-                    # returns `{}` -- it writes to Neon, not to the state)
-                    # arrives here as `{node_name: None}`. Measured live,
-                    # where it crashed the stream with AttributeError AFTER
-                    # the write had already landed and the receipt had been
-                    # persisted, so the guest saw a 500 instead of their
-                    # own receipt.
+                    # G10 (A-G10-01): the stage frame reads NOTHING from
+                    # `partial`, which is why it may sit before the falsy
+                    # guard below -- a node that ran but updated no channel
+                    # still belongs in the feed, and nothing here can hit
+                    # the `None.get()` the guard exists for.
+                    yield _sse_line(
+                        "stage",
+                        {
+                            **base,
+                            "node": node_name,
+                            "io": NODE_IO.get(node_name, "pure"),
+                            "usage": _spend(),
+                        },
+                    )
+                    # A node that updates no channel arrives here as
+                    # `{node_name: None}` (measured live at G7, where it
+                    # crashed the stream with AttributeError AFTER the
+                    # write had landed and the receipt had been persisted,
+                    # so the guest saw a 500 instead of their own receipt).
+                    # No node returns `{}` today; the guard stays.
                     if not partial:
                         continue
+                    if partial.get("cart") is not None:
+                        cart_seen = partial["cart"]
                     if node_name == "diagnose" and partial.get("diagnosis") is not None:
                         pending_diagnosis["diagnosis"] = partial["diagnosis"]
                         pending_diagnosis["disclosure"] = partial.get("disclosure")
@@ -331,6 +450,7 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
                             pending_diagnosis["diagnosis"],
                             pending_diagnosis["disclosure"],
                             partial.get("channel_comparison") or [],
+                            cart_seen,
                         )
                     # G8 (D51): the compensation offer arrives on
                     # `persist_receipt`'s own chunk, not `explain` --
@@ -364,6 +484,7 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
                     existing_state["diagnosis"],
                     existing_state.get("disclosure"),
                     existing_state.get("channel_comparison") or [],
+                    existing_state.get("cart"),
                 )
             # G8 (D51): a compensation offer's checkpoint still carries the
             # receipt it undoes -- replaying it here means a browser
@@ -376,6 +497,15 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
                 yield _options_line(existing_state["candidates"])
             if status == "aborted":
                 yield _sse_line("error", {**base, "error": existing_state.get("error")})
+
+        if usage_log:
+            # Persist onto the checkpoint so the next `/events` call (the
+            # write run, or a second consent round) continues the count.
+            spend = _spend()
+            await graph.aupdate_state(
+                config,
+                {"tokens_used": spend["tokens"], "llm_cost_usd": spend["cost_usd"]},
+            )
 
         final_snapshot = await graph.aget_state(config)
         final_state = final_snapshot.values
@@ -446,7 +576,23 @@ async def submit_consent(
         },
     )
 
-    return ConsentAckResponse(action_id=proposal.action_id)
+    # G10 (claim 3): the binding the guard will check, as recorded -- and
+    # no `cart_id` (D-G10-08).
+    return ConsentAckResponse(
+        action_id=proposal.action_id,
+        args_hash=consent.args_hash,
+        state_hash=consent.state_hash,
+        expires_at=consent.expires_at.isoformat(),
+    )
+
+
+@router.get("/evidence")
+async def evidence() -> Dict[str, Any]:
+    """G10 (claims 1 and 5): what a jury may be shown -- the tracked
+    metrics with `n`, interval and caveat, and the sanitised disclosure
+    observation. On `router`, not `app`: anything registered after the
+    root mount in `main.py` is shadowed by it."""
+    return load_evidence()
 
 
 # `/auth/start` and `/auth/callback` live in `oauth_routes.py` -- a real,

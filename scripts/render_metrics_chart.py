@@ -20,10 +20,10 @@ text English in ink #24242E, no sixth colour.
 from __future__ import annotations
 
 import json
-import math
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, Dict, Tuple, List
 
 from src.lantern.config import PROJECT_ROOT
+from src.lantern.domain.metrics import COUNT_METRICS, wilson  # noqa: F401
 
 METRICS_PATH = PROJECT_ROOT / "docs" / "evidence" / "metrics.json"
 OUT_PATH = PROJECT_ROOT / "docs" / "uml" / "svg" / "g9_metrics_results.svg"
@@ -56,17 +56,8 @@ GATES: Dict[str, Tuple[str, Callable[[float], bool]]] = {
     "FalseRecovery": ("0 absolute", lambda v: v == 0.0),
     "DisclosureRate": ("measured", lambda v: True),
 }
-# FalseRecovery is a COUNT, not a proportion -- it gets no interval.
-COUNT_METRICS = {"FalseRecovery"}
-
-
-def wilson(p: float, n: int, z: float = 1.96) -> Tuple[float, float]:
-    if n == 0:
-        return (0.0, 0.0)
-    denominator = 1 + z * z / n
-    centre = (p + z * z / (2 * n)) / denominator
-    half = (z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n))) / denominator
-    return (max(0.0, centre - half), min(1.0, centre + half))
+# `wilson` and `COUNT_METRICS` live in `domain/metrics.py` since G10, so
+# this chart and the console's `GET /evidence` cannot disagree.
 
 
 def _esc(text: str) -> str:

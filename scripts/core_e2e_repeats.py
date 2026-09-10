@@ -67,37 +67,17 @@ CORE_CASE_IDS = ["GD-01", "GD-02", "GD-03", "GD-04", "GD-05", "GD-06"]
 REPEATS_PER_CASE = 3
 
 
-def usage_from_response(response: Any) -> TokenUsage:
-    """Reads the provider's own usage block off a raw LangChain message.
-
-    A response carrying none records ZEROS, never an estimate: an
-    unmeasured call must stay visibly unmeasured rather than contribute a
-    guessed number to a cost report."""
-    metadata = getattr(response, "usage_metadata", None)
-    if not isinstance(metadata, dict):
-        return TokenUsage(0, 0)
-    return TokenUsage(
-        input_tokens=int(metadata.get("input_tokens") or 0),
-        output_tokens=int(metadata.get("output_tokens") or 0),
-    )
+# G10 (D90): both moved into `graph/llm_adapter.py` so the live session
+# and this script measure and price a token the same way. Re-exported
+# here for T25 and for the callers below.
+from src.lantern.graph.llm_adapter import (  # noqa: E402
+    load_llm_prices,
+    usage_from_response,
+)
 
 
-def _prices() -> Dict[str, Dict[str, float]]:
-    models = yaml.safe_load(MODELS_PATH.read_text(encoding="utf-8"))
-    planner = models["planner"]
-    explainer_selected = models["explainer"]["selected"]
-    explainer_price = next(
-        c["price_usd_per_million"]
-        for c in models["explainer"]["candidates"]
-        if c["model"] == explainer_selected
-    )
-    return {
-        "planner": {
-            "model": planner["model"],
-            **planner["price_usd_per_million"],
-        },
-        "explainer": {"model": explainer_selected, **explainer_price},
-    }
+def _prices() -> Dict[str, Any]:
+    return load_llm_prices()
 
 
 def _bundle_path_for(case: Dict[str, Any]) -> Optional[Path]:

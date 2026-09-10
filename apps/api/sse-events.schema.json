@@ -2,9 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://lantern.local/schemas/sse-event.json",
   "title": "SSE event envelope",
-  "description": "G5+G6 (D-G5-21): `event` is now the closed enum plan section 1.5 declares. Corrected in place -- this description previously named a different, seven-value vocabulary (read/diagnose/plan/consent/write/readback/receipt) that was never actually emitted by any route; the five values below are what `apps/api/routes.py`'s `session_events` endpoint emits. G7 (D-G7-03): per-event `data` shapes added for `diagnosis` and `receipt` -- previously only the three envelope fields common to every event were declared, so the disclosure layer and channel comparison the guest actually needs were never schema-checked at all.",
+  "description": "G5+G6 (D-G5-21): `event` is now the closed enum plan section 1.5 declares. Corrected in place -- this description previously named a different, seven-value vocabulary (read/diagnose/plan/consent/write/readback/receipt) that was never actually emitted by any route; the five values below are what `apps/api/routes.py`'s `session_events` endpoint emits. G7 (D-G7-03): per-event `data` shapes added for `diagnosis` and `receipt` -- previously only the three envelope fields common to every event were declared, so the disclosure layer and channel comparison the guest actually needs were never schema-checked at all. G10 (A-G10-01): a sixth event, `stage` -- one frame per graph node the stream observed completing, `{node, io}`; an append-only log of what ran, with no index, no counters (D59) and no start signal (`stream_mode=\"updates\"` reports completions only).",
   "type": "object",
-  "required": ["event", "data"],
+  "required": [
+    "event",
+    "data"
+  ],
   "properties": {
     "id": {
       "type": "string",
@@ -12,13 +15,24 @@
     },
     "event": {
       "type": "string",
-      "enum": ["diagnosis", "options", "consent_required", "receipt", "error"],
-      "description": "Plan section 1.5's five SSE event names."
+      "enum": [
+        "diagnosis",
+        "options",
+        "consent_required",
+        "receipt",
+        "error",
+        "stage"
+      ],
+      "description": "Plan section 1.5's five SSE event names, plus `stage` (A-G10-01)."
     },
     "data": {
       "type": "object",
       "description": "Every event's `data` carries session_id, trace_id, and the version tuple (plan section 1.5); the remaining fields are specific to the event name.",
-      "required": ["session_id", "trace_id", "version"]
+      "required": [
+        "session_id",
+        "trace_id",
+        "version"
+      ]
     },
     "retry": {
       "type": "integer",
@@ -29,28 +43,74 @@
   "additionalProperties": false,
   "allOf": [
     {
-      "if": { "properties": { "event": { "const": "diagnosis" } } },
+      "if": {
+        "properties": {
+          "event": {
+            "const": "diagnosis"
+          }
+        }
+      },
       "then": {
         "properties": {
           "data": {
             "required": [
-              "session_id", "trace_id", "version",
-              "primary_code", "gap", "gap_is_borderline", "validations", "channels"
+              "session_id",
+              "trace_id",
+              "version",
+              "primary_code",
+              "gap",
+              "gap_is_borderline",
+              "validations",
+              "channels",
+              "products_total",
+              "threshold_source"
             ],
             "properties": {
-              "primary_code": { "type": ["string", "null"] },
-              "gap": { "type": ["string", "null"] },
-              "gap_is_borderline": { "type": "boolean" },
+              "primary_code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "gap": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "gap_is_borderline": {
+                "type": "boolean"
+              },
               "validations": {
                 "type": "array",
                 "description": "Every validation the cart already carries -- blockers and disclosures alike (plan section 5.1's disclosure-layer requirement).",
                 "items": {
                   "type": "object",
-                  "required": ["code", "level", "type"],
+                  "required": [
+                    "code",
+                    "level",
+                    "type",
+                    "is_known"
+                  ],
                   "properties": {
-                    "code": { "type": "string" },
-                    "level": { "type": "string", "enum": ["error", "warning", "info"] },
-                    "type": { "type": "string" }
+                    "code": {
+                      "type": "string"
+                    },
+                    "level": {
+                      "type": "string",
+                      "enum": [
+                        "error",
+                        "warning",
+                        "info"
+                      ]
+                    },
+                    "type": {
+                      "type": "string"
+                    },
+                    "is_known": {
+                      "type": "boolean",
+                      "description": "G10: whether the policy registry knows this code; a quarantined code is false."
+                    }
                   }
                 }
               },
@@ -59,12 +119,226 @@
                 "description": "The delivery-channel comparison (amendment A7).",
                 "items": {
                   "type": "object",
-                  "required": ["delivery_type", "gap", "verdict", "reason"],
+                  "required": [
+                    "delivery_type",
+                    "gap",
+                    "verdict",
+                    "reason"
+                  ],
                   "properties": {
-                    "delivery_type": { "type": "string" },
-                    "gap": { "type": "string" },
-                    "verdict": { "type": "string", "enum": ["clears_now", "needs_check"] },
-                    "reason": { "type": "string" }
+                    "delivery_type": {
+                      "type": "string"
+                    },
+                    "gap": {
+                      "type": "string"
+                    },
+                    "verdict": {
+                      "type": "string",
+                      "enum": [
+                        "clears_now",
+                        "needs_check"
+                      ]
+                    },
+                    "reason": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "products_total": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "G10 (claim 2): the cart's productsTotal as a decimal string -- the arithmetic's input, never the cart id or coordinates."
+              },
+              "threshold_source": {
+                "type": "string",
+                "enum": [
+                  "validation_context",
+                  "time_slots",
+                  "unverified"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "receipt"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "required": [
+              "session_id",
+              "trace_id",
+              "version",
+              "status",
+              "reason",
+              "actual_delta",
+              "blocker_cleared",
+              "remaining_gap",
+              "expected_delta",
+              "verified",
+              "kind"
+            ],
+            "properties": {
+              "status": {
+                "type": "string"
+              },
+              "reason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "actual_delta": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "blocker_cleared": {
+                "type": "boolean",
+                "description": "D42: a verified write is not a recovered cart -- distinguishes 'the write landed' from 'you can check out'."
+              },
+              "remaining_gap": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "expected_delta": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "verified": {
+                "type": "boolean"
+              },
+              "kind": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "add",
+                  "compensate",
+                  null
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "options"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "required": [
+              "session_id",
+              "trace_id",
+              "version",
+              "candidates"
+            ],
+            "properties": {
+              "candidates": {
+                "type": "array",
+                "description": "G8 (D51): kind distinguishes the ordinary add screen from the offer to undo a write this system already performed.",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "action_id",
+                    "product_name",
+                    "quantity",
+                    "expected_delta",
+                    "guest_text_uk",
+                    "kind",
+                    "compensates_action_id",
+                    "args_hash",
+                    "tool_name",
+                    "evidence"
+                  ],
+                  "properties": {
+                    "action_id": {
+                      "type": "string"
+                    },
+                    "product_name": {
+                      "type": "string"
+                    },
+                    "quantity": {
+                      "type": "string"
+                    },
+                    "expected_delta": {
+                      "type": "string"
+                    },
+                    "guest_text_uk": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "add",
+                        "compensate"
+                      ]
+                    },
+                    "compensates_action_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "args_hash": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$",
+                      "description": "G10 (claim 3): computed at emit time with the guard's own canonicalizer."
+                    },
+                    "tool_name": {
+                      "type": "string"
+                    },
+                    "evidence": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "price",
+                          "availability",
+                          "source_tool",
+                          "captured_at"
+                        ],
+                        "properties": {
+                          "price": {
+                            "type": "string"
+                          },
+                          "availability": {
+                            "type": "boolean"
+                          },
+                          "source_tool": {
+                            "type": "string"
+                          },
+                          "captured_at": {
+                            "type": "string"
+                          }
+                        },
+                        "description": "G10: the evidence tuple without product_id."
+                      }
+                    }
                   }
                 }
               }
@@ -74,52 +348,59 @@
       }
     },
     {
-      "if": { "properties": { "event": { "const": "receipt" } } },
+      "if": {
+        "properties": {
+          "event": {
+            "const": "stage"
+          }
+        }
+      },
       "then": {
         "properties": {
           "data": {
             "required": [
-              "session_id", "trace_id", "version",
-              "status", "reason", "actual_delta", "blocker_cleared", "remaining_gap"
+              "session_id",
+              "trace_id",
+              "version",
+              "node",
+              "io",
+              "usage"
             ],
             "properties": {
-              "status": { "type": "string" },
-              "reason": { "type": ["string", "null"] },
-              "actual_delta": { "type": ["string", "null"] },
-              "blocker_cleared": {
-                "type": "boolean",
-                "description": "D42: a verified write is not a recovered cart -- distinguishes 'the write landed' from 'you can check out'."
+              "node": {
+                "type": "string",
+                "description": "The graph node that just completed -- one of the ten names build.py registers."
               },
-              "remaining_gap": { "type": ["string", "null"] }
-            }
-          }
-        }
-      }
-    },
-    {
-      "if": { "properties": { "event": { "const": "options" } } },
-      "then": {
-        "properties": {
-          "data": {
-            "required": ["session_id", "trace_id", "version", "candidates"],
-            "properties": {
-              "candidates": {
-                "type": "array",
-                "description": "G8 (D51): kind distinguishes the ordinary add screen from the offer to undo a write this system already performed.",
-                "items": {
-                  "type": "object",
-                  "required": [
-                    "action_id", "product_name", "quantity", "expected_delta",
-                    "guest_text_uk", "kind", "compensates_action_id"
-                  ],
-                  "properties": {
-                    "action_id": { "type": "string" },
-                    "product_name": { "type": "string" },
-                    "quantity": { "type": "string" },
-                    "expected_delta": { "type": "string" },
-                    "guest_text_uk": { "type": "string" },
-                    "kind": { "type": "string", "enum": ["add", "compensate"] },
-                    "compensates_action_id": { "type": ["string", "null"] }
+              "io": {
+                "type": "string",
+                "enum": [
+                  "mcp",
+                  "llm",
+                  "db",
+                  "pure",
+                  "mcp+db"
+                ],
+                "description": "What kind of work the node does, from `apps/api/routes.py`'s NODE_IO -- so a loader can say MCP / model / database honestly."
+              },
+              "usage": {
+                "type": "object",
+                "description": "G10 (D90): the session's cumulative SPEND from the provider's own usage block, priced against config/models.yaml; `ceiling_usd` is a project decision, never a remaining balance.",
+                "required": [
+                  "tokens",
+                  "cost_usd",
+                  "ceiling_usd"
+                ],
+                "properties": {
+                  "tokens": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "cost_usd": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "ceiling_usd": {
+                    "type": "number"
                   }
                 }
               }
