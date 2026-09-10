@@ -219,10 +219,11 @@ function App() {
     [consume, sessionId],
   );
 
-  // One predicate for the card and the panel: the panel must drop the
-  // stale pre-write diagnosis on the compensation screen for the same
-  // reason the card does (D51) -- a persistent left-column gap beside an
-  // undo offer would pass the card's test and still mislead.
+  // The card shows the diagnosis on its own screen and beside an ordinary
+  // offer; the panel keeps it as history on every screen EXCEPT beside an
+  // undo offer, where the stale pre-write gap would mislead (D51) -- seen
+  // live: reusing the card's predicate blanked claims 1 and 2 on the
+  // receipt screen.
   const compensationOffer =
     candidates.length > 0 && candidates.every((c) => c.kind === "compensate");
   const showDiagnosis =
@@ -243,7 +244,7 @@ function App() {
         <aside className="panel" aria-label="Observer panel">
           <StageFeed rows={stages} streaming={busy} />
           <ClaimPanel
-            diagnosis={showDiagnosis ? diagnosis : null}
+            diagnosis={screen === "consent" && compensationOffer ? null : diagnosis}
             candidates={candidates}
             consent={consentAck}
             receipts={receipts}

@@ -137,7 +137,7 @@ export function ClaimPanel({ diagnosis, candidates, consent, receipts, refusal, 
             {consent !== null && (
               <li>
                 consent recorded: args_hash <code>{short(consent.args_hash)}</code>, state_hash{" "}
-                <code>{short(consent.state_hash)}</code>, expires <code>{consent.expires_at}</code>
+                <code>{short(consent.state_hash)}</code>, expires <code>{consent.expires_at.slice(0, 19)}Z</code>
               </li>
             )}
             {refusal !== null && (
