@@ -45,6 +45,9 @@ const ENVELOPE = { session_id: "s1", trace_id: "t1", version: { schema_hash: "h"
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  // G10: the app resumes a stored session on mount; one test's session
+  // must not leak into the next.
+  sessionStorage.clear();
 });
 
 describe("recovery card", () => {
@@ -58,7 +61,7 @@ describe("recovery card", () => {
               session_id: "s1",
               status: "created",
               authorized: true,
-              auth_url: "/auth/start?session_id=s1",
+              auth_url: "/auth/start",
             }),
             { status: 200 },
           );
@@ -105,7 +108,7 @@ describe("recovery card", () => {
               session_id: "s1",
               status: "created",
               authorized: true,
-              auth_url: "/auth/start?session_id=s1",
+              auth_url: "/auth/start",
             }),
             { status: 200 },
           );
@@ -153,7 +156,7 @@ describe("recovery card", () => {
               session_id: "s1",
               status: "created",
               authorized: true,
-              auth_url: "/auth/start?session_id=s1",
+              auth_url: "/auth/start",
             }),
             { status: 200 },
           );
@@ -207,7 +210,7 @@ describe("recovery card", () => {
               session_id: "s1",
               status: "created",
               authorized: true,
-              auth_url: "/auth/start?session_id=s1",
+              auth_url: "/auth/start",
             }),
             { status: 200 },
           );
@@ -327,7 +330,7 @@ describe("compensation offer (G8, D51)", () => {
               session_id: "s1",
               status: "created",
               authorized: true,
-              auth_url: "/auth/start?session_id=s1",
+              auth_url: "/auth/start",
             }),
             { status: 200 },
           );
@@ -386,7 +389,7 @@ describe("compensation offer (G8, D51)", () => {
               session_id: "s1",
               status: "created",
               authorized: true,
-              auth_url: "/auth/start?session_id=s1",
+              auth_url: "/auth/start",
             }),
             { status: 200 },
           );
@@ -470,7 +473,7 @@ describe("guest login", () => {
               session_id: "s1",
               status: "created",
               authorized: false,
-              auth_url: "/auth/start?session_id=s1",
+              auth_url: "/auth/start",
             }),
             { status: 200 },
           );
@@ -487,9 +490,118 @@ describe("guest login", () => {
     await waitFor(() => {
       expect(screen.getByTestId("auth-link")).toBeInTheDocument();
     });
-    expect(screen.getByTestId("auth-link")).toHaveAttribute(
-      "href",
-      "/auth/start?session_id=s1",
+    expect(screen.getByTestId("auth-link")).toHaveAttribute("href", "/auth/start");
+    // G10 (A-G10-04): the id survives the round trip through Silpo's login
+    // page, which reloads this app on a bare `/`.
+    expect(sessionStorage.getItem("lantern_session_id")).toBe("s1");
+  });
+});
+
+// G10 delivery A: the callback lands on a bare `/`, so the app must find
+// its own session again; and reachability without logout is not shipped
+// (G10-4).
+describe("session round trip and logout", () => {
+  it("resumes the stored session on load and streams its events", async () => {
+    sessionStorage.setItem("lantern_session_id", "s1");
+    const calls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        calls.push(`${init?.method ?? "GET"} ${url}`);
+        return new Response(
+          sseStream([
+            frame("diagnosis", {
+              ...ENVELOPE,
+              primary_code: "order.cost.min",
+              gap: "194.11",
+              gap_is_borderline: false,
+              validations: [],
+              channels: [],
+            }),
+            frame("consent_required", ENVELOPE),
+          ]),
+          { status: 200 },
+        );
+      }),
     );
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("primary-code")).toHaveTextContent("order.cost.min");
+    });
+    expect(calls).toEqual(["GET /session/s1/events"]); // no second POST /session
+  });
+
+  it("returns to the login screen when the stored session has no token", async () => {
+    sessionStorage.setItem("lantern_session_id", "s1");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ detail: "no" }), { status: 401 })),
+    );
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("auth-link")).toBeInTheDocument();
+    });
+  });
+
+  it("logs out: DELETE /session, storage cleared, back to the start", async () => {
+    sessionStorage.setItem("lantern_session_id", "s1");
+    const calls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        calls.push(`${init?.method ?? "GET"} ${url}`);
+        if (init?.method === "DELETE") {
+          return new Response(null, { status: 204 });
+        }
+        return new Response(
+          sseStream([
+            frame("diagnosis", {
+              ...ENVELOPE,
+              primary_code: "order.cost.min",
+              gap: "194.11",
+              gap_is_borderline: false,
+              validations: [],
+              channels: [],
+            }),
+            frame("consent_required", ENVELOPE),
+          ]),
+          { status: 200 },
+        );
+      }),
+    );
+
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /вийти/i })).toBeInTheDocument();
+    });
+    await act(async () => {
+      screen.getByRole("button", { name: /вийти/i }).click();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /перевірити мій кошик/i })).toBeInTheDocument();
+    });
+    expect(calls).toContain("DELETE /session/s1");
+    expect(sessionStorage.getItem("lantern_session_id")).toBeNull();
+  });
+
+  it("explains a 429 in Ukrainian rather than echoing the status", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ detail: "cap" }), { status: 429 })),
+    );
+
+    render(<App />);
+    await act(async () => {
+      screen.getByRole("button", { name: /перевірити мій кошик/i }).click();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("error-message")).toHaveTextContent(/ліміт/i);
+    });
   });
 });

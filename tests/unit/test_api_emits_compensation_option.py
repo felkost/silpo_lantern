@@ -17,6 +17,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from apps.api import routes as routes_module
+from apps.api.limits import SpendCaps
+from apps.api.session_cookie import SESSION_COOKIE
 from src.lantern.domain.models import ActionProposal, Cart, EvidenceTuple, Receipt
 
 _NOW = datetime(2026, 9, 8, 12, 0, 0, tzinfo=timezone.utc)
@@ -131,6 +133,14 @@ class _FakeGraph:
         self.state = {**self.state, **values}
 
 
+def _client(app: FastAPI) -> TestClient:
+    """G10 (A-G10-04): every `/session/{id}/*` route checks the path id
+    against the session cookie; each test here drives session `s1`."""
+    client = TestClient(app)
+    client.cookies.set(SESSION_COOKIE, "s1")
+    return client
+
+
 def _make_app(graph: _FakeGraph, monkeypatch: pytest.MonkeyPatch) -> FastAPI:
     app = FastAPI()
     app.include_router(routes_module.router)
@@ -138,6 +148,7 @@ def _make_app(graph: _FakeGraph, monkeypatch: pytest.MonkeyPatch) -> FastAPI:
     app.state.owner_secret = "test-owner-secret"
     app.state.repo_pool = object()
     app.state.version_tuple = {"schema_hash": "h1"}
+    app.state.spend_caps = SpendCaps()
 
     monkeypatch.setattr(routes_module.repository, "create_session", lambda *a: None)
     monkeypatch.setattr(
@@ -193,7 +204,7 @@ def test_the_offer_is_emitted_from_persist_receipt_not_only_explain(
         },
     )
     app = _make_app(graph, monkeypatch)
-    client = TestClient(app)
+    client = _client(app)
 
     response = client.get("/session/s1/events")
 
@@ -223,7 +234,7 @@ def test_a_repeated_get_at_the_offer_replays_the_receipt_above_it(
     }
     graph = _FakeGraph(chunks=[], final_state=state, initial_state=state)
     app = _make_app(graph, monkeypatch)
-    client = TestClient(app)
+    client = _client(app)
 
     response = client.get("/session/s1/events")
 

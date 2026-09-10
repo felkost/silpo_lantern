@@ -20,6 +20,7 @@ in a child process that would not inherit this loop.
 import asyncio
 import os
 import sys
+from typing import Any, Dict
 
 import uvicorn
 
@@ -30,13 +31,19 @@ def main() -> None:
     # defaults (127.0.0.1:8000) so nothing about a plain `make run`
     # changes; $PORT wins only when Render (or any host following the
     # same convention) actually sets it.
+    on_render = "PORT" in os.environ
+    # G10 (D89): behind Render's proxy `request.client.host` is the proxy
+    # unless X-Forwarded-For is trusted -- and the per-IP session cap would
+    # then be one shared cap for everyone. Local dev keeps uvicorn's default.
+    proxy: Dict[str, Any] = {"forwarded_allow_ips": "*"} if on_render else {}
     config = uvicorn.Config(
         "apps.api.main:app",
         host=os.environ.get(
-            "LANTERN_API_HOST", "0.0.0.0" if "PORT" in os.environ else "127.0.0.1"
+            "LANTERN_API_HOST", "0.0.0.0" if on_render else "127.0.0.1"
         ),
         port=int(os.environ.get("PORT") or os.environ.get("LANTERN_API_PORT", "8000")),
         reload=False,
+        **proxy,
     )
     server = uvicorn.Server(config)
     if sys.platform == "win32":

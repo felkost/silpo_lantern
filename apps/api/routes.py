@@ -30,10 +30,15 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, AsyncIterator, Dict, Optional, Sequence
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse
 
 from apps.api.schemas import ConsentAckResponse, ConsentRequest, CreateSessionResponse
+from apps.api.session_cookie import (
+    clear_session_cookie,
+    require_session_cookie,
+    set_session_cookie,
+)
 from src.lantern.domain.consent_hash import (
     compute_args_hash,
     compute_owner,
@@ -77,20 +82,45 @@ def _sse_line(event: str, data: Dict[str, Any]) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
+def _caps(request: Request) -> Any:
+    return request.app.state.spend_caps
+
+
 @router.post("/session", response_model=CreateSessionResponse)
-async def create_session(request: Request) -> CreateSessionResponse:
+async def create_session(request: Request, response: Response) -> CreateSessionResponse:
+    # G10 (D89): per-IP cap before any row is written. `request.client`
+    # is the proxy on Render unless uvicorn trusts X-Forwarded-For -- see
+    # `apps/api/__main__.py`.
+    ip = request.client.host if request.client else "unknown"
+    if not _caps(request).admit_session(ip):
+        raise HTTPException(
+            status_code=429, detail="too many sessions from this address today"
+        )
     session_id = str(uuid.uuid4())
     thread_id = session_id
     owner = compute_owner(session_id, request.app.state.owner_secret)
     repository.create_session(request.app.state.repo_pool, session_id, thread_id, owner)
+    # G10 (A-G10-04): the id travels as a cookie from here on; `/auth/start`
+    # reads it from there, so the URL the guest navigates to carries
+    # nothing (G10-5).
+    set_session_cookie(response, session_id)
     # A brand-new session has no guest token yet, so the client's next
-    # step is `/auth/start?session_id=...`, not `/events`. Returned
-    # rather than left for the client to infer from a failed stream.
+    # step is `/auth/start`, not `/events`. Returned rather than left for
+    # the client to infer from a failed stream.
     return CreateSessionResponse(
-        session_id=session_id,
-        authorized=False,
-        auth_url=f"/auth/start?session_id={session_id}",
+        session_id=session_id, authorized=False, auth_url="/auth/start"
     )
+
+
+@router.delete("/session/{session_id}", status_code=204)
+async def delete_session(session_id: str, request: Request, response: Response) -> None:
+    """G10 (A-G10-04): logout. Deletes the guest's token row -- the only
+    credential this session holds -- and clears the cookie; a following
+    `/events` is refused as unauthorized. The session row and its
+    consents/receipts stay as the audit record they are."""
+    require_session_cookie(request, session_id)
+    repository.delete_session_token(request.app.state.repo_pool, session_id)
+    clear_session_cookie(response)
 
 
 @router.get("/session/{session_id}/events")
@@ -102,6 +132,7 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
     `POST /session/{id}/consent` (resumes into the write pipeline to a
     `receipt`/`error` outcome).
     """
+    require_session_cookie(request, session_id)
     # Bind THIS guest's own credential BEFORE touching the graph at all --
     # G7/IV-07 found live that `_get_graph` builds the production graph
     # lazily on its OWN first call, ever, across the whole app's lifetime
@@ -120,10 +151,7 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
     if await storage.get_tokens() is None:
         raise HTTPException(
             status_code=401,
-            detail=(
-                "session is not authorized yet -- send the guest to "
-                f"/auth/start?session_id={session_id}"
-            ),
+            detail="session is not authorized yet -- send the guest to /auth/start",
         )
     current_token_storage.set(storage)
 
@@ -137,6 +165,12 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
         session_row = repository.get_session(request.app.state.repo_pool, session_id)
         if session_row is None:
             raise HTTPException(status_code=404, detail="session not found")
+        # G10 (D89): a fresh start is what bills the LLM; a resume or a
+        # replay below does not, so only this branch counts.
+        if not _caps(request).admit_llm_run():
+            raise HTTPException(
+                status_code=429, detail="the daily ceiling on live sessions is reached"
+            )
         trace_id = str(uuid.uuid4())
         resume_input: Optional[RecoveryState] = new_recovery_state(
             session_id=session_id,
@@ -363,6 +397,7 @@ async def submit_consent(
     refusal, or a verified/unverified receipt) is observed by the client's
     next call to `GET /session/{id}/events`, which resumes the graph.
     """
+    require_session_cookie(request, session_id)
     graph = await _get_graph(request)
     config = _config(session_id)
     snapshot = await graph.aget_state(config)

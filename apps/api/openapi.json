@@ -23,6 +23,39 @@
         }
       }
     },
+    "/session/{session_id}": {
+      "delete": {
+        "summary": "Delete Session",
+        "description": "G10 (A-G10-04): logout. Deletes the guest's token row -- the only\ncredential this session holds -- and clears the cookie; a following\n`/events` is refused as unauthorized. The session row and its\nconsents/receipts stay as the audit record they are.",
+        "operationId": "delete_session_session__session_id__delete",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/session/{session_id}/events": {
       "get": {
         "summary": "Session Events",
@@ -114,35 +147,14 @@
     "/auth/start": {
       "get": {
         "summary": "Auth Start",
-        "description": "Sends THIS guest to Silpo's own login (phone + OTP). `session_id`\nis required: the token that comes back belongs to one guest, and the\ncallback has to know whose session to store it against.",
+        "description": "Sends THIS guest to Silpo's own login (phone + OTP). The session\ncomes from the cookie `POST /session` set (G10, A-G10-04) -- never from\nthe URL, which the browser records -- because the token that comes\nback belongs to one guest, and the callback has to know whose session\nto store it against.",
         "operationId": "auth_start_auth_start_get",
-        "parameters": [
-          {
-            "name": "session_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Session Id"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
               }
             }
           }
@@ -208,13 +220,7 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "title": "Response Auth Callback Auth Callback Get"
-                }
+                "schema": {}
               }
             }
           },

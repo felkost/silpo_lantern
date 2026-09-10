@@ -24,6 +24,7 @@ from mcp.shared.auth import OAuthClientInformationFull, OAuthMetadata, OAuthToke
 from pydantic import AnyUrl
 
 from apps.api import oauth_routes
+from apps.api.session_cookie import SESSION_COOKIE
 
 _AUTH_ENDPOINT = "https://auth.example.test/authorize"
 _SESSION_ID = "11111111-1111-1111-1111-111111111111"
@@ -67,6 +68,14 @@ class _FakeStorage:
 
     async def set_client_info(self, client_info: OAuthClientInformationFull) -> None:
         self._client_info = client_info
+
+
+def _client(app: FastAPI, session_id: str = _SESSION_ID) -> TestClient:
+    """G10 (A-G10-04): `/auth/start` reads the session from the cookie
+    `POST /session` set, never from the URL."""
+    client = TestClient(app)
+    client.cookies.set(SESSION_COOKIE, session_id)
+    return client
 
 
 def _make_app(
@@ -114,11 +123,9 @@ def test_auth_start_redirects_with_pkce_and_state(
 ) -> None:
     storage = _FakeStorage(_client_info())
     app = _make_app(monkeypatch, storage)
-    client = TestClient(app)
+    client = _client(app)
 
-    response = client.get(
-        f"/auth/start?session_id={_SESSION_ID}", follow_redirects=False
-    )
+    response = client.get("/auth/start", follow_redirects=False)
 
     assert response.status_code == 307
     location = response.headers["location"]
@@ -137,11 +144,9 @@ def test_auth_start_without_a_registered_client_is_501(
 ) -> None:
     storage = _FakeStorage(None)
     app = _make_app(monkeypatch, storage)
-    client = TestClient(app)
+    client = _client(app)
 
-    response = client.get(
-        f"/auth/start?session_id={_SESSION_ID}", follow_redirects=False
-    )
+    response = client.get("/auth/start", follow_redirects=False)
 
     assert response.status_code == 501
     assert "register" in response.json()["detail"].lower()
@@ -161,15 +166,21 @@ def test_auth_callback_exchanges_the_code_and_stores_the_token(
         request=httpx.Request("POST", _TOKEN_ENDPOINT),
     )
     app = _make_app(monkeypatch, storage, token_response=token_response)
-    client = TestClient(app)
+    client = _client(app)
 
     # Phase 1 seeds the pending state the callback must match.
-    client.get(f"/auth/start?session_id={_SESSION_ID}", follow_redirects=False)
+    client.get("/auth/start", follow_redirects=False)
     state = next(iter(app.state.oauth_pending))
 
-    response = client.get(f"/auth/callback?code=the-code&state={state}")
+    response = client.get(
+        f"/auth/callback?code=the-code&state={state}", follow_redirects=False
+    )
 
-    assert response.status_code == 200
+    # G10 (D87): the guest lands back on the app, not on a JSON page with
+    # no way forward -- and on a BARE `/`: the session id never rides in
+    # a redirect target (G10-5).
+    assert response.status_code == 303
+    assert response.headers["location"] == "/"
     assert storage.stored_token is not None
     assert storage.stored_token.access_token == "the-new-access-token"
     # The pending entry is consumed -- a replayed callback cannot reuse it.
@@ -184,7 +195,7 @@ def test_auth_callback_with_an_unknown_state_is_refused(
     exchange is attempted."""
     storage = _FakeStorage(_client_info())
     app = _make_app(monkeypatch, storage)
-    client = TestClient(app)
+    client = _client(app)
 
     response = client.get("/auth/callback?code=the-code&state=never-issued")
 
@@ -203,14 +214,14 @@ def test_auth_callback_rejects_a_replayed_state(
         request=httpx.Request("POST", _TOKEN_ENDPOINT),
     )
     app = _make_app(monkeypatch, storage, token_response=token_response)
-    client = TestClient(app)
-    client.get(f"/auth/start?session_id={_SESSION_ID}", follow_redirects=False)
+    client = _client(app)
+    client.get("/auth/start", follow_redirects=False)
     state = next(iter(app.state.oauth_pending))
 
-    first = client.get(f"/auth/callback?code=c1&state={state}")
+    first = client.get(f"/auth/callback?code=c1&state={state}", follow_redirects=False)
     second = client.get(f"/auth/callback?code=c1&state={state}")
 
-    assert first.status_code == 200
+    assert first.status_code == 303
     assert second.status_code == 400
 
 
@@ -219,8 +230,8 @@ def test_auth_callback_rejects_an_expired_pending_state(
 ) -> None:
     storage = _FakeStorage(_client_info())
     app = _make_app(monkeypatch, storage)
-    client = TestClient(app)
-    client.get(f"/auth/start?session_id={_SESSION_ID}", follow_redirects=False)
+    client = _client(app)
+    client.get("/auth/start", follow_redirects=False)
     state = next(iter(app.state.oauth_pending))
     app.state.oauth_pending[state]["created_at"] = (
         time.time() - oauth_routes.PENDING_TTL_SECONDS - 1
@@ -237,7 +248,7 @@ def test_auth_callback_surfaces_an_authorization_server_error(
 ) -> None:
     storage = _FakeStorage(_client_info())
     app = _make_app(monkeypatch, storage)
-    client = TestClient(app)
+    client = _client(app)
 
     response = client.get("/auth/callback?error=access_denied")
 
@@ -250,7 +261,7 @@ def test_auth_callback_without_code_or_state_is_refused(
 ) -> None:
     storage = _FakeStorage(_client_info())
     app = _make_app(monkeypatch, storage)
-    client = TestClient(app)
+    client = _client(app)
 
     response = client.get("/auth/callback")
 
@@ -264,11 +275,9 @@ def test_pending_store_holds_the_verifier_not_the_challenge(
     server and never appear in the redirect the browser follows."""
     storage = _FakeStorage(_client_info())
     app = _make_app(monkeypatch, storage)
-    client = TestClient(app)
+    client = _client(app)
 
-    response = client.get(
-        f"/auth/start?session_id={_SESSION_ID}", follow_redirects=False
-    )
+    response = client.get("/auth/start", follow_redirects=False)
     pending: Dict[str, Any] = next(iter(app.state.oauth_pending.values()))
 
     assert "code_verifier" in pending
@@ -315,10 +324,11 @@ def test_two_guests_get_two_separate_tokens(
         )
 
     monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
-    client = TestClient(app)
+    client = _client(app)
 
     for session_id in (session_a, session_b):
-        client.get(f"/auth/start?session_id={session_id}", follow_redirects=False)
+        client.cookies.set(SESSION_COOKIE, session_id)
+        client.get("/auth/start", follow_redirects=False)
     states = list(app.state.oauth_pending)
     for state in states:
         client.get(f"/auth/callback?code=c&state={state}")
@@ -365,11 +375,23 @@ def test_callback_stores_against_the_session_that_started_the_flow(
         )
 
     monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
-    client = TestClient(app)
+    client = _client(app)
 
-    client.get(f"/auth/start?session_id={_SESSION_ID}", follow_redirects=False)
+    client.get("/auth/start", follow_redirects=False)
     state = next(iter(app.state.oauth_pending))
     captured.clear()
     client.get(f"/auth/callback?code=c&state={state}&session_id=attacker-session")
 
     assert captured["session_id"] == _SESSION_ID
+
+
+def test_auth_start_without_a_cookie_is_401(monkeypatch: pytest.MonkeyPatch) -> None:
+    """G10 (A-G10-04): a `session_id` query parameter is no longer read at
+    all -- the id must not be placeable in a URL."""
+    app = _make_app(monkeypatch, _FakeStorage(_client_info()))
+    client = TestClient(app)
+
+    response = client.get(f"/auth/start?session_id={_SESSION_ID}")
+
+    assert response.status_code == 401
+    assert app.state.oauth_pending == {}

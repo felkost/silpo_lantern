@@ -1,4 +1,4 @@
-.PHONY: gate test test-integration lint secret-scan report openapi run eval
+.PHONY: gate test test-integration lint secret-scan report openapi run eval web-build
 
 gate: lint test
 
@@ -33,6 +33,12 @@ openapi:
 # (measured at G1+G2 close — see apps/api/__main__.py).
 run:
 	python -m apps.api
+
+# G10 (D87): builds the recovery card into apps/web/dist (gitignored), which
+# apps/api/main.py mounts at `/` when present. Render's build command runs
+# the same pair after `pip install`.
+web-build:
+	cd apps/web && npm ci && npm run build
 
 # G9 (G9.5): re-enables the deepeval pytest plugin for THIS invocation
 # only — pyproject.toml's `addopts = "-p no:deepeval"` disables it
