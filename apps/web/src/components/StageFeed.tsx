@@ -6,6 +6,7 @@
 // nothing about what comes next.
 
 import { IO_LABEL, type StageRow } from "../stages";
+import { Help } from "./Help";
 
 interface Props {
   rows: StageRow[];
@@ -19,6 +20,13 @@ export function StageFeed({ rows, streaming }: Props) {
   return (
     <section className="panel-block" aria-labelledby="stage-heading">
       <h2 id="stage-heading">Observed nodes</h2>
+      <Help>
+        Журнал кроків, які агент справді виконав у цій сесії, у порядку надходження.
+        MCP — читання чи запис кошика через сервер Сільпо; LLM — виклик мовної моделі;
+        DB — база даних; pure — обчислення без мережі. «working…» означає, що потік
+        відкритий і сервер ще працює. Рядок «Spent» — токени й долари цієї сесії за
+        даними провайдера; стеля — рішення проєкту, а не залишок.
+      </Help>
       {rows.length === 0 && !streaming && (
         <p className="muted">Nothing observed in this session yet.</p>
       )}

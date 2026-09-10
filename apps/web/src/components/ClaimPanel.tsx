@@ -15,6 +15,7 @@ import type {
   EvidenceResponse,
   ReceiptEvent,
 } from "../types";
+import { Help } from "./Help";
 
 interface Props {
   diagnosis: DiagnosisEvent | null;
@@ -35,9 +36,18 @@ export function ClaimPanel({ diagnosis, candidates, consent, receipts, refusal, 
   return (
     <section className="panel-block" aria-labelledby="claims-heading">
       <h2 id="claims-heading">What this run shows</h2>
+      <Help>
+        Чотири твердження про те, як працює система, і живі докази під кожним — лише з
+        цієї сесії. Назви полів (args_hash, products_total) навмисно ті самі, що в коді,
+        щоб їх можна було звірити.
+      </Help>
 
       <details open data-testid="claim-disclosure">
         <summary>The server returns more than the app shows</summary>
+        <p className="muted uk">
+          Доводить: сервер повертає всі позначки кошика з рівнями; позначені «unknown
+          code» — ті, яких система свідомо не тлумачить.
+        </p>
         {diagnosis === null ? (
           <p className="muted">{NOT_OBSERVED}</p>
         ) : (
@@ -65,6 +75,10 @@ export function ClaimPanel({ diagnosis, candidates, consent, receipts, refusal, 
 
       <details open data-testid="claim-arithmetic">
         <summary>Money is computed by code, never by the model</summary>
+        <p className="muted uk">
+          Доводить: сума й недостача — арифметика в коді з наведених вхідних даних;
+          речення моделі на картці лише пояснює, а не рахує.
+        </p>
         {diagnosis === null ? (
           <p className="muted">{NOT_OBSERVED}</p>
         ) : (
@@ -93,6 +107,10 @@ export function ClaimPanel({ diagnosis, candidates, consent, receipts, refusal, 
 
       <details open data-testid="claim-consent">
         <summary>Nothing is written without item-bound consent</summary>
+        <p className="muted uk">
+          Доводить: згода прив'язана до конкретної дії хешем аргументів і стану кошика;
+          відмова захисного шару показана його власними словами.
+        </p>
         {candidates.length === 0 && consent === null ? (
           <p className="muted">{NOT_OBSERVED}</p>
         ) : (
@@ -119,6 +137,10 @@ export function ClaimPanel({ diagnosis, candidates, consent, receipts, refusal, 
 
       <details open data-testid="claim-readback">
         <summary>Success is never asserted, only read back</summary>
+        <p className="muted uk">
+          Доводить: після запису кошик перечитується; «verified» — збіг очікуваного з
+          прочитаним, «unverified» — не підтверджено.
+        </p>
         {receipts.length === 0 ? (
           <p className="muted">{NOT_OBSERVED}</p>
         ) : (
