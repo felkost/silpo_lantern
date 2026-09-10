@@ -1063,3 +1063,33 @@ describe("claim panel grouping", () => {
     expect(screen.getByTestId("claim-disclosure")).toHaveTextContent("× 2");
   });
 });
+
+// Seen live after the hero run: the receipt screen dropped claims 1 and 2
+// ("not observed") because the panel reused the card's compensation-only
+// suppression for every non-diagnosis screen. The diagnosis is history the
+// panel keeps; only the undo offer (D51) hides it.
+describe("claim panel after the receipt", () => {
+  it("keeps the diagnosis evidence on the receipt screen", async () => {
+    sessionStorage.setItem("lantern_session_id", "s1");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          sseStream([
+            frame("diagnosis", { ...ENVELOPE, primary_code: "order.cost.min", gap: "93.38", gap_is_borderline: false, products_total: "605.62", threshold_source: "validation_context", validations: [{ code: "order.cost.min", level: "error", type: "cost", is_known: true }], channels: [] }),
+            frame("receipt", { ...ENVELOPE, status: "receipt", reason: "", expected_delta: "95.97", actual_delta: "95.97", verified: true, kind: "add", blocker_cleared: true, remaining_gap: null }),
+          ]),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("receipt-verified")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("claim-arithmetic")).toHaveTextContent("605.62");
+    expect(screen.getByTestId("claim-disclosure")).toHaveTextContent("order.cost.min");
+  });
+});
