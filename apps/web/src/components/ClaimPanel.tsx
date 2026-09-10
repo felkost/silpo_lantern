@@ -28,6 +28,19 @@ interface Props {
 
 const NOT_OBSERVED = "Not observed in this session.";
 
+function grouped<T extends { code: string }>(items: T[]): Array<[T, number]> {
+  const groups = new Map<string, [T, number]>();
+  for (const item of items) {
+    const entry = groups.get(item.code);
+    if (entry) {
+      entry[1] += 1;
+    } else {
+      groups.set(item.code, [item, 1]);
+    }
+  }
+  return [...groups.values()];
+}
+
 function short(hash: string): string {
   return `${hash.slice(0, 12)}…`;
 }
@@ -52,9 +65,10 @@ export function ClaimPanel({ diagnosis, candidates, consent, receipts, refusal, 
           <p className="muted">{NOT_OBSERVED}</p>
         ) : (
           <ul className="plain">
-            {diagnosis.validations.map((v, i) => (
-              <li key={`${v.code}-${i}`}>
+            {grouped(diagnosis.validations).map(([v, count]) => (
+              <li key={v.code}>
                 <code>{v.code}</code> <span className="tag">{v.level}</span>
+                {count > 1 && <span className="muted"> × {count}</span>}
                 {v.is_known === false && <span className="tag tag-warn">unknown code</span>}
               </li>
             ))}

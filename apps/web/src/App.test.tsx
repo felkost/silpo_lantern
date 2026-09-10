@@ -1029,3 +1029,37 @@ describe("explanations", () => {
     expect(screen.getByTestId("unknown-reason")).toHaveTextContent(/не є відомим правилом/);
   });
 });
+
+// The same grouping the card does (× 10), on the panel's first claim --
+// the live screen listed ten identical lines there too.
+describe("claim panel grouping", () => {
+  it("groups identical validation codes with a count", async () => {
+    sessionStorage.setItem("lantern_session_id", "s1");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          sseStream([
+            frame("diagnosis", {
+              ...ENVELOPE, primary_code: null, gap: null, gap_is_borderline: false,
+              products_total: "605.62", threshold_source: "unverified",
+              validations: [
+                { code: "product.offer.stock.max", level: "error", type: "stock", is_known: true },
+                { code: "product.offer.stock.max", level: "error", type: "stock", is_known: true },
+              ],
+              channels: [],
+            }),
+            frame("consent_required", ENVELOPE),
+          ]),
+          { status: 200 },
+        ),
+      ),
+    );
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByTestId("claim-disclosure")).toHaveTextContent("product.offer.stock.max");
+    });
+    expect(screen.getByTestId("claim-disclosure").textContent?.match(/product\.offer\.stock\.max/g)).toHaveLength(1);
+    expect(screen.getByTestId("claim-disclosure")).toHaveTextContent("× 2");
+  });
+});
