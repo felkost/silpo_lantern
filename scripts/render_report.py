@@ -113,6 +113,25 @@ same login then reached the diagnosis screen. A deployment is not verified until
 opens the URL.</div>
 <div class="diagram">{{ deployment_svg }}</div>
 
+<h2>2a. Data model</h2> <p>Everything the service remembers lives in six tables in
+Neon Postgres, created by nine small migrations. A <b>session</b> is one guest's
+visit; its <b>OAuth token</b> is the one credential the service holds for that guest,
+and logging out deletes exactly that row. A <b>consent</b> binds one specific proposed
+action to the cart as it was when the guest agreed (two hashes and an expiry); an
+<b>idempotency key</b> is claimed immediately before the write so a retry can never
+write twice; a <b>receipt</b> records what the cart looked like before and after, and
+whether the read-back confirmed the change. The LangGraph checkpointer keeps the
+in-flight graph state in its own tables, linked to a session only by a shared thread
+id.</p> <p>Two choices are visible in the shape. Consents and receipts point at a
+session <i>without</i> cascade, so a session row is never deleted and the audit trail
+survives a logout. And nothing stores the guest's address or coordinates as a column:
+the cart snapshots inside a receipt are the only place they could appear, and the API
+reduces those to amounts before anything reaches a browser.</p> <div
+class="example"><b>Example.</b> After the demo write on 10 September the receipt row
+held expected 95.97 and actual 95.97, verified, blocker cleared; the restore script
+found that row by its action id, checked the cart still matched it, and removed the
+line.</div> <div class="diagram">{{ er_svg }}</div>
+
 <h2>3. The hero recovery flow</h2>
 <p>This diagram shows the order of messages in one recovery. Time goes from top to
 bottom. The agent first reads the live cart through the MCP adapter. Then it sends a
@@ -395,6 +414,7 @@ def render() -> Path:
     html = TEMPLATE.render(
         c4_svg=_inline_svg("c4_container"),
         deployment_svg=_inline_svg("deployment"),
+        er_svg=_inline_svg("neon_schema_er"),
         sequence_svg=_inline_svg("hero_sequence"),
         state_svg=_inline_svg("graph_state"),
         langgraph_svg=_inline_svg("langgraph_structure"),
