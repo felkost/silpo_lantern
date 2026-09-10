@@ -589,6 +589,44 @@ describe("session round trip and logout", () => {
     expect(sessionStorage.getItem("lantern_session_id")).toBeNull();
   });
 
+  it("logging out mid-stream re-enables the start button and drops late events", async () => {
+    // Seen live on Render: a cold start keeps `/events` open for 20+ s;
+    // «Вийти» pressed meanwhile left `busy` stuck and the late stream
+    // overwrote the idle screen.
+    sessionStorage.setItem("lantern_session_id", "s1");
+    let release: (() => void) | null = null;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init?: RequestInit) => {
+        if (init?.method === "DELETE") {
+          return new Response(null, { status: 204 });
+        }
+        await gate;
+        return new Response(
+          sseStream([frame("error", { ...ENVELOPE, error: "late" })]),
+          { status: 200 },
+        );
+      }),
+    );
+
+    render(<App />);
+    await act(async () => {
+      screen.getByRole("button", { name: /вийти/i }).click();
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /перевірити мій кошик/i })).toBeEnabled();
+    });
+    await act(async () => {
+      release!();
+    });
+
+    expect(screen.queryByTestId("error-message")).toBeNull();
+    expect(screen.getByRole("button", { name: /перевірити мій кошик/i })).toBeEnabled();
+  });
+
   it("explains a 429 in Ukrainian rather than echoing the status", async () => {
     vi.stubGlobal(
       "fetch",
