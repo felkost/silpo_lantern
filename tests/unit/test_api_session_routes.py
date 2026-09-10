@@ -23,6 +23,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from apps.api import routes as routes_module
+from apps.api.limits import SpendCaps
+from apps.api.session_cookie import SESSION_COOKIE
 from src.lantern.mcp.session import current_token_storage
 from src.lantern.domain.disclosure import DisclosureReport
 from src.lantern.domain.models import (
@@ -194,6 +196,14 @@ def _read_pipeline_chunks() -> List[Dict[str, Any]]:
     ]
 
 
+def _client(app: FastAPI) -> TestClient:
+    """G10 (A-G10-04): every `/session/{id}/*` route checks the path id
+    against the session cookie; each test here drives session `s1`."""
+    client = TestClient(app)
+    client.cookies.set(SESSION_COOKIE, "s1")
+    return client
+
+
 def _make_app(graph: _FakeGraph, monkeypatch: pytest.MonkeyPatch) -> FastAPI:
     app = FastAPI()
     app.include_router(routes_module.router)
@@ -201,6 +211,7 @@ def _make_app(graph: _FakeGraph, monkeypatch: pytest.MonkeyPatch) -> FastAPI:
     app.state.owner_secret = "test-owner-secret"
     app.state.repo_pool = object()
     app.state.version_tuple = {"schema_hash": "h1"}
+    app.state.spend_caps = SpendCaps()
 
     monkeypatch.setattr(routes_module.repository, "create_session", lambda *a: None)
     monkeypatch.setattr(
@@ -223,7 +234,7 @@ def test_create_session_only_creates_the_session_row(
     push design replaced."""
     graph = _FakeGraph(chunks=[], final_state={})
     app = _make_app(graph, monkeypatch)
-    client = TestClient(app)
+    client = _client(app)
 
     response = client.post("/session")
 
@@ -241,7 +252,7 @@ def test_events_streams_the_read_pipeline_node_by_node(
         chunks=_read_pipeline_chunks(), final_state=_awaiting_consent_state()
     )
     app = _make_app(graph, monkeypatch)
-    client = TestClient(app)
+    client = _client(app)
 
     response = client.get("/session/s1/events")
 
@@ -278,7 +289,7 @@ def test_events_resumes_an_existing_session_rather_than_restarting_it(
         initial_state=_consented_state(),
     )
     app = _make_app(graph, monkeypatch)
-    client = TestClient(app)
+    client = _client(app)
 
     response = client.get("/session/s1/events")
 
@@ -297,7 +308,7 @@ def test_events_emits_error_when_a_node_aborts(
         final_state=aborted,
     )
     app = _make_app(graph, monkeypatch)
-    client = TestClient(app)
+    client = _client(app)
 
     response = client.get("/session/s1/events")
 
@@ -312,7 +323,8 @@ def test_events_for_an_unknown_session_is_404(
     graph = _FakeGraph(chunks=[], final_state={})
     app = _make_app(graph, monkeypatch)
     monkeypatch.setattr(routes_module.repository, "get_session", lambda *a: None)
-    client = TestClient(app)
+    client = _client(app)
+    client.cookies.set(SESSION_COOKIE, "nope")
 
     response = client.get("/session/nope/events")
 
@@ -326,7 +338,7 @@ def test_consent_records_and_advances_without_running_the_write(
         chunks=[], final_state={}, initial_state=_awaiting_consent_state()
     )
     app = _make_app(graph, monkeypatch)
-    client = TestClient(app)
+    client = _client(app)
 
     response = client.post("/session/s1/consent", json={"action_id": "a1"})
 
@@ -347,7 +359,7 @@ def test_consent_with_unknown_action_id_is_refused(
         chunks=[], final_state={}, initial_state=_awaiting_consent_state()
     )
     app = _make_app(graph, monkeypatch)
-    client = TestClient(app)
+    client = _client(app)
 
     response = client.post("/session/s1/consent", json={"action_id": "does-not-exist"})
 
@@ -360,7 +372,7 @@ def test_consent_when_not_awaiting_consent_is_refused(
     state = {**_awaiting_consent_state(), "status": "reading"}
     graph = _FakeGraph(chunks=[], final_state={}, initial_state=state)
     app = _make_app(graph, monkeypatch)
-    client = TestClient(app)
+    client = _client(app)
 
     response = client.post("/session/s1/consent", json={"action_id": "a1"})
 
@@ -372,7 +384,8 @@ def test_consent_for_an_unknown_session_is_404(
 ) -> None:
     graph = _FakeGraph(chunks=[], final_state={}, initial_state={})
     app = _make_app(graph, monkeypatch)
-    client = TestClient(app)
+    client = _client(app)
+    client.cookies.set(SESSION_COOKIE, "nope")
 
     response = client.post("/session/nope/consent", json={"action_id": "a1"})
 
@@ -389,7 +402,7 @@ def test_t18_consent_request_has_no_field_for_a_client_supplied_hash(
         chunks=[], final_state={}, initial_state=_awaiting_consent_state()
     )
     app = _make_app(graph, monkeypatch)
-    client = TestClient(app)
+    client = _client(app)
 
     response = client.post(
         "/session/s1/consent",
@@ -434,7 +447,7 @@ def test_b3_write_guard_refusal_reaches_the_client_as_an_error_event(
         initial_state=_consented_state(),
     )
     app = _make_app(graph, monkeypatch)
-    client = TestClient(app)
+    client = _client(app)
 
     response = client.get("/session/s1/events")
 
@@ -465,7 +478,7 @@ def test_the_guest_token_is_bound_before_the_graph_is_ever_built(
 
     app = _make_app(_FakeGraph(chunks=[], final_state={}), monkeypatch)
     app.state.graph_builder = spying_graph_builder
-    client = TestClient(app)
+    client = _client(app)
 
     client.get("/session/s1/events")
 
@@ -494,7 +507,7 @@ def test_events_refuses_an_unauthorized_session(
     monkeypatch.setattr(
         routes_module, "SessionTokenStorage", lambda pool, sid: _Unauthorized()
     )
-    client = TestClient(app)
+    client = _client(app)
 
     response = client.get("/session/s1/events")
 
@@ -508,12 +521,13 @@ def test_create_session_points_the_client_at_the_login_url(
 ) -> None:
     graph = _FakeGraph(chunks=[], final_state={})
     app = _make_app(graph, monkeypatch)
-    client = TestClient(app)
+    client = _client(app)
 
     body = client.post("/session").json()
 
     assert body["authorized"] is False
-    assert body["auth_url"] == f"/auth/start?session_id={body['session_id']}"
+    # G10 (A-G10-04): a bare path -- the id rides in the cookie, never a URL.
+    assert body["auth_url"] == "/auth/start"
 
 
 def test_repeating_events_without_consent_does_not_advance_the_graph(
@@ -530,7 +544,7 @@ def test_repeating_events_without_consent_does_not_advance_the_graph(
         initial_state=_awaiting_consent_state(),
     )
     app = _make_app(graph, monkeypatch)
-    client = TestClient(app)
+    client = _client(app)
 
     response = client.get("/session/s1/events")
 
@@ -555,7 +569,7 @@ def test_repeating_events_after_a_terminal_outcome_replays_it(
     }
     graph = _FakeGraph(chunks=[], final_state=aborted, initial_state=aborted)
     app = _make_app(graph, monkeypatch)
-    client = TestClient(app)
+    client = _client(app)
 
     response = client.get("/session/s1/events")
 
@@ -587,7 +601,7 @@ def test_a_node_that_updates_no_state_does_not_break_the_stream(
         initial_state=_consented_state(),
     )
     app = _make_app(graph, monkeypatch)
-    client = TestClient(app)
+    client = _client(app)
 
     response = client.get("/session/s1/events")
 

@@ -60,6 +60,7 @@ from mcp.client.auth.oauth2 import (  # type: ignore[attr-defined]
 from mcp.shared.auth import OAuthClientMetadata, OAuthMetadata
 from pydantic import AnyUrl
 
+from apps.api.session_cookie import cookie_session_id
 from src.lantern.mcp.session import DEFAULT_MCP_URL
 from src.lantern.mcp.session_token_storage import SessionTokenStorage
 from src.lantern.memory import repository
@@ -97,10 +98,13 @@ def _storage_for(request: Request, session_id: str) -> SessionTokenStorage:
 
 
 @router.get("/auth/start")
-async def auth_start(session_id: str, request: Request) -> RedirectResponse:
-    """Sends THIS guest to Silpo's own login (phone + OTP). `session_id`
-    is required: the token that comes back belongs to one guest, and the
-    callback has to know whose session to store it against."""
+async def auth_start(request: Request) -> RedirectResponse:
+    """Sends THIS guest to Silpo's own login (phone + OTP). The session
+    comes from the cookie `POST /session` set (G10, A-G10-04) -- never from
+    the URL, which the browser records -- because the token that comes
+    back belongs to one guest, and the callback has to know whose session
+    to store it against."""
+    session_id = cookie_session_id(request)
     if repository.get_session(request.app.state.repo_pool, session_id) is None:
         raise HTTPException(status_code=404, detail="session not found")
 
@@ -155,7 +159,7 @@ async def auth_callback(
     code: Optional[str] = Query(None),
     state: Optional[str] = Query(None),
     error: Optional[str] = Query(None),
-) -> Dict[str, str]:
+) -> RedirectResponse:
     if error:
         raise HTTPException(
             status_code=400, detail=f"authorization server returned error: {error}"
@@ -231,4 +235,8 @@ async def auth_callback(
         ) from exc
 
     await storage.set_tokens(token)
-    return {"status": "ok", "detail": "token stored"}
+    # G10 (D87): back to the app, on a BARE `/`. The session was resolved
+    # from the server-held `state` above, so the id never needed to ride
+    # in the redirect target -- and must not (G10-5: browser history, a
+    # projector at a demo). The SPA finds its own copy in `sessionStorage`.
+    return RedirectResponse("/", status_code=303)

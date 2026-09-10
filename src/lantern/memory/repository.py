@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import json
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any, Dict, Iterator, Literal, Optional, Tuple
 
@@ -35,6 +35,12 @@ from src.lantern.domain.models import ConsentRecord, Receipt
 IdempotencyState = Literal["prepared", "in_flight", "confirmed", "failed", "unknown"]
 
 MAX_POOL_SIZE = 5
+
+# G10 (A-G10-04): a guest who walks away leaves a live Silpo credential in
+# a public service. Thirty minutes covers a full recovery session with a
+# generous consent pause (CONSENT_TTL is five), and every token read
+# restarts the clock, so a session in use never expires under the guest.
+SESSION_IDLE_TTL = timedelta(minutes=30)
 
 
 class ActionAlreadyInFlightError(Exception):
@@ -115,10 +121,21 @@ def save_session_token(
 def load_session_token(
     pool: ConnectionPool, session_id: str
 ) -> Optional[Dict[str, Any]]:
+    """Idle expiry lives here, on the read path, because every use of the
+    credential -- each MCP call -- comes through it: a row idle past
+    `SESSION_IDLE_TTL` is deleted and reported absent, a live one is
+    touched. Both against Postgres's own clock (D-G5-09), so container
+    clock skew can neither kill a live session nor resurrect a dead one."""
     with pool.connection() as conn:
+        conn.execute(
+            "DELETE FROM oauth_tokens WHERE session_id = %s"
+            " AND updated_at <= now() - %s",
+            (session_id, SESSION_IDLE_TTL),
+        )
         with conn.cursor(row_factory=dict_row) as cur:
             cur.execute(
-                "SELECT token FROM oauth_tokens WHERE session_id = %s",
+                "UPDATE oauth_tokens SET updated_at = now()"
+                " WHERE session_id = %s RETURNING token",
                 (session_id,),
             )
             row = cur.fetchone()
@@ -126,6 +143,15 @@ def load_session_token(
         return None
     token: Dict[str, Any] = row["token"]
     return token
+
+
+def delete_session_token(pool: ConnectionPool, session_id: str) -> None:
+    """G10 (A-G10-04): logout. Removes the credential and nothing else --
+    the `sessions` row stays because `consents`/`receipts` reference it
+    without cascade (0003, 0005): deleting it would fail on the FK, and a
+    cascade there would destroy the audit trail a logout must not touch."""
+    with pool.connection() as conn:
+        conn.execute("DELETE FROM oauth_tokens WHERE session_id = %s", (session_id,))
 
 
 def save_consent(pool: ConnectionPool, consent: ConsentRecord) -> None:

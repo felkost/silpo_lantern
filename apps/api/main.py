@@ -14,15 +14,25 @@ fake builder via `app.state.graph_builder = ...` before any request.
 """
 
 import asyncio
+import logging
+import os
 import sys
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any, AsyncIterator, Dict
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
+from apps.api.limits import (
+    DEFAULT_LLM_RUNS_PER_DAY,
+    DEFAULT_SESSIONS_PER_IP,
+    SpendCaps,
+)
 from apps.api.oauth_routes import router as oauth_router
 from apps.api.routes import router
 from src.lantern.config import (
+    PROJECT_ROOT,
     get_database_url,
     get_owner_secret,
     strip_sqlalchemy_dialect,
@@ -63,6 +73,16 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             # in-process store (same assumption `ToolRegistry` already
             # documents for this project).
             app.state.oauth_pending = {}
+            # G10 (D89): env overrides so the author can tighten either
+            # cap on Render without a deploy; defaults in `limits.py`.
+            app.state.spend_caps = SpendCaps(
+                sessions_per_ip=int(
+                    os.environ.get("LANTERN_SESSIONS_PER_IP", DEFAULT_SESSIONS_PER_IP)
+                ),
+                llm_runs_per_day=int(
+                    os.environ.get("LANTERN_LLM_RUNS_PER_DAY", DEFAULT_LLM_RUNS_PER_DAY)
+                ),
+            )
 
             def build_graph() -> Any:
                 if app.state.graph is None:
@@ -85,3 +105,24 @@ app.include_router(oauth_router)
 @app.get("/health")
 def health() -> Dict[str, str]:
     return {"status": "ok"}
+
+
+def mount_web(app: FastAPI, dist: Path) -> bool:
+    """G10 (D87): serves the built recovery card from `/`. Must be called
+    AFTER every API route is registered -- a root mount registered earlier
+    shadows `/health` (measured, spec §4). `StaticFiles` raises on a missing
+    directory, so a clone without `npm run build` is warned about, not
+    broken. `html=True` serves `index.html` at `/`; there is no SPA
+    fallback because the app has no client-side router -- every screen is
+    state inside one page."""
+    if not dist.is_dir():
+        logging.getLogger(__name__).warning(
+            "web dist %s is absent -- `/` will 404; run `make web-build`", dist
+        )
+        return False
+    app.mount("/", StaticFiles(directory=dist, html=True), name="web")
+    return True
+
+
+_WEB_DIST = PROJECT_ROOT / "apps" / "web" / "dist"
+mount_web(app, _WEB_DIST)

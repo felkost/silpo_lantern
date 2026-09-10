@@ -8,9 +8,15 @@
 // or `error`). That is the server's own contract -- consent recording
 // and write execution are deliberately separate steps.
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-import { createSession, streamSessionEvents, submitConsent } from "./api";
+import {
+  SessionUnauthorizedError,
+  createSession,
+  deleteSession,
+  streamSessionEvents,
+  submitConsent,
+} from "./api";
 import { ConsentScreen } from "./components/ConsentScreen";
 import { DiagnosisScreen } from "./components/DiagnosisScreen";
 import { ReceiptScreen } from "./components/ReceiptScreen";
@@ -27,6 +33,33 @@ import type {
 // consent_required`. Replacing a single `receipt` field loses round 1's
 // receipt the instant round 2 starts (an adversarial audit of this
 // stage's plan caught it before it shipped): the fix is to accumulate.
+
+// G10 (A-G10-04): the session id is an HttpOnly cookie on the wire, so
+// this page cannot read it back -- and Silpo's login returns the guest to
+// a bare `/`, a fresh load. `sessionStorage` is the app's own copy, per
+// tab, gone when the tab closes; a browser that refuses storage (private
+// mode, blocked site data) just starts over, never crashes.
+const STORAGE_KEY = "lantern_session_id";
+
+function readStoredSession(): string | null {
+  try {
+    return sessionStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredSession(id: string | null): void {
+  try {
+    if (id === null) {
+      sessionStorage.removeItem(STORAGE_KEY);
+    } else {
+      sessionStorage.setItem(STORAGE_KEY, id);
+    }
+  } catch {
+    // storage unavailable: the login round trip will need a new session
+  }
+}
 
 function App() {
   const [screen, setScreen] = useState<Screen>("idle");
@@ -63,6 +96,7 @@ function App() {
     try {
       const session = await createSession();
       setSessionId(session.session_id);
+      writeStoredSession(session.session_id);
       setAuthUrl(session.auth_url);
       if (!session.authorized) {
         // The guest logs in at Silpo's own page (phone + OTP) and comes
@@ -73,27 +107,65 @@ function App() {
       }
       await consume(session.session_id);
     } catch (exc) {
-      setError(String(exc));
+      setError(exc instanceof Error ? exc.message : String(exc));
       setScreen("error");
     } finally {
       setBusy(false);
     }
   }, [consume]);
 
+  const resume = useCallback(
+    async (id: string) => {
+      setBusy(true);
+      try {
+        await consume(id);
+      } catch (exc) {
+        if (exc instanceof SessionUnauthorizedError) {
+          // The stored session has no token: login was abandoned, timed
+          // out, or the guest logged out elsewhere. Offer it again.
+          setAuthUrl("/auth/start");
+          setScreen("auth_required");
+        } else {
+          setError(exc instanceof Error ? exc.message : String(exc));
+          setScreen("error");
+        }
+      } finally {
+        setBusy(false);
+      }
+    },
+    [consume],
+  );
+
+  // Back from Silpo's login on a bare `/`: pick the session up where the
+  // redirect dropped it. A GET on `/events` is safe to repeat, so a plain
+  // reload here replays rather than re-runs.
+  useEffect(() => {
+    const stored = readStoredSession();
+    if (stored !== null) {
+      setSessionId(stored);
+      void resume(stored);
+    }
+  }, [resume]);
+
   const afterLogin = useCallback(async () => {
-    if (sessionId === null) {
-      return;
+    if (sessionId !== null) {
+      await resume(sessionId);
     }
-    setBusy(true);
-    try {
-      await consume(sessionId);
-    } catch (exc) {
-      setError(String(exc));
-      setScreen("error");
-    } finally {
-      setBusy(false);
+  }, [resume, sessionId]);
+
+  const logout = useCallback(async () => {
+    const id = sessionId;
+    writeStoredSession(null);
+    setSessionId(null);
+    setDiagnosis(null);
+    setCandidates([]);
+    setReceipts([]);
+    setError(null);
+    setScreen("idle");
+    if (id !== null) {
+      await deleteSession(id).catch(() => undefined);
     }
-  }, [consume, sessionId]);
+  }, [sessionId]);
 
   const consent = useCallback(
     async (actionId: string) => {
@@ -118,6 +190,14 @@ function App() {
   return (
     <main>
       <h1>Ліхтарик</h1>
+
+      {sessionId !== null && (
+        <p>
+          <button type="button" onClick={logout} data-testid="logout">
+            Вийти
+          </button>
+        </p>
+      )}
 
       {screen === "idle" && (
         <button type="button" onClick={start} disabled={busy}>

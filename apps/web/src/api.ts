@@ -14,12 +14,38 @@ import type {
 
 export const API_BASE = import.meta.env?.VITE_API_BASE ?? "";
 
+// G10 (D89): both spend caps answer 429; the guest gets one plain line,
+// never a bare status code.
+export const CAP_REACHED_UK =
+  "Досягнуто денний ліміт сесій -- спробуйте завтра.";
+
+export class SessionUnauthorizedError extends Error {}
+
+function failed(label: string, status: number): Error {
+  if (status === 429) {
+    return new Error(CAP_REACHED_UK);
+  }
+  if (status === 401) {
+    return new SessionUnauthorizedError(`${label}: 401`);
+  }
+  return new Error(`${label} failed: ${status}`);
+}
+
 export async function createSession(): Promise<CreateSessionResponse> {
   const response = await fetch(`${API_BASE}/session`, { method: "POST" });
   if (!response.ok) {
-    throw new Error(`POST /session failed: ${response.status}`);
+    throw failed("POST /session", response.status);
   }
   return (await response.json()) as CreateSessionResponse;
+}
+
+export async function deleteSession(sessionId: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/session/${sessionId}`, {
+    method: "DELETE",
+  });
+  if (!response.ok && response.status !== 401) {
+    throw failed(`DELETE /session/${sessionId}`, response.status);
+  }
 }
 
 export async function submitConsent(
@@ -77,7 +103,7 @@ export async function streamSessionEvents(
 ): Promise<void> {
   const response = await fetch(`${API_BASE}/session/${sessionId}/events`);
   if (!response.ok || !response.body) {
-    throw new Error(`GET /session/${sessionId}/events failed: ${response.status}`);
+    throw failed(`GET /session/${sessionId}/events`, response.status);
   }
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
