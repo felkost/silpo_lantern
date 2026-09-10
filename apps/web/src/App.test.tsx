@@ -697,10 +697,10 @@ describe("console shell", () => {
     });
 
     render(<App />);
-    const toggle = screen.getByRole("button", { name: /theme/i });
+    const toggle = screen.getByRole("switch", { name: /theme/i });
     await act(async () => { toggle.click(); });
     expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
-    await act(async () => { screen.getByRole("button", { name: /theme/i }).click(); });
+    await act(async () => { screen.getByRole("switch", { name: /theme/i }).click(); });
     expect(document.documentElement.getAttribute("data-theme")).toBe("light");
 
     setItem.mockRestore();
