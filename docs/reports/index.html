@@ -191,20 +191,25 @@ action.</div>
 </div>
 
 <h2>2. Deployment</h2>
-<p>This diagram shows where each part runs. Today the web app and the API run on the
-developer machine. Four external services are used: Neon Postgres keeps all state,
-LangSmith receives traces, OpenRouter serves the language model, and the Silpo MCP
-server provides the cart data. The public tier on Render is drawn with dashed lines
-because it is optional and not deployed yet.</p>
+<p>This diagram shows where each part runs. On the developer machine the web app and
+the API are two processes. On the public tier (Render, Frankfurt) they are one service:
+the API builds the web app at deploy time and serves it from the root URL, so a guest
+opens one address, logs in at Silpo's own page and is returned to it. Four external
+services are used: Neon Postgres keeps all state, LangSmith receives traces, OpenRouter
+serves the language model, and the Silpo MCP server provides the cart data.</p>
 <p>No state is kept on the service disk. If the process restarts, the session
-continues from the database.</p>
-<div class="example"><b>Example.</b> The demo runs fully on a laptop. If the laptop
-process stops in the middle of a recovery, the same session can continue later,
-because the consent record and the graph checkpoint are already in Neon, not in
-memory.</div>
+continues from the database. The session id travels only as an HttpOnly cookie, never in
+a URL; logging out deletes the guest's credential; an idle session's credential is
+dropped after 30 minutes; and an anonymous visitor is capped per address and per
+day.</p>
+<div class="example"><b>Example.</b> The first login through the public URL failed:
+the host had picked Python 3.14 while every measurement was made on 3.12, and the
+guest's credential did not reach the MCP client. Pinning the interpreter fixed it; the
+same login then reached the diagnosis screen. A deployment is not verified until someone
+opens the URL.</div>
 <div class="diagram"><svg viewBox="0 0 1160 860" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="deployment-title deployment-desc">
       <title id="deployment-title">Lantern deployment topology</title>
-      <desc id="deployment-desc">Deployment diagram showing the developer machine running the web and API processes, an optional Render Frankfurt tier behind a dashed boundary, and four external services the API talks to: Neon Postgres, LangSmith, OpenRouter and the Silpo MCP server.</desc>
+      <desc id="deployment-desc">Deployment diagram showing the developer machine running the web and API processes, the public Render Frankfurt tier where one service serves the API and the built web app from the same origin, and four external services the API talks to: Neon Postgres, LangSmith, OpenRouter and the Silpo MCP server.</desc>
       <defs><style>text{font-family:Arial,Helvetica,"Liberation Sans","DejaVu Sans",sans-serif;}</style>
         <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6b7280"/></marker>
         <marker id="arrow-ink" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#24242e"/></marker>
@@ -218,9 +223,9 @@ memory.</div>
       <text x="190" y="114" fill="#6b7280" font-size="12" font-weight="700" text-anchor="middle">DEVELOPER MACHINE · DEV / DEMO</text>
 
       <!-- Render (optional) -->
-      <rect x="620" y="110" width="500" height="180" rx="8" fill="#fbfbfc" stroke="#9ca3af" stroke-width="1" stroke-dasharray="6,4"/>
+      <rect x="620" y="110" width="500" height="180" rx="8" fill="#f7f7fa" stroke="#9ca3af" stroke-width="1"/>
       <rect x="640" y="100" width="330" height="20" rx="2" fill="#ffffff"/>
-      <text x="805" y="114" fill="#6b7280" font-size="12" font-weight="700" text-anchor="middle">RENDER FRANKFURT · OPTIONAL, AFTER IV-06 (G7)</text>
+      <text x="805" y="114" fill="#6b7280" font-size="12" font-weight="700" text-anchor="middle">RENDER FRANKFURT · PUBLIC, SINCE G10</text>
 
       <!-- ============ ARROWS ============ -->
 
@@ -238,22 +243,20 @@ memory.</div>
       <path d="M 430,245 V 348 Q 430,356 438,356 H 692 Q 700,356 700,364 V 420"
             fill="none" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
 
-      <!-- API (Render, optional) reaches the same four services on a shared
-           trunk routed below the service row, so it never crosses the dev lanes. -->
-      <path d="M 1090,200 H 1112 Q 1120,200 1120,208 V 552 Q 1120,560 1112,560 H 148"
-            fill="none" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3"/>
-      <path d="M 140,560 V 534" fill="none" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
-      <path d="M 420,560 V 534" fill="none" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
-      <path d="M 700,560 V 534" fill="none" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
-      <path d="M 980,560 V 534" fill="none" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <!-- The public API reaches the same four services on a shared trunk
+           routed below the service row, so it never crosses the dev lanes. -->
+      <path d="M 980,200 H 1112 Q 1120,200 1120,208 V 552 Q 1120,560 1112,560 H 148"
+            fill="none" stroke="#24242e" stroke-width="1.2"/>
+      <path d="M 140,560 V 534" fill="none" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <path d="M 420,560 V 534" fill="none" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <path d="M 700,560 V 534" fill="none" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <path d="M 980,560 V 534" fill="none" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
       <rect x="470" y="566" width="220" height="16" rx="2" fill="#ffffff"/>
-      <text x="580" y="578" fill="#6b7280" font-size="12" text-anchor="middle">SAME SERVICES, WHEN DEPLOYED</text>
+      <text x="580" y="578" fill="#6b7280" font-size="12" text-anchor="middle">SAME FOUR SERVICES, PUBLIC TIER</text>
 
       <!-- Web -> API (inside dev zone) -->
       <line x1="250" y1="200" x2="300" y2="200" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
 
-      <!-- Web -> API (inside render zone) -->
-      <line x1="830" y1="200" x2="880" y2="200" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
 
       <!-- ============ NODES ============ -->
 
@@ -271,19 +274,15 @@ memory.</div>
       <text x="405" y="208" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">lantern-api</text>
       <text x="405" y="228" fill="#24242e" font-size="12" text-anchor="middle">uvicorn · no image yet</text>
 
-      <!-- lantern-web (render, optional) -->
-      <rect x="650" y="155" width="180" height="90" rx="6" fill="#91ccf1" stroke="#2e7dbf" stroke-width="1" stroke-dasharray="6,3"/>
-      <rect x="662" y="167" width="28" height="16" rx="2" fill="transparent" stroke="#2e7dbf" stroke-width="0.8"/>
-      <text x="676" y="179" fill="#24242e" font-size="12" text-anchor="middle">IF</text>
-      <text x="740" y="208" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">lantern-web</text>
-      <text x="740" y="228" fill="#24242e" font-size="12" text-anchor="middle">static build</text>
-
-      <!-- lantern-api (render, optional) -->
-      <rect x="880" y="155" width="210" height="90" rx="6" fill="#91ccf1" stroke="#2e7dbf" stroke-width="1" stroke-dasharray="6,3"/>
-      <rect x="892" y="167" width="28" height="16" rx="2" fill="transparent" stroke="#2e7dbf" stroke-width="0.8"/>
-      <text x="906" y="179" fill="#24242e" font-size="12" text-anchor="middle">IF</text>
-      <text x="985" y="208" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">lantern-api</text>
-      <text x="985" y="228" fill="#24242e" font-size="12" text-anchor="middle">container</text>
+      <!-- lantern-api (Render): one service, the API and the built web app
+           from one origin (G10, D87); the two-service split §1.6 named
+           collapsed into a single mount (A-G10-02). -->
+      <rect x="760" y="150" width="220" height="100" rx="6" fill="#91ccf1" stroke="#2e7dbf" stroke-width="1"/>
+      <rect x="772" y="162" width="28" height="16" rx="2" fill="transparent" stroke="#2e7dbf" stroke-width="0.8"/>
+      <text x="786" y="174" fill="#24242e" font-size="12" text-anchor="middle">IF</text>
+      <text x="870" y="200" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">lantern-api</text>
+      <text x="870" y="220" fill="#24242e" font-size="12" text-anchor="middle">uvicorn · Python 3.12.10</text>
+      <text x="870" y="238" fill="#24242e" font-size="12" text-anchor="middle">serves the built web at /</text>
 
       <!-- External services row -->
 
@@ -328,14 +327,8 @@ memory.</div>
       <rect x="300" y="660" width="18" height="14" rx="2" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
       <text x="326" y="671" fill="#24242e" font-size="12">External service</text>
 
-      <rect x="520" y="660" width="18" height="14" rx="2" fill="#91ccf1" stroke="#2e7dbf" stroke-width="1" stroke-dasharray="4,2"/>
-      <text x="546" y="671" fill="#24242e" font-size="12">Optional / not yet deployed</text>
-
       <line x1="40" y1="706" x2="80" y2="706" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
-      <text x="90" y="710" fill="#24242e" font-size="12">Active connection (dev)</text>
-
-      <line x1="300" y1="706" x2="340" y2="706" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
-      <text x="350" y="710" fill="#24242e" font-size="12">Planned connection (optional tier)</text>
+      <text x="90" y="710" fill="#24242e" font-size="12">Active connection (dev and public tier alike)</text>
     </svg>
 </div>
 
@@ -2687,5 +2680,5 @@ detail.</p>
 </table>
 
 
-<p class="meta">Regenerated 2026-09-09T22:32:52+00:00. No external network resources.</p>
+<p class="meta">Regenerated 2026-09-10T17:09:30+00:00. No external network resources.</p>
 </body></html>

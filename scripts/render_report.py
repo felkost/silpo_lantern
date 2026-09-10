@@ -95,17 +95,22 @@ action.</div>
 <div class="diagram">{{ c4_svg }}</div>
 
 <h2>2. Deployment</h2>
-<p>This diagram shows where each part runs. Today the web app and the API run on the
-developer machine. Four external services are used: Neon Postgres keeps all state,
-LangSmith receives traces, OpenRouter serves the language model, and the Silpo MCP
-server provides the cart data. The public tier on Render is drawn with dashed lines
-because it is optional and not deployed yet.</p>
+<p>This diagram shows where each part runs. On the developer machine the web app and
+the API are two processes. On the public tier (Render, Frankfurt) they are one service:
+the API builds the web app at deploy time and serves it from the root URL, so a guest
+opens one address, logs in at Silpo's own page and is returned to it. Four external
+services are used: Neon Postgres keeps all state, LangSmith receives traces, OpenRouter
+serves the language model, and the Silpo MCP server provides the cart data.</p>
 <p>No state is kept on the service disk. If the process restarts, the session
-continues from the database.</p>
-<div class="example"><b>Example.</b> The demo runs fully on a laptop. If the laptop
-process stops in the middle of a recovery, the same session can continue later,
-because the consent record and the graph checkpoint are already in Neon, not in
-memory.</div>
+continues from the database. The session id travels only as an HttpOnly cookie, never in
+a URL; logging out deletes the guest's credential; an idle session's credential is
+dropped after 30 minutes; and an anonymous visitor is capped per address and per
+day.</p>
+<div class="example"><b>Example.</b> The first login through the public URL failed:
+the host had picked Python 3.14 while every measurement was made on 3.12, and the
+guest's credential did not reach the MCP client. Pinning the interpreter fixed it; the
+same login then reached the diagnosis screen. A deployment is not verified until someone
+opens the URL.</div>
 <div class="diagram">{{ deployment_svg }}</div>
 
 <h2>3. The hero recovery flow</h2>
