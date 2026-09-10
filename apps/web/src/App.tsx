@@ -162,12 +162,6 @@ function App() {
     }
   }, [resume]);
 
-  const afterLogin = useCallback(async () => {
-    if (sessionId !== null) {
-      await resume(sessionId);
-    }
-  }, [resume, sessionId]);
-
   const logout = useCallback(async () => {
     const id = sessionId;
     activeSession.current = null;
@@ -208,7 +202,9 @@ function App() {
     <main>
       <h1>Ліхтарик</h1>
 
-      {sessionId !== null && (
+      {/* «Вийти» only once there is a login to end; on the login screen
+          the same action is a cancel, not an exit (the author, live). */}
+      {sessionId !== null && screen !== "auth_required" && (
         <p>
           <button type="button" onClick={logout} data-testid="logout">
             Вийти
@@ -227,14 +223,15 @@ function App() {
           <h2 id="auth-heading">Потрібен вхід у Сільпо</h2>
           <p>
             Щоб побачити саме ваш кошик, увійдіть у Сільпо за номером телефону.
-            Застосунок ніколи не бачить ваш пароль чи код із SMS.
+            Застосунок ніколи не бачить ваш пароль чи код із SMS. Після входу ви
+            автоматично повернетеся сюди.
           </p>
           <a href={authUrl} data-testid="auth-link">
             Увійти за номером телефону
           </a>
           <p>
-            <button type="button" onClick={afterLogin} disabled={busy}>
-              Я увійшов — продовжити
+            <button type="button" onClick={logout}>
+              Скасувати
             </button>
           </p>
         </section>

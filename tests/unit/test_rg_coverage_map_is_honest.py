@@ -133,3 +133,22 @@ def test_an_integration_only_row_is_blocked_without_a_database() -> None:
                 f"{row['rg_id']} rests on an integration-only test but reads "
                 f"{row['status']!r} with no DATABASE_URL in the environment"
             )
+
+
+def test_a_pass_row_names_an_artefact_git_tracks() -> None:
+    """A tracked file may only reference tracked files (CLAUDE.md §4): a
+    `run_artefact` under a gitignored directory is a claim a fresh clone
+    cannot check. Caught at G10 delivery B, where the first recorder wrote
+    into `datasets/evidence/`, which `.gitignore` excludes."""
+    for row in _rows():
+        if row["status"] != "pass":
+            continue
+        tracked = subprocess.run(
+            ["git", "ls-files", "--error-unmatch", row["run_artefact"]],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+        )
+        assert (
+            tracked.returncode == 0
+        ), f"{row['rg_id']}'s run_artefact {row['run_artefact']!r} is not tracked"

@@ -494,6 +494,38 @@ describe("guest login", () => {
     // G10 (A-G10-04): the id survives the round trip through Silpo's login
     // page, which reloads this app on a bare `/`.
     expect(sessionStorage.getItem("lantern_session_id")).toBe("s1");
+    // The author, walking it live: «Я увійшов — продовжити» did nothing
+    // (the callback already returns the guest here) and «Вийти» offered an
+    // exit from a login that had not happened. One link, one way back.
+    expect(screen.queryByRole("button", { name: /увійшов/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /вийти/i })).toBeNull();
+    expect(screen.getByRole("button", { name: /скасувати/i })).toBeInTheDocument();
+  });
+
+  it("«Скасувати» on the login screen returns to the start", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init?: RequestInit) => {
+        if (init?.method === "DELETE") {
+          return new Response(null, { status: 204 });
+        }
+        return new Response(
+          JSON.stringify({ session_id: "s1", status: "created", authorized: false, auth_url: "/auth/start" }),
+          { status: 200 },
+        );
+      }),
+    );
+
+    render(<App />);
+    await act(async () => {
+      screen.getByRole("button", { name: /перевірити мій кошик/i }).click();
+    });
+    await act(async () => {
+      screen.getByRole("button", { name: /скасувати/i }).click();
+    });
+
+    expect(screen.getByRole("button", { name: /перевірити мій кошик/i })).toBeEnabled();
+    expect(sessionStorage.getItem("lantern_session_id")).toBeNull();
   });
 });
 
