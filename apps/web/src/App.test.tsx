@@ -976,3 +976,56 @@ describe("token economics", () => {
     expect(screen.getByTestId("spend")).not.toHaveTextContent(/remaining/i);
   });
 });
+
+// Author's live feedback after the first console session: the panel, the
+// pile of identical validation lines and the loading state need Ukrainian
+// explanations. Technical identifiers stay English (A-G10-02); the words
+// that explain them are for the reader.
+describe("explanations", () => {
+  it("every panel block carries a Ukrainian «Що це?» explanation", () => {
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("nothing fetches"); }));
+    render(<App />);
+    const helps = screen.getAllByText(/^Що це\?$/);
+    expect(helps.length).toBeGreaterThanOrEqual(4);
+    expect(screen.getByText(/MCP — читання/)).toBeInTheDocument();
+  });
+
+  it("groups identical validation lines with a count and explains an unknown reason", async () => {
+    sessionStorage.setItem("lantern_session_id", "s1");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          sseStream([
+            frame("diagnosis", {
+              ...ENVELOPE,
+              primary_code: null,
+              gap: null,
+              gap_is_borderline: false,
+              products_total: "404.89",
+              threshold_source: "unverified",
+              validations: [
+                { code: "timeslot.not_found", level: "error", type: "slot", is_known: false },
+                { code: "product.offer.stock.max", level: "error", type: "stock", is_known: true },
+                { code: "product.offer.stock.max", level: "error", type: "stock", is_known: true },
+                { code: "product.offer.stock.max", level: "error", type: "stock", is_known: true },
+              ],
+              channels: [],
+            }),
+            frame("consent_required", ENVELOPE),
+          ]),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("primary-code")).toHaveTextContent("невідома");
+    });
+    expect(screen.getByTestId("validation-product.offer.stock.max")).toHaveTextContent("× 3");
+    expect(screen.getAllByTestId("validation-product.offer.stock.max")).toHaveLength(1);
+    expect(screen.getByTestId("unknown-reason")).toHaveTextContent(/не є відомим правилом/);
+  });
+});

@@ -9,10 +9,25 @@
 // and both are rendered in Ukrainian rather than as raw validation codes.
 
 import { translateValidationCode } from "../copy";
-import type { DiagnosisEvent } from "../types";
+import type { DiagnosisEvent, DisclosedValidation } from "../types";
 
 interface Props {
   diagnosis: DiagnosisEvent | null;
+}
+
+function groupByCode(
+  validations: DisclosedValidation[],
+): Array<[DisclosedValidation, number]> {
+  const groups = new Map<string, [DisclosedValidation, number]>();
+  for (const v of validations) {
+    const entry = groups.get(v.code);
+    if (entry) {
+      entry[1] += 1;
+    } else {
+      groups.set(v.code, [v, 1]);
+    }
+  }
+  return [...groups.values()];
 }
 
 export function DiagnosisScreen({ diagnosis }: Props) {
@@ -27,6 +42,12 @@ export function DiagnosisScreen({ diagnosis }: Props) {
             Причина:{" "}
             <code data-testid="primary-code">{diagnosis.primary_code ?? "невідома"}</code>
           </p>
+          {diagnosis.primary_code === null && (
+            <p className="muted" data-testid="unknown-reason">
+              Жодна з позначок кошика не є відомим правилом, тому система не пропонує
+              дію наосліп — перевірте кошик у застосунку Сільпо.
+            </p>
+          )}
           {diagnosis.gap !== null && (
             <p>
               Не вистачає:{" "}
@@ -45,9 +66,13 @@ export function DiagnosisScreen({ diagnosis }: Props) {
             <p>Інших позначок немає.</p>
           ) : (
             <ul data-testid="disclosures">
-              {diagnosis.validations.map((validation) => (
+              {/* Identical lines grouped with a count: a cart with ten
+                  out-of-stock items produced ten identical sentences on
+                  the first live screen. */}
+              {groupByCode(diagnosis.validations).map(([validation, count]) => (
                 <li key={validation.code} data-testid={`validation-${validation.code}`}>
                   {translateValidationCode(validation)}
+                  {count > 1 && <span className="muted"> × {count}</span>}
                 </li>
               ))}
             </ul>

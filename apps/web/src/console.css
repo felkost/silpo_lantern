@@ -220,6 +220,31 @@ code,
   user-select: all;
 }
 
+/* «Що це?» — Ukrainian explanations under English technical headings */
+
+.help {
+  margin: -4px 0 10px;
+  border: 0;
+  padding: 0;
+  font-size: 13px;
+}
+
+.help summary {
+  color: var(--action);
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.help p {
+  margin: 4px 0 0;
+  color: var(--ink-2);
+}
+
+.panel .uk {
+  font-size: 13px;
+  margin: 4px 0 6px;
+}
+
 /* rating: five quiet buttons, the chosen one filled */
 
 .rating-row {

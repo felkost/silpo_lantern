@@ -5,12 +5,15 @@
 
 import { useState } from "react";
 
+import { Help } from "./Help";
+
 export function AnswerRating() {
   const [score, setScore] = useState<number | null>(null);
   const [note, setNote] = useState("");
   return (
     <section className="panel-block" aria-labelledby="rating-heading">
       <h2 id="rating-heading">Your rating — this browser only</h2>
+      <Help>Ваша оцінка лишається в цьому браузері й нікуди не надсилається.</Help>
       <p className="rating-row">
         {[1, 2, 3, 4, 5].map((n) => (
           <button

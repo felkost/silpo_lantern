@@ -8,6 +8,7 @@ import { useState } from "react";
 
 import { getEvidence } from "../api";
 import type { EvidenceResponse } from "../types";
+import { Help } from "./Help";
 
 interface Props {
   evidence: EvidenceResponse | null;
@@ -33,6 +34,10 @@ export function MeasuredEarlier({ evidence, onLoaded }: Props) {
   return (
     <section className="panel-block" aria-labelledby="measured-heading" data-testid="measured-earlier">
       <h2 id="measured-heading">Measured earlier — not this session</h2>
+      <Help>
+        Метрики, виміряні раніше на офлайн-прогонах — не в цій сесії. n — розмір
+        вибірки, у дужках — 95% інтервал Вілсона; команда поруч відтворює файл із нуля.
+      </Help>
       {evidence === null ? (
         <p>
           <button type="button" onClick={load} disabled={busy}>
