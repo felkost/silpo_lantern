@@ -103,6 +103,49 @@ code,
   flex: 1;
 }
 
+/* theme switch: sun on the left, moon on the right, the knob shows which */
+
+.theme-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 58px;
+  height: 28px;
+  padding: 0 7px;
+  border-radius: 999px;
+  border: 1px solid var(--hairline);
+  background: var(--card);
+  color: var(--ink-2);
+}
+
+.theme-switch .knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  transition: transform 160ms ease-out;
+}
+
+.theme-switch.on .knob {
+  transform: translateX(30px);
+}
+
+.theme-switch .sun,
+.theme-switch .moon {
+  position: relative;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-switch .knob {
+    transition: none;
+  }
+}
+
 .shell-body {
   display: grid;
   grid-template-columns: 1fr 2fr;
