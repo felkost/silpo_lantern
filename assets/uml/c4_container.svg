@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 1400 620" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c4-container-title c4-container-desc">
+      <title id="c4-container-title">Lantern system architecture</title>
+      <desc id="c4-container-desc">Architecture diagram showing a guest reaching the interface layer, which drives the Recovery Agent orchestrator; the orchestrator computes through the Domain Core, authorizes writes through the Write Guard, and both the Write Guard and the orchestrator's read path go through the MCP Adapter to reach external services (Silpo MCP, Neon, OpenRouter, LangSmith).</desc>
+      <defs><style>text{font-family:Arial,Helvetica,"Liberation Sans","DejaVu Sans",sans-serif;}</style>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6b7280"/></marker>
+        <marker id="arrow-ink" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#24242e"/></marker>
+      </defs>
+
+      <rect width="100%" height="100%" fill="#ffffff"/>
+
+      <!-- ============ ARROWS (behind boxes) ============ -->
+
+      <!-- Guest -> Interface -->
+      <line x1="200" y1="164" x2="280" y2="164" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="204" y="132" width="72" height="16" rx="2" fill="#ffffff"/>
+      <text x="240" y="144" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">HTTPS</text>
+
+      <!-- Interface -> Recovery Agent -->
+      <line x1="450" y1="164" x2="530" y2="164" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+
+      <!-- Recovery Agent -> Domain Core (solid elbow) -->
+      <path d="M 578,208 V 276 Q 578,284 570,284 H 473 Q 465,284 465,292 V 360"
+            fill="none" stroke="#6b7280" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+      <!-- Recovery Agent -> Write Guard (solid elbow) -->
+      <path d="M 626,208 V 276 Q 626,284 634,284 H 697 Q 705,284 705,292 V 360"
+            fill="none" stroke="#6b7280" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+      <!-- Recovery Agent -> MCP Adapter, read path (dashed elbow) —
+           bends 20px higher (y=264) than the Domain Core / Write Guard
+           elbows (y=284) so its horizontal run clears both of them
+           instead of overlapping the Write Guard elbow's own run. -->
+      <path d="M 674,208 V 256 Q 674,264 682,264 H 937 Q 945,264 945,272 V 360"
+            fill="none" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <rect x="772" y="240" width="72" height="16" rx="2" fill="#ffffff"/>
+      <text x="808" y="252" fill="#6b7280" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">READ</text>
+
+      <!-- Write Guard -> MCP Adapter (row 2, horizontal) -->
+      <line x1="790" y1="404" x2="860" y2="404" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="789" y="372" width="52" height="16" rx="2" fill="#ffffff"/>
+      <text x="815" y="384" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">WRITE</text>
+
+      <!-- MCP Adapter -> External Services (row 2, horizontal) -->
+      <line x1="1030" y1="404" x2="1100" y2="404" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="1029" y="372" width="52" height="16" rx="2" fill="#ffffff"/>
+      <text x="1055" y="384" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">CALL</text>
+
+      <!-- ============ NODES ============ -->
+
+      <!-- Guest (level 1: external) -->
+      <rect x="40" y="120" width="160" height="88" rx="6" fill="#ffffff"/>
+      <rect x="40" y="120" width="160" height="88" rx="6" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
+      <rect x="52" y="132" width="36" height="16" rx="2" fill="transparent" stroke="#c9ba5e" stroke-width="0.8"/>
+      <text x="70" y="144" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">EXT</text>
+      <text x="120" y="172" fill="#24242e" font-size="14" font-weight="700" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">Guest</text>
+      <text x="120" y="190" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">browser / WebView</text>
+
+      <!-- Interface (level 2) -->
+      <rect x="280" y="120" width="170" height="88" rx="6" fill="#ffffff"/>
+      <rect x="280" y="120" width="170" height="88" rx="6" fill="#91ccf1" stroke="#2e7dbf" stroke-width="1"/>
+      <rect x="292" y="132" width="24" height="16" rx="2" fill="transparent" stroke="#2e7dbf" stroke-width="0.8"/>
+      <text x="304" y="144" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">IF</text>
+      <text x="365" y="168" fill="#24242e" font-size="14" font-weight="700" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">Interface</text>
+      <text x="365" y="186" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">apps/api · apps/web</text>
+
+      <!-- Recovery Agent (level 3: application) -->
+      <rect x="530" y="120" width="190" height="88" rx="6" fill="#ffffff"/>
+      <rect x="530" y="120" width="190" height="88" rx="6" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1"/>
+      <rect x="542" y="132" width="36" height="16" rx="2" fill="transparent" stroke="#2c5fc9" stroke-width="0.8"/>
+      <text x="560" y="144" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">APP</text>
+      <text x="625" y="168" fill="#24242e" font-size="14" font-weight="700" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">Recovery Agent</text>
+      <text x="625" y="186" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">LangGraph StateGraph</text>
+
+      <!-- Domain Core (level 4: domain/safety) -->
+      <rect x="380" y="360" width="170" height="88" rx="6" fill="#ffffff"/>
+      <rect x="380" y="360" width="170" height="88" rx="6" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <rect x="392" y="372" width="36" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
+      <text x="410" y="384" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">DOM</text>
+      <text x="465" y="408" fill="#24242e" font-size="14" font-weight="700" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">Domain Core</text>
+      <text x="465" y="426" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">13 DR · gap · diff</text>
+
+      <!-- Write Guard (level 4: domain/safety) -->
+      <rect x="620" y="360" width="170" height="88" rx="6" fill="#ffffff"/>
+      <rect x="620" y="360" width="170" height="88" rx="6" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <rect x="632" y="372" width="40" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
+      <text x="652" y="384" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">SAFE</text>
+      <text x="705" y="408" fill="#24242e" font-size="14" font-weight="700" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">Write Guard</text>
+      <text x="705" y="426" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">allowlist · consent</text>
+
+      <!-- MCP Adapter (level 5: infra) -->
+      <rect x="860" y="360" width="170" height="88" rx="6" fill="#ffffff"/>
+      <rect x="860" y="360" width="170" height="88" rx="6" fill="#afa4de" stroke="#7c6bc4" stroke-width="1"/>
+      <rect x="872" y="372" width="44" height="16" rx="2" fill="transparent" stroke="#7c6bc4" stroke-width="0.8"/>
+      <text x="894" y="384" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">INFRA</text>
+      <text x="945" y="408" fill="#24242e" font-size="14" font-weight="700" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">MCP Adapter</text>
+      <text x="945" y="426" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">registry · OAuth</text>
+
+      <!-- External Services (level 1: external, wide zone box) -->
+      <rect x="1100" y="360" width="230" height="88" rx="6" fill="#ffffff"/>
+      <rect x="1100" y="360" width="230" height="88" rx="6" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
+      <rect x="1112" y="372" width="36" height="16" rx="2" fill="transparent" stroke="#c9ba5e" stroke-width="0.8"/>
+      <text x="1130" y="384" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">EXT</text>
+      <text x="1215" y="404" fill="#24242e" font-size="14" font-weight="700" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">External Services</text>
+      <text x="1215" y="422" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">Silpo · Neon · OpenRouter</text>
+      <text x="1215" y="438" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">LangSmith</text>
+
+      <!-- ============ LEGEND ============ -->
+      <line x1="40" y1="500" x2="1340" y2="500" stroke="#d1d5db" stroke-width="0.8"/>
+      <text x="40" y="522" fill="#6b7280" font-size="12" font-weight="700" font-family="Arial, Helvetica, sans-serif" letter-spacing="0.10em">LEGEND</text>
+
+      <rect x="40" y="540" width="18" height="14" rx="2" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
+      <text x="66" y="551" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif">External actor / service</text>
+
+      <rect x="280" y="540" width="18" height="14" rx="2" fill="#91ccf1" stroke="#2e7dbf" stroke-width="1"/>
+      <text x="306" y="551" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif">Interface layer</text>
+
+      <rect x="480" y="540" width="18" height="14" rx="2" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1"/>
+      <text x="506" y="551" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif">Application layer</text>
+
+      <rect x="700" y="540" width="18" height="14" rx="2" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <text x="726" y="551" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif">Domain / Safety layer</text>
+
+      <rect x="950" y="540" width="18" height="14" rx="2" fill="#afa4de" stroke="#7c6bc4" stroke-width="1"/>
+      <text x="976" y="551" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif">Infra / adapter layer</text>
+
+      <line x1="40" y1="584" x2="72" y2="584" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <text x="80" y="588" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif">Primary flow</text>
+
+      <line x1="260" y1="584" x2="292" y2="584" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <text x="300" y="588" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif">Secondary / read path</text>
+    </svg>

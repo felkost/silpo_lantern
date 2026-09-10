@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1160" height="970" viewBox="0 0 1160 970" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="er-title er-desc">
+      <title id="er-title">Lantern Neon schema</title>
+      <desc id="er-desc">Entity-relationship diagram of the six application tables in Neon Postgres (schema_version, sessions, consents, idempotency_keys, receipts, oauth_tokens) with their columns, keys and relationships, and the LangGraph checkpointer tables the library owns, linked to sessions by thread_id without a foreign key.</desc>
+      <defs><style>text{font-family:Arial,Helvetica,"Liberation Sans","DejaVu Sans",sans-serif;}</style></defs>
+      <rect width="100%" height="100%" fill="#ffffff"/>
+      <rect x="40" y="120" width="220" height="78" rx="6" fill="#ffffff" stroke="#7a6cc4" stroke-width="1"/>
+      <rect x="40" y="120" width="220" height="30" rx="6" fill="#afa4de" stroke="#7a6cc4" stroke-width="1"/>
+      <rect x="40" y="144" width="220" height="6" fill="#afa4de"/>
+      <text x="52" y="140" fill="#24242e" font-size="14" font-weight="700">schema_version</text>
+      <text x="50" y="163" fill="#6b7280" font-size="12" font-weight="700">PK</text>
+      <text x="92" y="163" fill="#24242e" font-size="12">version</text>
+      <text x="250" y="163" fill="#6b7280" font-size="12" text-anchor="end">integer</text>
+      <text x="92" y="181" fill="#24242e" font-size="12">applied_at</text>
+      <text x="250" y="181" fill="#6b7280" font-size="12" text-anchor="end">timestamptz</text>
+<rect x="330" y="120" width="250" height="132" rx="6" fill="#ffffff" stroke="#7a6cc4" stroke-width="1"/>
+      <rect x="330" y="120" width="250" height="30" rx="6" fill="#afa4de" stroke="#7a6cc4" stroke-width="1"/>
+      <rect x="330" y="144" width="250" height="6" fill="#afa4de"/>
+      <text x="342" y="140" fill="#24242e" font-size="14" font-weight="700">sessions</text>
+      <text x="340" y="163" fill="#6b7280" font-size="12" font-weight="700">PK</text>
+      <text x="382" y="163" fill="#24242e" font-size="12">session_id</text>
+      <text x="570" y="163" fill="#6b7280" font-size="12" text-anchor="end">uuid</text>
+      <text x="382" y="181" fill="#24242e" font-size="12">thread_id</text>
+      <text x="570" y="181" fill="#6b7280" font-size="12" text-anchor="end">text</text>
+      <text x="382" y="199" fill="#24242e" font-size="12">owner</text>
+      <text x="570" y="199" fill="#6b7280" font-size="12" text-anchor="end">text</text>
+      <text x="382" y="217" fill="#24242e" font-size="12">created_at</text>
+      <text x="570" y="217" fill="#6b7280" font-size="12" text-anchor="end">timestamptz</text>
+      <text x="382" y="235" fill="#24242e" font-size="12">updated_at</text>
+      <text x="570" y="235" fill="#6b7280" font-size="12" text-anchor="end">timestamptz</text>
+<rect x="660" y="120" width="250" height="114" rx="6" fill="#ffffff" stroke="#7a6cc4" stroke-width="1"/>
+      <rect x="660" y="120" width="250" height="30" rx="6" fill="#afa4de" stroke="#7a6cc4" stroke-width="1"/>
+      <rect x="660" y="144" width="250" height="6" fill="#afa4de"/>
+      <text x="672" y="140" fill="#24242e" font-size="14" font-weight="700">oauth_tokens</text>
+      <text x="670" y="163" fill="#6b7280" font-size="12" font-weight="700">PK FK</text>
+      <text x="712" y="163" fill="#24242e" font-size="12">session_id</text>
+      <text x="900" y="163" fill="#6b7280" font-size="12" text-anchor="end">uuid  (cascade)</text>
+      <text x="712" y="181" fill="#24242e" font-size="12">token</text>
+      <text x="900" y="181" fill="#6b7280" font-size="12" text-anchor="end">jsonb</text>
+      <text x="712" y="199" fill="#24242e" font-size="12">created_at</text>
+      <text x="900" y="199" fill="#6b7280" font-size="12" text-anchor="end">timestamptz</text>
+      <text x="712" y="217" fill="#24242e" font-size="12">updated_at</text>
+      <text x="900" y="217" fill="#6b7280" font-size="12" text-anchor="end">timestamptz</text>
+<rect x="40" y="340" width="270" height="258" rx="6" fill="#ffffff" stroke="#7a6cc4" stroke-width="1"/>
+      <rect x="40" y="340" width="270" height="30" rx="6" fill="#afa4de" stroke="#7a6cc4" stroke-width="1"/>
+      <rect x="40" y="364" width="270" height="6" fill="#afa4de"/>
+      <text x="52" y="360" fill="#24242e" font-size="14" font-weight="700">consents</text>
+      <text x="50" y="383" fill="#6b7280" font-size="12" font-weight="700">PK</text>
+      <text x="92" y="383" fill="#24242e" font-size="12">action_id</text>
+      <text x="300" y="383" fill="#6b7280" font-size="12" text-anchor="end">uuid</text>
+      <text x="50" y="401" fill="#6b7280" font-size="12" font-weight="700">FK</text>
+      <text x="92" y="401" fill="#24242e" font-size="12">session_id</text>
+      <text x="300" y="401" fill="#6b7280" font-size="12" text-anchor="end">uuid</text>
+      <text x="92" y="419" fill="#24242e" font-size="12">owner</text>
+      <text x="300" y="419" fill="#6b7280" font-size="12" text-anchor="end">text</text>
+      <text x="92" y="437" fill="#24242e" font-size="12">cart_id</text>
+      <text x="300" y="437" fill="#6b7280" font-size="12" text-anchor="end">text</text>
+      <text x="92" y="455" fill="#24242e" font-size="12">canonical_args</text>
+      <text x="300" y="455" fill="#6b7280" font-size="12" text-anchor="end">jsonb</text>
+      <text x="92" y="473" fill="#24242e" font-size="12">args_hash</text>
+      <text x="300" y="473" fill="#6b7280" font-size="12" text-anchor="end">text</text>
+      <text x="92" y="491" fill="#24242e" font-size="12">state_hash</text>
+      <text x="300" y="491" fill="#6b7280" font-size="12" text-anchor="end">text</text>
+      <text x="92" y="509" fill="#24242e" font-size="12">prompt_version</text>
+      <text x="300" y="509" fill="#6b7280" font-size="12" text-anchor="end">text</text>
+      <text x="92" y="527" fill="#24242e" font-size="12">policy_version</text>
+      <text x="300" y="527" fill="#6b7280" font-size="12" text-anchor="end">text</text>
+      <text x="92" y="545" fill="#24242e" font-size="12">created_at</text>
+      <text x="300" y="545" fill="#6b7280" font-size="12" text-anchor="end">timestamptz</text>
+      <text x="92" y="563" fill="#24242e" font-size="12">expires_at</text>
+      <text x="300" y="563" fill="#6b7280" font-size="12" text-anchor="end">timestamptz</text>
+      <text x="92" y="581" fill="#24242e" font-size="12">consumed_at</text>
+      <text x="300" y="581" fill="#6b7280" font-size="12" text-anchor="end">timestamptz</text>
+<rect x="380" y="340" width="270" height="222" rx="6" fill="#ffffff" stroke="#7a6cc4" stroke-width="1"/>
+      <rect x="380" y="340" width="270" height="30" rx="6" fill="#afa4de" stroke="#7a6cc4" stroke-width="1"/>
+      <rect x="380" y="364" width="270" height="6" fill="#afa4de"/>
+      <text x="392" y="360" fill="#24242e" font-size="14" font-weight="700">idempotency_keys</text>
+      <text x="390" y="383" fill="#6b7280" font-size="12" font-weight="700">PK</text>
+      <text x="432" y="383" fill="#24242e" font-size="12">id</text>
+      <text x="640" y="383" fill="#6b7280" font-size="12" text-anchor="end">bigserial</text>
+      <text x="432" y="401" fill="#24242e" font-size="12">owner</text>
+      <text x="640" y="401" fill="#6b7280" font-size="12" text-anchor="end">text</text>
+      <text x="432" y="419" fill="#24242e" font-size="12">cart_id</text>
+      <text x="640" y="419" fill="#6b7280" font-size="12" text-anchor="end">text</text>
+      <text x="432" y="437" fill="#24242e" font-size="12">action_id</text>
+      <text x="640" y="437" fill="#6b7280" font-size="12" text-anchor="end">uuid</text>
+      <text x="432" y="455" fill="#24242e" font-size="12">canonical_args_hash</text>
+      <text x="640" y="455" fill="#6b7280" font-size="12" text-anchor="end">text</text>
+      <text x="432" y="473" fill="#24242e" font-size="12">state</text>
+      <text x="640" y="473" fill="#6b7280" font-size="12" text-anchor="end">text  CHECK 5 values</text>
+      <text x="432" y="491" fill="#24242e" font-size="12">result</text>
+      <text x="640" y="491" fill="#6b7280" font-size="12" text-anchor="end">jsonb</text>
+      <text x="432" y="509" fill="#24242e" font-size="12">created_at</text>
+      <text x="640" y="509" fill="#6b7280" font-size="12" text-anchor="end">timestamptz</text>
+      <text x="432" y="527" fill="#24242e" font-size="12">updated_at</text>
+      <text x="640" y="527" fill="#6b7280" font-size="12" text-anchor="end">timestamptz</text>
+      <text x="390" y="545" fill="#6b7280" font-size="12" font-weight="700">UQ</text>
+      <text x="432" y="545" fill="#24242e" font-size="12">(owner, cart_id, action_id)</text>
+<rect x="720" y="340" width="280" height="312" rx="6" fill="#ffffff" stroke="#7a6cc4" stroke-width="1"/>
+      <rect x="720" y="340" width="280" height="30" rx="6" fill="#afa4de" stroke="#7a6cc4" stroke-width="1"/>
+      <rect x="720" y="364" width="280" height="6" fill="#afa4de"/>
+      <text x="732" y="360" fill="#24242e" font-size="14" font-weight="700">receipts</text>
+      <text x="730" y="383" fill="#6b7280" font-size="12" font-weight="700">PK</text>
+      <text x="772" y="383" fill="#24242e" font-size="12">action_id</text>
+      <text x="990" y="383" fill="#6b7280" font-size="12" text-anchor="end">uuid</text>
+      <text x="730" y="401" fill="#6b7280" font-size="12" font-weight="700">FK</text>
+      <text x="772" y="401" fill="#24242e" font-size="12">session_id</text>
+      <text x="990" y="401" fill="#6b7280" font-size="12" text-anchor="end">uuid</text>
+      <text x="772" y="419" fill="#24242e" font-size="12">owner</text>
+      <text x="990" y="419" fill="#6b7280" font-size="12" text-anchor="end">text</text>
+      <text x="772" y="437" fill="#24242e" font-size="12">before_state</text>
+      <text x="990" y="437" fill="#6b7280" font-size="12" text-anchor="end">jsonb</text>
+      <text x="772" y="455" fill="#24242e" font-size="12">after_state</text>
+      <text x="990" y="455" fill="#6b7280" font-size="12" text-anchor="end">jsonb</text>
+      <text x="772" y="473" fill="#24242e" font-size="12">verified</text>
+      <text x="990" y="473" fill="#6b7280" font-size="12" text-anchor="end">boolean</text>
+      <text x="772" y="491" fill="#24242e" font-size="12">status</text>
+      <text x="990" y="491" fill="#6b7280" font-size="12" text-anchor="end">text  receipt | unverified</text>
+      <text x="772" y="509" fill="#24242e" font-size="12">reason</text>
+      <text x="990" y="509" fill="#6b7280" font-size="12" text-anchor="end">text</text>
+      <text x="772" y="527" fill="#24242e" font-size="12">expected_delta</text>
+      <text x="990" y="527" fill="#6b7280" font-size="12" text-anchor="end">numeric</text>
+      <text x="772" y="545" fill="#24242e" font-size="12">actual_delta</text>
+      <text x="990" y="545" fill="#6b7280" font-size="12" text-anchor="end">numeric</text>
+      <text x="772" y="563" fill="#24242e" font-size="12">trace_id</text>
+      <text x="990" y="563" fill="#6b7280" font-size="12" text-anchor="end">text</text>
+      <text x="772" y="581" fill="#24242e" font-size="12">blocker_cleared</text>
+      <text x="990" y="581" fill="#6b7280" font-size="12" text-anchor="end">boolean</text>
+      <text x="772" y="599" fill="#24242e" font-size="12">remaining_gap</text>
+      <text x="990" y="599" fill="#6b7280" font-size="12" text-anchor="end">numeric</text>
+      <text x="772" y="617" fill="#24242e" font-size="12">kind</text>
+      <text x="990" y="617" fill="#6b7280" font-size="12" text-anchor="end">text  add | compensate</text>
+      <text x="772" y="635" fill="#24242e" font-size="12">created_at</text>
+      <text x="990" y="635" fill="#6b7280" font-size="12" text-anchor="end">timestamptz</text>
+      <rect x="330" y="710" width="670" height="118" rx="8" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1" stroke-dasharray="6,4"/>
+      <text x="345" y="730" fill="#24242e" font-size="14" font-weight="700">LangGraph checkpointer  (owned by AsyncPostgresSaver, same Neon database)</text>
+      <text x="345" y="752" fill="#24242e" font-size="12">checkpoints  ·  checkpoint_blobs  ·  checkpoint_writes  ·  checkpoint_migrations</text>
+      <text x="345" y="772" fill="#6b7280" font-size="12">keyed by thread_id = sessions.thread_id; holds the serialised RecoveryState across the consent interrupt.</text>
+      <text x="345" y="792" fill="#6b7280" font-size="12">No foreign key in either direction: the library owns its migrations, the application owns its rows.</text>
+      <text x="345" y="812" fill="#6b7280" font-size="12">Migrated by the saver's own setup(), not by 0001-0009.</text>
+      
+      <!-- sessions 1 : 0..N consents (FK, no cascade). Lane y=290. -->
+      <path d="M 380,252 V 282 Q 380,290 372,290 H 178 Q 170,290 170,298 V 340" fill="none" stroke="#24242e" stroke-width="1.2"/>
+      <line x1="374" y1="262" x2="386" y2="262" stroke="#24242e" stroke-width="1.2"/>
+      <path d="M 163,330 L 170,340 L 177,330 M 170,330 V 340" fill="none" stroke="#24242e" stroke-width="1.2"/>
+      <text x="200" y="285" fill="#6b7280" font-size="12">session_id</text>
+
+      <!-- sessions 1 : 0..N receipts (FK, no cascade). Lane y=310. -->
+      <path d="M 540,252 V 302 Q 540,310 548,310 H 852 Q 860,310 860,318 V 340" fill="none" stroke="#24242e" stroke-width="1.2"/>
+      <line x1="534" y1="262" x2="546" y2="262" stroke="#24242e" stroke-width="1.2"/>
+      <path d="M 853,330 L 860,340 L 867,330 M 860,330 V 340" fill="none" stroke="#24242e" stroke-width="1.2"/>
+      <text x="700" y="305" fill="#6b7280" font-size="12">session_id</text>
+
+      <!-- sessions 1 : 0..1 oauth_tokens (FK, ON DELETE CASCADE). Straight. -->
+      <line x1="580" y1="170" x2="660" y2="170" stroke="#24242e" stroke-width="1.2"/>
+      <line x1="592" y1="164" x2="592" y2="176" stroke="#24242e" stroke-width="1.2"/>
+      <circle cx="646" cy="170" r="4" fill="#ffffff" stroke="#24242e" stroke-width="1.2"/><line x1="654" y1="164" x2="654" y2="176" stroke="#24242e" stroke-width="1.2"/>
+      <text x="620" y="162" fill="#6b7280" font-size="12" text-anchor="middle">cascade</text>
+
+      <!-- consents 1 : 0..1 idempotency_keys, by action_id, no FK (dashed = logical). -->
+      <line x1="310" y1="420" x2="380" y2="420" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3"/>
+      <line x1="322" y1="414" x2="322" y2="426" stroke="#24242e" stroke-width="1.2"/>
+      <circle cx="366" cy="420" r="4" fill="#ffffff" stroke="#24242e" stroke-width="1.2"/><line x1="374" y1="414" x2="374" y2="426" stroke="#24242e" stroke-width="1.2"/>
+      <text x="345" y="412" fill="#6b7280" font-size="12" text-anchor="middle">action_id</text>
+
+      <!-- consents 1 : 0..1 receipts, by action_id, no FK. Routed under row 2, lane y=630. -->
+      <path d="M 175,598 V 672 Q 175,680 183,680 H 852 Q 860,680 860,672 V 652" fill="none" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3"/>
+      <line x1="169" y1="608" x2="181" y2="608" stroke="#24242e" stroke-width="1.2"/>
+      <circle cx="860" cy="666" r="4" fill="#ffffff" stroke="#24242e" stroke-width="1.2"/><line x1="854" y1="658" x2="866" y2="658" stroke="#24242e" stroke-width="1.2"/>
+      <text x="520" y="675" fill="#6b7280" font-size="12" text-anchor="middle">action_id (a receipt exists only for a consumed consent)</text>
+
+      <!-- sessions.thread_id : checkpointer, logical. Down the gap between consents and idempotency_keys. -->
+      <path d="M 345,252 V 710" fill="none" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3"/>
+      <rect x="318" y="470" width="54" height="16" rx="2" fill="#ffffff"/>
+      <text x="345" y="482" fill="#6b7280" font-size="12" text-anchor="middle">thread_id</text>
+
+      <line x1="40" y1="848" x2="1120" y2="848" stroke="#d1d5db" stroke-width="0.8"/>
+      <text x="40" y="870" fill="#6b7280" font-size="12" font-weight="700" letter-spacing="0.10em">LEGEND</text>
+      <rect x="40" y="886" width="18" height="14" rx="2" fill="#afa4de" stroke="#7a6cc4" stroke-width="1"/>
+      <text x="66" y="897" fill="#24242e" font-size="12">Application table (migrations 0001-0009, src/lantern/memory/migrations)</text>
+      <rect x="560" y="886" width="18" height="14" rx="2" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1" stroke-dasharray="4,2"/>
+      <text x="586" y="897" fill="#24242e" font-size="12">Library-owned tables</text>
+      <line x1="40" y1="922" x2="90" y2="922" stroke="#24242e" stroke-width="1.2"/>
+      <line x1="50" y1="916" x2="50" y2="928" stroke="#24242e" stroke-width="1.2"/><path d="M 80,915 L 90,922 L 80,929 M 80,922 H 90" fill="none" stroke="#24242e" stroke-width="1.2"/>
+      <text x="100" y="926" fill="#24242e" font-size="12">Foreign key, one to many</text>
+      <line x1="330" y1="922" x2="380" y2="922" stroke="#24242e" stroke-width="1.2"/>
+      <line x1="340" y1="916" x2="340" y2="928" stroke="#24242e" stroke-width="1.2"/><circle cx="366" cy="922" r="4" fill="#ffffff" stroke="#24242e" stroke-width="1.2"/><line x1="374" y1="916" x2="374" y2="928" stroke="#24242e" stroke-width="1.2"/>
+      <text x="390" y="926" fill="#24242e" font-size="12">Foreign key, one to zero-or-one</text>
+      <line x1="620" y1="922" x2="670" y2="922" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3"/>
+      <text x="680" y="926" fill="#24242e" font-size="12">Logical link by value, no foreign key</text>
+      <text x="40" y="952" fill="#6b7280" font-size="12">PK primary key · FK foreign key · UQ unique constraint. consents and receipts reference sessions WITHOUT cascade (D92): a session row is never deleted; logout deletes oauth_tokens only.</text>
+    </svg>
