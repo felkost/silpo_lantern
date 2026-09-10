@@ -8,7 +8,7 @@
 // or `error`). That is the server's own contract -- consent recording
 // and write execution are deliberately separate steps.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   SessionUnauthorizedError,
@@ -70,9 +70,17 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [authUrl, setAuthUrl] = useState<string>("");
   const [busy, setBusy] = useState(false);
+  // Seen live on Render: a cold start keeps `/events` open for 20+ s, and
+  // «Вийти» pressed meanwhile left `busy` stuck and let the late stream
+  // overwrite the idle screen. Every stream checks it is still the
+  // current session before touching state.
+  const activeSession = useRef<string | null>(null);
 
   const consume = useCallback((id: string) => {
     return streamSessionEvents(id, (event) => {
+      if (activeSession.current !== id) {
+        return;
+      }
       if (event.event === "diagnosis") {
         setDiagnosis(event.data as unknown as DiagnosisEvent);
         setScreen("diagnosis");
@@ -96,6 +104,7 @@ function App() {
     try {
       const session = await createSession();
       setSessionId(session.session_id);
+      activeSession.current = session.session_id;
       writeStoredSession(session.session_id);
       setAuthUrl(session.auth_url);
       if (!session.authorized) {
@@ -120,6 +129,9 @@ function App() {
       try {
         await consume(id);
       } catch (exc) {
+        if (activeSession.current !== id) {
+          return; // logged out meanwhile: the outcome no longer matters
+        }
         if (exc instanceof SessionUnauthorizedError) {
           // The stored session has no token: login was abandoned, timed
           // out, or the guest logged out elsewhere. Offer it again.
@@ -130,7 +142,9 @@ function App() {
           setScreen("error");
         }
       } finally {
-        setBusy(false);
+        if (activeSession.current === id) {
+          setBusy(false);
+        }
       }
     },
     [consume],
@@ -143,20 +157,17 @@ function App() {
     const stored = readStoredSession();
     if (stored !== null) {
       setSessionId(stored);
+      activeSession.current = stored;
       void resume(stored);
     }
   }, [resume]);
 
-  const afterLogin = useCallback(async () => {
-    if (sessionId !== null) {
-      await resume(sessionId);
-    }
-  }, [resume, sessionId]);
-
   const logout = useCallback(async () => {
     const id = sessionId;
+    activeSession.current = null;
     writeStoredSession(null);
     setSessionId(null);
+    setBusy(false);
     setDiagnosis(null);
     setCandidates([]);
     setReceipts([]);
@@ -191,7 +202,9 @@ function App() {
     <main>
       <h1>Ліхтарик</h1>
 
-      {sessionId !== null && (
+      {/* «Вийти» only once there is a login to end; on the login screen
+          the same action is a cancel, not an exit (the author, live). */}
+      {sessionId !== null && screen !== "auth_required" && (
         <p>
           <button type="button" onClick={logout} data-testid="logout">
             Вийти
@@ -210,14 +223,15 @@ function App() {
           <h2 id="auth-heading">Потрібен вхід у Сільпо</h2>
           <p>
             Щоб побачити саме ваш кошик, увійдіть у Сільпо за номером телефону.
-            Застосунок ніколи не бачить ваш пароль чи код із SMS.
+            Застосунок ніколи не бачить ваш пароль чи код із SMS. Після входу ви
+            автоматично повернетеся сюди.
           </p>
           <a href={authUrl} data-testid="auth-link">
             Увійти за номером телефону
           </a>
           <p>
-            <button type="button" onClick={afterLogin} disabled={busy}>
-              Я увійшов — продовжити
+            <button type="button" onClick={logout}>
+              Скасувати
             </button>
           </p>
         </section>

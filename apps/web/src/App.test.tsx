@@ -494,6 +494,38 @@ describe("guest login", () => {
     // G10 (A-G10-04): the id survives the round trip through Silpo's login
     // page, which reloads this app on a bare `/`.
     expect(sessionStorage.getItem("lantern_session_id")).toBe("s1");
+    // The author, walking it live: «Я увійшов — продовжити» did nothing
+    // (the callback already returns the guest here) and «Вийти» offered an
+    // exit from a login that had not happened. One link, one way back.
+    expect(screen.queryByRole("button", { name: /увійшов/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /вийти/i })).toBeNull();
+    expect(screen.getByRole("button", { name: /скасувати/i })).toBeInTheDocument();
+  });
+
+  it("«Скасувати» on the login screen returns to the start", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init?: RequestInit) => {
+        if (init?.method === "DELETE") {
+          return new Response(null, { status: 204 });
+        }
+        return new Response(
+          JSON.stringify({ session_id: "s1", status: "created", authorized: false, auth_url: "/auth/start" }),
+          { status: 200 },
+        );
+      }),
+    );
+
+    render(<App />);
+    await act(async () => {
+      screen.getByRole("button", { name: /перевірити мій кошик/i }).click();
+    });
+    await act(async () => {
+      screen.getByRole("button", { name: /скасувати/i }).click();
+    });
+
+    expect(screen.getByRole("button", { name: /перевірити мій кошик/i })).toBeEnabled();
+    expect(sessionStorage.getItem("lantern_session_id")).toBeNull();
   });
 });
 
@@ -587,6 +619,44 @@ describe("session round trip and logout", () => {
     });
     expect(calls).toContain("DELETE /session/s1");
     expect(sessionStorage.getItem("lantern_session_id")).toBeNull();
+  });
+
+  it("logging out mid-stream re-enables the start button and drops late events", async () => {
+    // Seen live on Render: a cold start keeps `/events` open for 20+ s;
+    // «Вийти» pressed meanwhile left `busy` stuck and the late stream
+    // overwrote the idle screen.
+    sessionStorage.setItem("lantern_session_id", "s1");
+    let release: (() => void) | null = null;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init?: RequestInit) => {
+        if (init?.method === "DELETE") {
+          return new Response(null, { status: 204 });
+        }
+        await gate;
+        return new Response(
+          sseStream([frame("error", { ...ENVELOPE, error: "late" })]),
+          { status: 200 },
+        );
+      }),
+    );
+
+    render(<App />);
+    await act(async () => {
+      screen.getByRole("button", { name: /вийти/i }).click();
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /перевірити мій кошик/i })).toBeEnabled();
+    });
+    await act(async () => {
+      release!();
+    });
+
+    expect(screen.queryByTestId("error-message")).toBeNull();
+    expect(screen.getByRole("button", { name: /перевірити мій кошик/i })).toBeEnabled();
   });
 
   it("explains a 429 in Ukrainian rather than echoing the status", async () => {

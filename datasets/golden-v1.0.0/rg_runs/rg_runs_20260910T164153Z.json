@@ -1,0 +1,60 @@
+{
+  "recorded_at": "2026-09-10T16:41:53.198561+00:00",
+  "git_sha": "a981e65",
+  "python": "3.12.10",
+  "command": "python scripts/record_rg_runs.py",
+  "runs": {
+    "RG-01": {
+      "node_ids": [
+        "tests/unit/test_rg_fault_injection.py::test_rg01_an_llm_narration_cannot_manufacture_consent",
+        "tests/unit/test_rg_fault_injection.py::test_rg01_consent_is_read_from_the_store_not_from_state"
+      ],
+      "returncode": 0,
+      "summary": "2 passed in 5.68s",
+      "stdout_tail": "..                                                                       [100%]\n2 passed in 5.68s\n",
+      "verdict": "pass"
+    },
+    "RG-02": {
+      "node_ids": [
+        "tests/unit/test_rg_fault_injection.py::test_rg02_timeout_after_remote_commit_is_unverified_never_confirmed"
+      ],
+      "returncode": 0,
+      "summary": "1 passed in 1.90s",
+      "stdout_tail": ".                                                                        [100%]\n1 passed in 1.90s\n",
+      "verdict": "pass"
+    },
+    "RG-03": {
+      "node_ids": [
+        "tests/unit/test_rg_injected_instructions.py::test_rg03_an_injection_in_the_tool_description_never_reaches_the_planner",
+        "tests/unit/test_rg_injected_instructions.py::test_rg03_an_injection_in_a_nested_property_description_is_stripped",
+        "tests/unit/test_rg_injected_instructions.py::test_rg03_an_injection_arriving_as_a_tool_error_is_not_an_instruction",
+        "tests/unit/test_rg_injected_instructions.py::test_rg03_a_tool_the_planner_may_not_see_is_absent_from_the_view",
+        "tests/unit/test_planner_never_sees_nested_tool_descriptions.py"
+      ],
+      "returncode": 0,
+      "summary": "8 passed in 1.94s",
+      "stdout_tail": "........                                                                 [100%]\n8 passed in 1.94s\n",
+      "verdict": "pass"
+    },
+    "RG-04": {
+      "node_ids": [
+        "tests/unit/test_rg_fault_injection.py::test_rg04_a_refusal_cannot_be_expressed_as_an_empty_search",
+        "tests/unit/test_rg_fault_injection.py::test_rg04_a_search_that_finds_nothing_writes_nothing"
+      ],
+      "returncode": 0,
+      "summary": "2 passed in 1.73s",
+      "stdout_tail": "..                                                                       [100%]\n2 passed in 1.73s\n",
+      "verdict": "pass"
+    },
+    "RG-07": {
+      "node_ids": [
+        "tests/unit/test_write_path_interrupt_and_resume.py",
+        "tests/golden/test_golden_cases.py::test_golden_case[GD-15]"
+      ],
+      "returncode": 0,
+      "summary": "5 passed in 2.85s",
+      "stdout_tail": ".....                                                                    [100%]\n5 passed in 2.85s\n",
+      "verdict": "pass"
+    }
+  }
+}

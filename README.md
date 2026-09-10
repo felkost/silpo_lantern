@@ -57,10 +57,14 @@ Postgres call — reusing the same compiled graph the live path runs. Render's F
 egress reaches the live MCP server (IV-06), and the full hero flow, including a second
 consent round, has been run end to end against the deployed API (IV-07).
 
-**The web interface itself is not yet served.** The deployment runs the API only: the root
-URL returns a 404 and the recovery card, which exists and is tested, has never been openable
-in a browser. Making it reachable — together with a logout, a session cookie in place of an
-id in the URL, and a cap on what an anonymous visitor can spend — is the next piece of work.
+**The recovery card is served from the root URL** (G10). The same service builds the React
+app and mounts it after the API routes; a guest's login through Silpo's own phone + OTP page
+has been walked end to end in a browser against the deployed URL. The session id travels
+only as an `HttpOnly; Secure; SameSite=Lax` cookie and never in a URL; «Вийти» deletes the
+credential (proven by a test and by the production access log); an idle session's token is
+dropped after 30 minutes; and an anonymous visitor is capped per address and per day, so the
+project's LLM budget cannot be spent by the public. The service pins Python 3.12.10 — the
+first browser login failed on an unpinned 3.14 and passed once pinned.
 
 The write segment now offers a guest-facing undo. When a consented write leaves a known,
 unwanted diff — the wrong quantity landed, or the write cleared nothing and surfaced a
