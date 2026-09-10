@@ -8,9 +8,41 @@ after the guest's explicit consent to one specific plan, performs the minimal ca
 and proves the outcome by reading the cart back. Checkout and payment stay the guest's
 own action, always.
 
-See [`docs/reports/index.html`](docs/reports/index.html) for the architecture diagrams,
-the hero recovery flow, the safety state machine, and the business-value argument behind
-this project.
+**What it solves, in one paragraph.** A guest's cart is blocked at the last step of the
+funnel; the app says «add items for X ₴» and nothing else, while the server already knows
+every constraint — including one the app never renders. Lantern turns that into one
+action with a proof: exact gap → 2–3 concrete products → consent to one of them → one
+guarded write → the cart read back → a receipt that says what actually changed.
+
+Live: `https://silpo-lantern.onrender.com/` (a guest logs in at Silpo's own page; the
+service holds one credential per session, deletable with «Вийти»). Architecture, every
+sequence and state diagram, and the value argument: [`docs/reports/index.html`](docs/reports/index.html).
+
+## Architecture
+
+One FastAPI service serves the API and the built React card; a LangGraph graph runs the
+recovery; a single Write Guard node is the only place a write tool can be called; the MCP
+adapter treats the server's own tool list as untrusted input; Neon Postgres holds every
+piece of state.
+
+![C4 container diagram](assets/uml/c4_container.svg)
+
+## The scenario that proves it
+
+The hero: a cart under the minimum order sum. Read → diagnose (every validation, not only
+the blocker) → plan → consent bound to one action and one cart state → guarded write →
+independent read-back → receipt.
+
+![Hero recovery sequence](assets/uml/hero_sequence.svg)
+
+Walked live through the browser on 2026-09-10: gap 93.38 ₴ against a 699 ₴ minimum,
+three candidates priced from the product search, consent to one (31.99 × 3), expected
++95.97 and read back +95.97, verified, blocker cleared; the session spent 5,205 tokens
+($0.0042). The cart was restored afterwards by script.
+
+## Data model
+
+![Neon schema](assets/uml/neon_schema_er.svg)
 
 ## Status
 
@@ -171,38 +203,62 @@ populated by later stages.
 
 ## Metrics
 
-Seven metrics, each reported with the population it was measured over and never as a
-bare number. Measured over a versioned 15-case golden dataset and 18 repeats, all
-reproducible offline from this repository:
+Computed over a versioned 15-case golden dataset and 18 offline repeats, reproducible
+from this repository alone (`python -m scripts.compute_metrics --tracked` regenerates
+`datasets/golden-v1.0.0/metrics.json`, and a gate test asserts the committed file agrees).
+The same eight rows, with the same intervals and caveats, are what the console serves at
+`GET /evidence`.
 
-| Metric | Value | n |
-|---|---|---|
-| Unauthorized write rate | 0.00 | 33 |
-| Read-back coverage | 1.00 | 33 |
-| Consent binding integrity | 1.00 | 33 |
-| Write-delta fidelity | 1.00 | 33 |
-| False recovery | 0 | 33 |
-| Recovery completion rate | 1.00 | 18 |
-| Search-price fidelity | 0.27 | 33 |
-| Disclosure rate | 1 of 1 | 1 |
+| Metric | Value | n | 95% Wilson interval | Gate |
+|---|---|---|---|---|
+| Unauthorized write rate | 0.00 | 33 | [0.00, 0.10] | 0.00 |
+| Read-back coverage | 1.00 | 33 | [0.90, 1.00] | 1.00 |
+| Consent binding integrity | 1.00 | 33 | [0.90, 1.00] | 1.00 |
+| Write-delta fidelity | 1.00 | 33 | [0.90, 1.00] | 1.00 |
+| Search-price fidelity | 0.27 | 33 | [0.15, 0.44] | none (observation) |
+| Recovery completion rate | 1.00 | 18 | [0.82, 1.00] | ≥ 0.85 |
+| False recovery (count) | 0 | 33 | — | 0 |
+| Disclosure rate | 1 of 1 | 1 | [0.21, 1.00] | measured |
 
-The last two are one question split in two. Write-delta fidelity asks what this system
-controls — does the change we recorded match the movement the cart itself shows? It is 33
-of 33. Search-price fidelity asks something else entirely: how well the product search
-predicts what the cart will charge. It carries no target, because the cart applies a
-per-product loyalty discount the search does not report, and that is the retailer's
-pricing rather than this system's behaviour. It is also the whole case for proving every
-change by re-reading the cart instead of trusting the prediction.
+How to read them. The four 0.00/1.00 rows are unrefuted, not proven: at n = 33 a
+proportion of 1.00 still has a 95% lower bound of 0.90. **False recovery** is a count of
+false "recovered" claims, not a rate. **Search-price fidelity is not a success rate** —
+it asks how often the search price equalled the price the cart charged, and it is low
+because the cart applies a per-product loyalty discount the search does not carry; that
+is the retailer's pricing, and the whole case for proving every change by re-reading the
+cart. **Disclosure rate** rests on one audited observation (the cart carried two
+constraints, the app showed one, the other on no screen a guest can reach) and is reported
+as one observation, never as a percentage. Live repeats: 18 of 18 on 2026-09-09.
 
-The four clean figures are unrefuted, not proven — at n=33 the 95% Wilson interval for a
-proportion of 1.00 still reaches down to 0.90, and the results chart draws those
-intervals rather than four full bars. Disclosure rate now rests on a single audited observation: the
-cart carried two constraints and the app displayed one, with the other shown on no screen
-the guest can reach. One observation is reported as one — its interval runs from 0.21 —
-not as a percentage.
+What is **not** measured: before/after figures from moderated guest sessions (n = 0 —
+no access to participants; the protocol is written and untouched), and any conversion or
+revenue effect. Neither is substituted by a proxy. The replay fallback exists as tracked
+recorded bundles replayed by `tests/e2e`, not as a mode of the interface; every
+demonstration is a live session.
 
-See [`docs/reports/index.html`](docs/reports/index.html), which explains how the parts
-interact and why that is expected to help.
+## Unit economics
+
+Stated as the plan's own formula with variables, not as a projection. Net value of the
+agent over a period:
+
+`Vnet = B × (p₁ × M₁ − p₀ × M₀ − c) + ΔS × C − F`
+
+where B is the number of recovery-eligible episodes, p₁/p₀ the share of completed
+purchases with and without the agent, M₁/M₀ the marginal contribution per purchase, c the
+agent's variable cost per episode, ΔS the support contacts avoided, C the cost of one, and
+F the fixed cost of integration. **Only c is measured here:** 18 live runs of
+2026-09-09 cost $0.13 in total at the pinned OpenRouter prices, about $0.007 per episode
+including both model calls, and the console session above cost $0.0042. Everything else
+is Silpo's data (checkout analytics, margins, support costs) and is left as a variable —
+the pilot design for measuring p₁/p₀ is an A/B over eligible episodes, described in the
+project plan. At c ≈ $0.01 an episode, the agent pays for itself if one recovered
+purchase in a hundred episodes carries more than one dollar of margin; that arithmetic is
+the only claim made, and it depends on p₁ − p₀ being greater than zero, which is exactly
+what the pilot would establish.
+
+Spend to date against the project's $20 ceiling: ≈ $0.98 by the project's own per-call
+accounting (every model id and usage block recorded per run); the OpenRouter balance read
+$10.04 on 2026-09-10.
 
 ## Privacy
 
