@@ -66,6 +66,16 @@ dropped after 30 minutes; and an anonymous visitor is capped per address and per
 project's LLM budget cannot be spent by the public. The service pins Python 3.12.10 — the
 first browser login failed on an unpinned 3.14 and passed once pinned.
 
+Around the guest card sits a **jury console** (G10): a stage feed that logs the graph nodes
+the stream actually reported — MCP, model, database or pure, in arrival order, never a
+pre-drawn checklist — a panel organised by what each field proves (the server returns more
+than the app shows; money is computed by code; nothing is written without item-bound
+consent; success is only read back), a separately headed block of metrics measured earlier
+with `n`, a 95% interval, a caveat and the command that regenerates them, and the session's
+LLM spend beside the project ceiling — never a "remaining" balance. Identifiers are English
+so they match the code; every block carries a Ukrainian «Що це?». A demo runbook lists the
+five live scenarios and what each one shows.
+
 The write segment now offers a guest-facing undo. When a consented write leaves a known,
 unwanted diff — the wrong quantity landed, or the write cleared nothing and surfaced a
 new problem — the guest is offered a compensation (a second, separately allowlisted
