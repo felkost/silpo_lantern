@@ -1093,3 +1093,65 @@ describe("claim panel after the receipt", () => {
     expect(screen.getByTestId("claim-disclosure")).toHaveTextContent("order.cost.min");
   });
 });
+
+// The cart column (the author, 2026-09-11): a jury needs the starting
+// state in front of them, and the Silpo app itself may never be shown
+// (name, address). So the console renders the cart as the server returned
+// it -- lines, total, minimum, slot -- and, once evidence is loaded, what
+// the app showed against what the server returned.
+describe("cart column", () => {
+  it("renders the cart lines, the total against the minimum and the slot", async () => {
+    sessionStorage.setItem("lantern_session_id", "s1");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          sseStream([
+            frame("diagnosis", {
+              ...ENVELOPE,
+              primary_code: "order.cost.min",
+              gap: "93.38",
+              gap_is_borderline: false,
+              products_total: "605.62",
+              cart: {
+                delivery_type: "DeliveryHome",
+                timeslot_start: "2026-09-11T06:30:00+00:00",
+                timeslot_end: "2026-09-11T07:30:00+00:00",
+                products_total: "605.62",
+                lines: [
+                  { name: "Молоко «Галичина» 2,5%", quantity: "2", price: "39.99" },
+                  { name: "Хліб", quantity: "1", price: "24.50" },
+                ],
+              },
+              threshold_source: "validation_context",
+              validations: [{ code: "order.cost.min", level: "error", type: "cost", is_known: true }],
+              channels: [],
+            }),
+            frame("consent_required", ENVELOPE),
+          ]),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("cart-column")).toHaveTextContent("605.62");
+    });
+    const column = screen.getByTestId("cart-column");
+    expect(column).toHaveTextContent("Хліб");
+    expect(column).toHaveTextContent("× 2");
+    expect(column).toHaveTextContent("93.38");
+    expect(column).toHaveTextContent("DeliveryHome");
+    expect(column).toHaveTextContent("2026-09-11");
+    // nothing that identifies the guest
+    expect(column.textContent).not.toMatch(/cart-|latitude|вул\./i);
+  });
+
+  it("says the cart is not read yet before the diagnosis", () => {
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("nothing fetches"); }));
+    render(<App />);
+    expect(screen.getByTestId("cart-column")).toHaveTextContent(/ще не прочитано/i);
+  });
+});

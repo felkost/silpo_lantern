@@ -100,12 +100,29 @@ export interface ChannelComparisonRow {
   reason: string;
 }
 
+export interface CartLine {
+  name: string;
+  quantity: string;
+  price: string;
+}
+
+export interface CartView {
+  delivery_type: string | null;
+  timeslot_start: string | null;
+  timeslot_end: string | null;
+  products_total: string;
+  lines: CartLine[];
+}
+
 export interface DiagnosisEvent extends EventEnvelope {
   primary_code: string | null;
   gap: string | null;
   gap_is_borderline: boolean;
   /** G10 (claim 2): the arithmetic's inputs, as decimal strings. */
   products_total: string | null;
+  /** The cart as the server returned it -- never its id, address or
+   * coordinates. `null` until the read node has run. */
+  cart: CartView | null;
   threshold_source: "validation_context" | "time_slots" | "unverified";
   validations: DisclosedValidation[];
   channels: ChannelComparisonRow[];

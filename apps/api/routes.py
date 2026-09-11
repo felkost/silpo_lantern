@@ -113,6 +113,27 @@ def _is_known(code: str) -> bool:
     return _registry.lookup(code) is not None
 
 
+def _cart_view(cart: Any) -> Optional[Dict[str, Any]]:
+    if cart is None:
+        return None
+    return {
+        "delivery_type": cart.delivery_type,
+        "timeslot_start": (
+            cart.timeslot_start.isoformat() if cart.timeslot_start else None
+        ),
+        "timeslot_end": cart.timeslot_end.isoformat() if cart.timeslot_end else None,
+        "products_total": str(cart.products_total),
+        "lines": [
+            {
+                "name": line.name,
+                "quantity": str(line.quantity),
+                "price": str(line.price),
+            }
+            for line in cart.products
+        ],
+    }
+
+
 def _sse_line(event: str, data: Dict[str, Any]) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
@@ -294,6 +315,11 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
                     "products_total": (
                         str(cart.products_total) if cart is not None else None
                     ),
+                    # G10 (the console's cart column): the starting state a
+                    # jury needs in front of them -- lines, total, channel,
+                    # slot. Product names are allowed; the cart id, the
+                    # address and the coordinates never leave the server.
+                    "cart": _cart_view(cart),
                     "threshold_source": diagnosis.threshold_source,
                     "validations": [
                         {

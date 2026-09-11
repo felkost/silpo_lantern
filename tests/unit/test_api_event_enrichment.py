@@ -146,3 +146,43 @@ def test_no_frame_carries_a_forbidden_key(monkeypatch: pytest.MonkeyPatch) -> No
         body = _client(_make_app(graph, monkeypatch)).get("/session/s1/events").text
         for match in re.findall(r"data: (.*?)\n\n", body, re.S):
             assert not FORBIDDEN_KEYS & _keys(json.loads(match)), match
+
+
+def test_diagnosis_carries_the_cart_lines_but_no_id_or_address(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The console's cart column: what the server sees, so a jury has the
+    starting state in front of them. Product names, quantities, prices,
+    the total and the slot -- never the cart id, address or coordinates
+    (the forbidden-key walk above covers every frame)."""
+    from decimal import Decimal
+
+    from src.lantern.domain.models import Cart, LineItem
+
+    cart = Cart(
+        cart_id="cart-1",
+        products_total=Decimal("404.89"),
+        delivery_type="DeliveryHome",
+        products=[
+            LineItem(
+                product_id="p1",
+                name="Молоко",
+                quantity=Decimal("2"),
+                price=Decimal("39.99"),
+            ),
+        ],
+    )
+    chunks = _read_pipeline_chunks()
+    chunks[0] = {"read": {"cart": cart}}
+    graph = _FakeGraph(
+        chunks=chunks, final_state={**_awaiting_consent_state(), "cart": cart}
+    )
+    client = _client(_make_app(graph, monkeypatch))
+
+    (frame,) = _frames(client.get("/session/s1/events").text, "diagnosis")
+
+    assert frame["cart"]["delivery_type"] == "DeliveryHome"
+    assert frame["cart"]["lines"] == [
+        {"name": "Молоко", "quantity": "2", "price": "39.99"}
+    ]
+    assert "cart_id" not in frame["cart"] and "product_id" not in json.dumps(frame)

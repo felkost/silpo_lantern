@@ -18,6 +18,7 @@ import {
   submitConsent,
 } from "./api";
 import { AnswerRating } from "./components/AnswerRating";
+import { CartColumn } from "./components/CartColumn";
 import { ClaimPanel } from "./components/ClaimPanel";
 import { ConsentScreen } from "./components/ConsentScreen";
 import { MeasuredEarlier } from "./components/MeasuredEarlier";
@@ -319,6 +320,8 @@ function App() {
             </section>
           )}
         </main>
+
+        <CartColumn diagnosis={diagnosis} evidence={evidence} />
       </div>
 
       <footer className="shell-footer">silpo lantern</footer>
