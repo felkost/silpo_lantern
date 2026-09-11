@@ -235,8 +235,7 @@ if it was restarted meanwhile, or the request landed on a different worker proce
 detail: a typed state feeds a builder that compiles to an executable graph, a
 conditional edge routes each step, and a checkpointer persists the state after every
 node — which is what makes stopping for a human answer possible at all. This project's
-own node topology, exported from the code, is on the
-<a href="safety.html#compensation">safety page</a>.</p>
+own node topology is on the <a href="safety.html#compensation">safety page</a>.</p>
 <div class="diagram">{{ langgraph_svg }}</div>
 
 <h2 id="deployment">Deployment</h2>
@@ -249,45 +248,133 @@ server provides the cart. No state is kept on the service disk.</p>
 
 <h2 id="mcp">The MCP adapter and the tool list</h2>
 <p>Silpo's server offers what it can do as a list of <i>tools</i>: read the cart, search
-products, change the cart. That list is discovered live through
-<code>tools/list</code>, cached with an
-expiry, hashed per tool, and a tool that is new or whose schema changed is quarantined
-until reviewed. The live server ships imperative instructions inside tool descriptions;
-the planner never sees them raw.</p>
+products, change the cart. The list is fetched from the server live, through
+<code>tools/list</code>, and held only briefly, with an expiry.</p>
+<p>For each tool the system keeps <b>a checksum of its description</b> — a short
+signature computed from the parameters and their types, which changes the moment the
+server alters anything in it. Beside it, in the repository, sits the list of tools
+already reviewed together with their signatures; a developer refreshes that list with a
+separate command, once they have looked at a change and accepted it.</p>
+<p>If a tool appears for the first time, or its present signature does not match the
+reviewed one, the system puts it in <b>quarantine</b>. In practice that means the tool
+never enters the list the language model sees, and no step of the run calls it. The
+Customer's current request does not stop: reading the cart, the diagnosis and the
+product search carry on with the remaining, reviewed tools. What stops is only what is
+impossible without the quarantined tool: if it was the write tool that changed, the
+Write Guard refuses the write and says plainly that Silpo's service changed its
+interface. A tool does not leave quarantine on its own — a developer looks at what
+changed and, if it is acceptable, refreshes the reviewed list.</p>
+<p>And about the description texts. The server sends a description with each tool, and
+those descriptions are written for a general shopping assistant. The product-search
+tool, for instance, carries the instruction "if user mentions a budget, ALWAYS fill the
+cart as close to the budget limit as possible" (verbatim, from the tool-list snapshot of
+5 September). For an assistant whose user has just said "I have a thousand hryvnias",
+that is sound advice.</p>
+<p>Lantern's task is narrower: the Customer named no budget — they have a blocked cart
+and a specific shortfall. A model that took that instruction personally would offer more
+than is needed to clear the block. That serves neither the Customer nor Silpo: an offer
+the Customer declines does not become a completed order, and the completed order is what
+both sides are after.</p>
+<p>So the planner is given only the tool's name and the list of its parameters; the
+description text is dropped before the model sees anything. The rule is wider than this
+one example: any text arriving from an external server is data to us, never an
+instruction to the model, whoever wrote it and with whatever intent.</p>
 <div class="diagram">{{ mcp_adapter_svg }}</div>
-<p>And the registry's own sequence: the agent asks for the tool list, a stale cache is
-refetched through the SDK, an oversized response is rejected before it is parsed, the
-names are diffed against the previous snapshot, and only then are the tools handed
-on.</p>
+<p>Step by step, when the agent needs the tool list: it asks the local store; if the
+entry has expired the store fetches it from Silpo's server; the names are compared with
+the previous list; and only then are the tools handed to the agent.</p>
+<p>There is one more check — on the size of the answer. If the server ever returned more
+than 500 tools, or more than 5 MB, the answer is rejected without being parsed. That is
+a guard against a corrupted or deliberately inflated response: parsing one would spend
+memory and time on data the system does not trust anyway. The ceilings are set with room
+to spare — the largest answer Silpo's server has returned so far held 40 tools.</p>
+<p>If such an answer did arrive, the Customer's request ends with an error: the service
+says the tool list could not be read and does nothing further. The stale list is not
+used instead — working from a list that may already have changed would mean calling a
+tool with an unknown set of parameters, exactly what quarantine and the signature check
+exist to prevent.</p>
 <div class="diagram">{{ tools_list_svg }}</div>
 
 <h2 id="domain">The domain core</h2>
-<p>The plain data objects that carry one recovery from a raw cart to a receipt. A cart
-holds validations; each one that blocks checkout wraps into a blocker. The domain core
-reads a cart and produces a diagnosis: an exact gap in money, never a guess. That
-diagnosis later feeds a proposal with real evidence, and a consent record that only the
-guarded write step may use. None of these objects call the network — every rule about
-them is tested without a live server.</p>
+<p>The data models that describe one recovery, from a raw cart to a receipt: cart,
+validation, blocker, diagnosis, proposal, consent, receipt.</p>
+<p>Along with the cart the server returns a list of <b>validations</b> — messages about
+its state, each with a level: error, warning or informational. A validation at error
+level is what stops the order being placed; those the system calls <b>blockers</b>. The
+rest are still shown to the Customer — and it is among them that the constraint the app
+displays nowhere turns up.</p>
+<p>The core reads the cart and produces a <b>diagnosis</b>: exactly how many hryvnias
+are missing. This is neither an estimate nor an answer from the language model — the
+threshold comes from the validation's own data (<code>699</code> in
+<code>orderCostMin</code>), the products total from the cart, and the system subtracts
+one from the other.</p>
+<p>The diagnosis is then used like this: it goes into the request to the language model,
+which proposes search terms. Products that come back with a verified price and
+availability are turned into concrete proposals by code — which computes the quantity
+from the shortfall rather than asking the model for it. When the Customer agrees to one
+of them the server records the consent; only the Write Guard may use that record.</p>
+<p>None of these data models reach outside — not to Silpo's server, not to the language
+model, not to the database. That is why every rule about them is checked by ordinary
+tests, with no network call at all.</p>
 <div class="diagram">{{ domain_class_svg }}</div>
-<p>What happens to one cart as it moves through the core: a cart that does not match the
-expected shape stops early with a named error; a cart that resolves cleanly moves on to
-its gap; the rare case with no threshold at all is still shown, marked unverified rather
-than given a confident number. Every path that reaches the end shows every validation
-the cart carries, including the ones the app's own screen never displays.</p>
+<p>The next diagram follows one cart from the server's answer to the message the
+Customer sees. First the answer is unpacked into known fields: totals, products,
+validations. If its shape is unexpected — a required field missing, a type that does not
+fit — processing stops at once with a named error and the Customer is told the cart
+could not be read: better to say so than to compute a shortfall from data the system
+does not trust.</p>
+<p>If the answer unpacked cleanly, the system looks for the minimum-order threshold and
+subtracts the products total from it. It also happens that the threshold is in none of
+the known fields — then the Customer still gets a message, but one that says plainly
+that the amount could not be confirmed; an invented number never takes its place.</p>
+<p>Wherever the path leads, the message to the Customer lists <b>every</b> validation
+the cart carries, not only the one that caused the block. From the audit of 10
+September: the server returned two. The first is an error about the minimum order sum —
+that is what blocks checkout, and the Silpo app shows it as a large button. The second
+is informational: paying in instalments is unavailable because the cart is under 1000 ₴.
+A Customer could only meet that on the payment screen — and while the cart is blocked by
+the minimum, they never reach checkout, so it is shown to them nowhere at all. That
+difference between what the server knows and what the Customer
+sees is what Lantern exists to show.</p>
 <div class="diagram">{{ domain_activity_svg }}</div>
 
 <h2 id="planner">Planner, evidence gate, ranking</h2>
-<p>After the diagnosis the planner proposes search terms — never a price or a product
-id, which are structurally absent from what it may return. Every candidate the search
-turns up is checked against the same call's own typed response before it can reach the
-Customer; one with no verified price, or marked unavailable, is dropped. What survives
-is ranked by the smallest top-up that clears the gap.</p>
+<p>After the diagnosis the language model sees what is already in the cart and how much
+is missing, and proposes <b>search terms</b> — product or category names such as "milk",
+"bread", "coffee". That is all it can return: there is no field for a price or a product
+id in the shape it answers with. Its answer is a guess about <i>what to look for</i>,
+and it decides nothing.</p>
+<p>With those words the system queries Silpo's product search — in the same branch and
+for the same delivery slot as the cart. The search returns a structured answer: name,
+price, availability, identifiers. A candidate goes further only if its <b>price and
+availability come from that same answer</b>: one with no confirmed price, or marked
+unavailable, is dropped. The model has no part in those numbers.</p>
+<p>For each survivor the system computes the smallest quantity that closes the
+shortfall: the shortfall divided by the price, rounded to the catalogue's selling step
+and capped by stock. It then orders the candidates <b>by one thing only — the top-up
+amount, smallest first</b> — and shows the Customer the top two or three.</p>
+<p>It is worth saying plainly what is <b>not</b> used to choose. The search is confined
+to the same branch, delivery type and slot as the cart — otherwise the product found
+could not be ordered at all. After that only the evidence gate filters: a confirmed
+price and availability pass, anything else does not. Customer preferences, food
+restrictions, favourites, promotions or semantic closeness to what is already in the
+cart are <b>not</b> taken into account: Silpo's server offers tools for those, and this
+version does not use them. The reason is plain: every extra signal is one more place to
+be wrong in front of a Customer, and there was no measured way to validate relevance
+within this version. So relevance stays with the model and with the Customer, who picks
+one of two or three offers — or none.</p>
 <div class="diagram">{{ g4_activity_svg }}</div>
-<p>Drawn from a captured run against a live cart, not from the design: the two points
-where a model is involved — proposing search terms, narrating one accepted candidate —
-and what each may see. The planner receives a tool's name and JSON Schema, never its raw
-description text; the product name reaching the narration step is wrapped as inert
-data.</p>
+<p>The next diagram shows the two places where a language model is involved at all, and
+what each of them receives. Step by step: the system takes the tool list and keeps from
+each tool only its name and the list of its parameters with their types; passes that to
+the model together with the cart data and the shortfall; the model returns search
+terms; the product search runs on them, and each result goes through <b>the evidence
+gate</b> — a step of Lantern's own, with no model involved, which drops anything without
+a confirmed price and availability in that same search answer. Once a candidate is
+chosen the model is called a second time — to
+write one Ukrainian sentence about that product; the product name is passed as plain
+data, so no text inside it can become an instruction. Neither call ever sees the raw
+tool descriptions, or the write tool.</p>
 <div class="diagram">{{ g4_sequence_svg }}</div>
 """
 
