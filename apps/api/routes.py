@@ -45,7 +45,7 @@ from src.lantern.domain.consent_hash import (
     compute_owner,
     compute_state_hash,
 )
-from src.lantern.domain.models import ConsentRecord
+from src.lantern.domain.models import Cart, ConsentRecord
 from src.lantern.domain.repeat_accounting import TokenUsage, cost_usd
 from src.lantern.graph.llm_adapter import current_usage_log, load_llm_prices
 from src.lantern.graph.state import (
@@ -362,6 +362,15 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
                     ),
                     "verified": bool(receipt and receipt.verified),
                     "kind": receipt.kind if receipt else None,
+                    # The cart column's next state: the read-back's own
+                    # cart, projected like the first (never the wholesale
+                    # `after_state`, which carries coordinates); null when
+                    # the read-back was unreachable.
+                    "cart": (
+                        _cart_view(Cart.model_validate(receipt.after_state))
+                        if receipt and receipt.after_state
+                        else None
+                    ),
                     "actual_delta": (
                         str(receipt.actual_delta)
                         if receipt and receipt.actual_delta is not None

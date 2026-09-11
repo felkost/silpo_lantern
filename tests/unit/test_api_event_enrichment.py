@@ -186,3 +186,39 @@ def test_diagnosis_carries_the_cart_lines_but_no_id_or_address(
         {"name": "Молоко", "quantity": "2", "price": "39.99"}
     ]
     assert "cart_id" not in frame["cart"] and "product_id" not in json.dumps(frame)
+
+
+def test_receipt_carries_the_read_back_cart_and_null_when_unreachable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The cart column's second state: the cart as the read-back saw it,
+    projected the same way as the first (names, quantities, prices, total)
+    -- never the wholesale `after_state`, which carries coordinates. An
+    unreachable read-back (`after_state == {}`) yields null, not a guess."""
+    from tests.unit.test_api_emits_compensation_option import _receipt as _r
+
+    receipt = _r()
+    unreachable = receipt.model_copy(
+        update={"after_state": {}, "verified": False, "status": "unverified"}
+    )
+    graph = _FakeGraph(
+        chunks=[
+            {"write_and_readback": {"receipt": receipt, "status": "verified"}},
+            {"persist_receipt": {"receipt": unreachable, "status": "unverified"}},
+        ],
+        final_state={
+            **_consented_state(),
+            "status": "unverified",
+            "receipt": unreachable,
+        },
+        initial_state=_consented_state(),
+    )
+    client = _client(_make_app(graph, monkeypatch))
+
+    first, second = _frames(client.get("/session/s1/events").text, "receipt")
+
+    assert first["cart"]["products_total"] == "587.61"
+    assert first["cart"]["lines"] == [
+        {"name": "Товар", "quantity": "1", "price": "86.84"}
+    ]
+    assert second["cart"] is None

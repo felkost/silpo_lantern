@@ -169,6 +169,48 @@ code,
   }
 }
 
+/* three columns, three eyebrows, hairlines between them */
+
+.eyebrow {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.guest > .eyebrow {
+  align-self: stretch;
+}
+
+@media (min-width: 1101px) {
+  .guest,
+  .cart-column {
+    border-left: 1px solid var(--hairline);
+    padding-left: 24px;
+  }
+}
+
+.cart-state {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--hairline);
+}
+
+.cart-state h3 {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cart-added {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-radius: 6px;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
 /* ---- cart column (right, Ukrainian): the starting state ---- */
 
 .cart-column {

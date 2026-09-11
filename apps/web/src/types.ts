@@ -140,6 +140,8 @@ export interface ReceiptEvent extends EventEnvelope {
   verified: boolean;
   kind: "add" | "compensate" | null;
   actual_delta: string | null;
+  /** The cart as the read-back saw it; null when the read-back was unreachable. */
+  cart: CartView | null;
   /** D42: a verified write is not a recovered cart -- distinguishes
    * "the write landed" from "you can check out". */
   blocker_cleared: boolean;

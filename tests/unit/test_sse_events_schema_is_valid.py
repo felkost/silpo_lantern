@@ -84,6 +84,7 @@ def _receipt_data(**overrides: object) -> dict:
         "expected_delta": "39.99",
         "verified": True,
         "kind": "add",
+        "cart": None,
     }
     data.update(overrides)
     return data

@@ -294,6 +294,7 @@ describe("receipt screen", () => {
             expected_delta: "39.99",
             verified: false,
             kind: "add",
+            cart: null,
             actual_delta: null,
             blocker_cleared: false,
             remaining_gap: null,
@@ -1153,5 +1154,50 @@ describe("cart column", () => {
     vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("nothing fetches"); }));
     render(<App />);
     expect(screen.getByTestId("cart-column")).toHaveTextContent(/ще не прочитано/i);
+  });
+});
+
+// Cart history (the author, 2026-09-11): every cart state the stream
+// reported, labelled with the step it belongs to, so a change can be
+// followed -- state 1 at the read, state 2 as the read-back saw it, with
+// the added line marked and the totals side by side.
+describe("cart history", () => {
+  it("appends the read-back state after the receipt and marks the added line", async () => {
+    sessionStorage.setItem("lantern_session_id", "s1");
+    const before = {
+      delivery_type: "DeliveryHome", timeslot_start: null, timeslot_end: null,
+      products_total: "605.62",
+      lines: [{ name: "Хліб", quantity: "1", price: "24.50" }],
+    };
+    const after = {
+      ...before, products_total: "701.59",
+      lines: [{ name: "Хліб", quantity: "1", price: "24.50" }, { name: "Сир", quantity: "3", price: "31.99" }],
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          sseStream([
+            frame("diagnosis", { ...ENVELOPE, primary_code: "order.cost.min", gap: "93.38", gap_is_borderline: false, products_total: "605.62", cart: before, threshold_source: "validation_context", validations: [], channels: [] }),
+            frame("receipt", { ...ENVELOPE, status: "receipt", reason: "", expected_delta: "95.97", actual_delta: "95.97", verified: true, kind: "add", blocker_cleared: true, remaining_gap: null, cart: after }),
+          ]),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("cart-state")).toHaveLength(2);
+    });
+    const [first, second] = screen.getAllByTestId("cart-state");
+    expect(first).toHaveTextContent(/Стан 1/);
+    expect(first).toHaveTextContent("605.62");
+    expect(second).toHaveTextContent(/Стан 2/);
+    expect(second).toHaveTextContent(/після запису/i);
+    expect(second).toHaveTextContent("701.59");
+    expect(second).toHaveTextContent("+95.97");
+    expect(second.querySelector(".cart-added")).toHaveTextContent("Сир");
   });
 });

@@ -245,7 +245,8 @@
               "remaining_gap",
               "expected_delta",
               "verified",
-              "kind"
+              "kind",
+              "cart"
             ],
             "properties": {
               "status": {
@@ -292,6 +293,63 @@
                   "compensate",
                   null
                 ]
+              },
+              "cart": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "description": "G10: the cart as the read-back saw it, projected like the diagnosis frame's; null when the read-back was unreachable.",
+                "required": [
+                  "delivery_type",
+                  "products_total",
+                  "lines"
+                ],
+                "properties": {
+                  "delivery_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "timeslot_start": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "timeslot_end": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "products_total": {
+                    "type": "string"
+                  },
+                  "lines": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "name",
+                        "quantity",
+                        "price"
+                      ],
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "quantity": {
+                          "type": "string"
+                        },
+                        "price": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
               }
             }
           }
