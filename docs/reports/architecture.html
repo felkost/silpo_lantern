@@ -92,14 +92,15 @@ important rule is visible in the shape: there is one road to a cart change, and 
 through the Write Guard.</p>
 
 <h2 id="containers">Containers</h2>
-<p>The guest talks only to the interface — one FastAPI service that serves the API and
-the built React console from the same origin. The interface starts the Recovery Agent, a
-LangGraph graph. The agent uses the Domain Core to compute every number, and it must
+<p>The guest talks only to the web page. It starts the Recovery Agent, a LangGraph
+graph. The agent uses the Domain Core to compute every number, and it must
 pass the <b>Write Guard</b> before any change to the cart: the single node in the whole
 system that is allowed to call a write tool, and which checks the consent, the cart and
 the tool's own schema before it authorises one. It is described in full on the
-<a href="safety.html#guard">safety page</a>. Only the MCP Adapter talks to Silpo; the
-guest's browser can never reach the Silpo server directly.</p>
+<a href="safety.html#guard">safety page</a>. Only the <b>MCP Adapter</b> — labelled
+that way on the diagram below — talks to Silpo: MCP is the open protocol through which
+Silpo exposes the cart to applications, and the adapter is this project's single module
+that speaks it. The guest's browser can never reach the Silpo server directly.</p>
 <div class="example"><b>Example.</b> A guest opens a blocked cart and starts a session.
 The agent reads the cart, the Domain Core computes that it is 93.38 ₴ below the minimum
 order sum, and nothing is changed yet — the write path stays closed until the guest
@@ -246,7 +247,8 @@ network</td></tr>
 <tr><td>Safety</td><td>the Write Guard: allowlist, consent binding, hashes, per-tool
 schema hash, budget reserve, read-back gate</td><td>the only place a write tool is
 called</td></tr>
-<tr><td>Infra</td><td>MCP client and OAuth, dynamic tool registry with quarantine, Neon
+<tr><td>Infra (the MCP adapter)</td><td>MCP client and OAuth, dynamic tool registry
+with quarantine, Neon
 repository and checkpointer, tracing with redaction</td><td>talks to the outside;
 trusts nothing it receives</td></tr>
 <tr><td>Application</td><td>the LangGraph graph and prompts</td><td>the model plans and
@@ -258,10 +260,11 @@ console</td><td>Ukrainian for the guest; English identifiers for the observer</t
 nesting alone.</p>
 
 <h2 id="rules">The 13 domain rules</h2>
-<p>The brief names thirteen rules about money, time and evidence. Each one exists here
-as its own test file — <code>tests/unit/test_dr_01…13</code> — named after the rule,
-so "the rule holds" is something the test suite answers rather than a claim in a
-document. None of them needs a network to run.</p>
+<p>The project applies thirteen domain rules — about money, time and evidence. Each
+one exists as its own test file named after the rule
+(<code>tests/unit/test_dr_01…13</code>), so "does the rule hold" is a question the test
+suite answers rather than a claim in a document. None of them needs a network to
+run.</p>
 <table>
 <tr><th>#</th><th>Rule</th><th>Why it is not obvious</th></tr>
 <tr><td>DR-01</td><td>Money is <code>Decimal</code>, coordinates are floats, quantity
@@ -599,7 +602,9 @@ server provides the cart. No state is kept on the service disk.</p>
 </div>
 
 <h2 id="mcp">The MCP adapter and the tool list</h2>
-<p>The tool list is discovered live through <code>tools/list</code>, cached with an
+<p>Silpo's server offers what it can do as a list of <i>tools</i>: read the cart, search
+products, change the cart. That list is discovered live through
+<code>tools/list</code>, cached with an
 expiry, hashed per tool, and a tool that is new or whose schema changed is quarantined
 until reviewed. The live server ships imperative instructions inside tool descriptions;
 the planner never sees them raw.</p>
@@ -1451,5 +1456,5 @@ data.</p>
 <div class="next"><a href="index.html">← Start here</a>
 
 <a href="recovery.html">Hero recovery →</a></div>
-<p class="meta">Regenerated 2026-09-11T21:46:21+00:00. No external network resources.</p>
+<p class="meta">Regenerated 2026-09-11T21:59:34+00:00. No external network resources.</p>
 </main></div></body></html>
