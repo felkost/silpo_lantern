@@ -21,6 +21,7 @@ secret-scan:
 
 report:
 	python scripts/render_report.py
+	python scripts/render_report_pages.py
 
 # D-G1-07: dumps FastAPI's own generated OpenAPI schema for review/diffing —
 # never hand-authored separately, so it can't silently drift from the routes.

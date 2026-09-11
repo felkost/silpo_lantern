@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Lantern — measured results</title>
+<style>
+body { font-family: system-ui, sans-serif; max-width: 900px; margin: 2rem auto;
+padding: 0 1rem; color: #1a1a1a; background: #fafafa; line-height: 1.5; }
+h1 { border-bottom: 2px solid #2a5; padding-bottom: .3rem; } h2 { margin-top: 2.5rem; }
+.lede { color: #444; font-size: 1.05rem; }
+.diagram { background: white; border: 1px solid #ddd; border-radius: 6px; padding: 1rem;
+margin: 1rem 0; overflow-x: auto; } .diagram svg { max-width: 100%; height: auto; }
+.example { background: #fff; border-left: 4px solid #6ca2ee; padding: .6rem .9rem;
+margin: .8rem 0; font-size: .95rem; } .example b { color: #2c5fc9; }
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+th, td { border: 1px solid #ccc; padding: .5rem .7rem; text-align: left;
+vertical-align: top; }
+th { background: #eee; } code { background: #eee; padding: 0 .25rem; border-radius:
+3px; }
+.meta { color: #888; font-size: .85rem; } nav a { margin-right: 1rem; }
+</style></head>
+<body>
+<nav><a href="index.html">Full report</a> <a href="hero-run.html">Hero run</a>
+<a href="safety.html">Safety</a> <a href="metrics.html">Metrics</a>
+<a href="data-model.html">Data model</a></nav>
+<h1>Lantern — measured results</h1>
+
+<p class="lede">Eight numbers, each with the population it was measured over, its 95%
+interval and its caveat — never a bare percentage.</p>
+
+<table>
+<tr><th>Metric</th><th>Value</th><th>n</th><th>95% Wilson</th><th>Caveat</th></tr>
+
+<tr><td><code>UnauthorizedWriteRate</code></td><td>0.00</td><td>33</td>
+<td>[0.00, 0.10]</td><td>Gate 0.00 absolute. Denominator: idempotency claims.</td></tr>
+
+<tr><td><code>ReadbackCoverage</code></td><td>1.00</td><td>33</td>
+<td>[0.90, 1.00]</td><td>Gate 1.00. Every claimed write followed by an independent read-back.</td></tr>
+
+<tr><td><code>ConsentBindingIntegrity</code></td><td>1.00</td><td>33</td>
+<td>[0.90, 1.00]</td><td>Gate 1.00. Consent hashes match what the guard authorised.</td></tr>
+
+<tr><td><code>WriteDeltaFidelity</code></td><td>1.00</td><td>33</td>
+<td>[0.90, 1.00]</td><td>Gate 1.00 absolute. The recorded delta against the cart's own movement -- what this system controls (D82).</td></tr>
+
+<tr><td><code>SearchPriceFidelity</code></td><td>0.27</td><td>33</td>
+<td>[0.15, 0.44]</td><td>No gate. NOT a success rate: how often the search price equalled the price the cart charged. Low because the cart applies a per-product loyalty discount the search does not carry (D68/D76/D82).</td></tr>
+
+<tr><td><code>RecoveryCompletionRate</code></td><td>1.00</td><td>18</td>
+<td>[0.82, 1.00]</td><td>Gate 0.85 on the core cases. Offline population.</td></tr>
+
+<tr><td><code>FalseRecovery</code></td><td>0</td><td>33</td>
+<td>—</td><td>Gate 0 absolute. A count of false 'recovered' claims, not a rate.</td></tr>
+
+<tr><td><code>DisclosureRate</code></td><td>1 of 1</td><td>1</td>
+<td>[0.21, 1.00]</td><td>One audited observation, not a rate (section 12.3): the app showed the blocking constraint and showed order.payment_types.disabled on no reachable surface.</td></tr>
+
+</table>
+<p>Population <code>offline</code>: the 18 offline repeats over the tracked
+recorded bundles, replayed through the same compiled graph the live path runs.
+Regenerate with <code>python -m scripts.compute_metrics --tracked</code>; a gate test asserts the committed file
+agrees with a fresh regeneration. Live repeats: 18 of 18 on 2026-09-09.</p>
+<div class="diagram"><svg xmlns="http://www.w3.org/2000/svg" width="1000" height="524" viewBox="0 0 1000 524">
+<defs><style>text{font-family:Arial,Helvetica,"Liberation Sans","DejaVu Sans",sans-serif;}</style></defs>
+<rect width="1000" height="524" fill="#FFFFFF"/>
+<text x="24" y="34" font-size="14" font-weight="700" fill="#24242E">G9 measurement results - seven metrics, 95% Wilson intervals</text>
+<text x="24" y="58" font-size="12" fill="#6B7280">Computed by scripts/compute_metrics.py from the offline repeats own emitted run records (D61: reproducible from the repository, which a live LLM run is not).</text>
+<text x="24" y="78" font-size="12" fill="#6B7280">n is the population each metric was measured over. A metric with n = 0 is N/A, never a zero bar.</text>
+<line x1="260.0" y1="96" x2="260.0" y2="436" stroke="#D1D5DB"/>
+<text x="260.0" y="90" font-size="12" fill="#6B7280" text-anchor="middle">0.00</text>
+<line x1="370.0" y1="96" x2="370.0" y2="436" stroke="#D1D5DB"/>
+<text x="370.0" y="90" font-size="12" fill="#6B7280" text-anchor="middle">0.25</text>
+<line x1="480.0" y1="96" x2="480.0" y2="436" stroke="#D1D5DB"/>
+<text x="480.0" y="90" font-size="12" fill="#6B7280" text-anchor="middle">0.50</text>
+<line x1="590.0" y1="96" x2="590.0" y2="436" stroke="#D1D5DB"/>
+<text x="590.0" y="90" font-size="12" fill="#6B7280" text-anchor="middle">0.75</text>
+<line x1="700.0" y1="96" x2="700.0" y2="436" stroke="#D1D5DB"/>
+<text x="700.0" y="90" font-size="12" fill="#6B7280" text-anchor="middle">1.00</text>
+<text x="24" y="126" font-size="12" font-weight="700" fill="#24242E">UnauthorizedWriteRate</text>
+<text x="200" y="126" font-size="12" fill="#6B7280" text-anchor="end">n = 33</text>
+<rect x="260" y="116" width="0.0" height="20" fill="#2C5FC9" stroke="#6440C9"/>
+<line x1="260.0" y1="126" x2="305.9" y2="126" stroke="#24242E" stroke-width="1.5"/>
+<line x1="260.0" y1="120" x2="260.0" y2="132" stroke="#24242E" stroke-width="1.5"/>
+<line x1="305.9" y1="120" x2="305.9" y2="132" stroke="#24242E" stroke-width="1.5"/>
+<text x="712" y="126" font-size="12" font-weight="700" fill="#24242E">0.00</text>
+<text x="762" y="126" font-size="12" fill="#6B7280">gate: 0.00 absolute</text>
+<text x="24" y="168" font-size="12" font-weight="700" fill="#24242E">ReadbackCoverage</text>
+<text x="200" y="168" font-size="12" fill="#6B7280" text-anchor="end">n = 33</text>
+<rect x="260" y="158" width="440.0" height="20" fill="#2C5FC9" stroke="#6440C9"/>
+<line x1="654.1" y1="168" x2="700.0" y2="168" stroke="#24242E" stroke-width="1.5"/>
+<line x1="654.1" y1="162" x2="654.1" y2="174" stroke="#24242E" stroke-width="1.5"/>
+<line x1="700.0" y1="162" x2="700.0" y2="174" stroke="#24242E" stroke-width="1.5"/>
+<text x="712" y="168" font-size="12" font-weight="700" fill="#24242E">1.00</text>
+<text x="762" y="168" font-size="12" fill="#6B7280">gate: 1.00</text>
+<text x="24" y="210" font-size="12" font-weight="700" fill="#24242E">ConsentBindingIntegrity</text>
+<text x="200" y="210" font-size="12" fill="#6B7280" text-anchor="end">n = 33</text>
+<rect x="260" y="200" width="440.0" height="20" fill="#2C5FC9" stroke="#6440C9"/>
+<line x1="654.1" y1="210" x2="700.0" y2="210" stroke="#24242E" stroke-width="1.5"/>
+<line x1="654.1" y1="204" x2="654.1" y2="216" stroke="#24242E" stroke-width="1.5"/>
+<line x1="700.0" y1="204" x2="700.0" y2="216" stroke="#24242E" stroke-width="1.5"/>
+<text x="712" y="210" font-size="12" font-weight="700" fill="#24242E">1.00</text>
+<text x="762" y="210" font-size="12" fill="#6B7280">gate: 1.00</text>
+<text x="24" y="252" font-size="12" font-weight="700" fill="#24242E">WriteDeltaFidelity</text>
+<text x="200" y="252" font-size="12" fill="#6B7280" text-anchor="end">n = 33</text>
+<rect x="260" y="242" width="440.0" height="20" fill="#2C5FC9" stroke="#6440C9"/>
+<line x1="654.1" y1="252" x2="700.0" y2="252" stroke="#24242E" stroke-width="1.5"/>
+<line x1="654.1" y1="246" x2="654.1" y2="258" stroke="#24242E" stroke-width="1.5"/>
+<line x1="700.0" y1="246" x2="700.0" y2="258" stroke="#24242E" stroke-width="1.5"/>
+<text x="712" y="252" font-size="12" font-weight="700" fill="#24242E">1.00</text>
+<text x="762" y="252" font-size="12" fill="#6B7280">gate: 1.00 absolute</text>
+<text x="24" y="294" font-size="12" font-weight="700" fill="#24242E">SearchPriceFidelity</text>
+<text x="200" y="294" font-size="12" fill="#6B7280" text-anchor="end">n = 33</text>
+<rect x="260" y="284" width="120.0" height="20" fill="#2C5FC9" stroke="#6440C9"/>
+<line x1="326.3" y1="294" x2="454.6" y2="294" stroke="#24242E" stroke-width="1.5"/>
+<line x1="326.3" y1="288" x2="326.3" y2="300" stroke="#24242E" stroke-width="1.5"/>
+<line x1="454.6" y1="288" x2="454.6" y2="300" stroke="#24242E" stroke-width="1.5"/>
+<text x="712" y="294" font-size="12" font-weight="700" fill="#24242E">0.27</text>
+<text x="762" y="294" font-size="12" fill="#6B7280">gate: no gate - observation</text>
+<text x="24" y="336" font-size="12" font-weight="700" fill="#24242E">RecoveryCompletionRate</text>
+<text x="200" y="336" font-size="12" fill="#6B7280" text-anchor="end">n = 18</text>
+<rect x="260" y="326" width="440.0" height="20" fill="#2C5FC9" stroke="#6440C9"/>
+<line x1="622.6" y1="336" x2="700.0" y2="336" stroke="#24242E" stroke-width="1.5"/>
+<line x1="622.6" y1="330" x2="622.6" y2="342" stroke="#24242E" stroke-width="1.5"/>
+<line x1="700.0" y1="330" x2="700.0" y2="342" stroke="#24242E" stroke-width="1.5"/>
+<text x="712" y="336" font-size="12" font-weight="700" fill="#24242E">1.00</text>
+<text x="762" y="336" font-size="12" fill="#6B7280">gate: 0.85 core</text>
+<text x="24" y="378" font-size="12" font-weight="700" fill="#24242E">FalseRecovery</text>
+<text x="200" y="378" font-size="12" fill="#6B7280" text-anchor="end">n = 33</text>
+<text x="260" y="378" font-size="12" font-weight="700" fill="#24242E">0 false claim(s) across 33 receipts - a count, not a rate</text>
+<text x="762" y="378" font-size="12" fill="#6B7280">gate: 0 absolute</text>
+<text x="24" y="420" font-size="12" font-weight="700" fill="#24242E">DisclosureRate</text>
+<text x="200" y="420" font-size="12" fill="#6B7280" text-anchor="end">n = 1</text>
+<rect x="260" y="410" width="440.0" height="20" fill="#2C5FC9" stroke="#6440C9"/>
+<line x1="350.9" y1="420" x2="700.0" y2="420" stroke="#24242E" stroke-width="1.5"/>
+<line x1="350.9" y1="414" x2="350.9" y2="426" stroke="#24242E" stroke-width="1.5"/>
+<line x1="700.0" y1="414" x2="700.0" y2="426" stroke="#24242E" stroke-width="1.5"/>
+<text x="712" y="420" font-size="12" font-weight="700" fill="#24242E">1.00</text>
+<text x="762" y="420" font-size="12" fill="#6B7280">gate: measured</text>
+<rect x="24" y="459" width="16" height="14" fill="#2C5FC9" stroke="#6440C9"/>
+<text x="48" y="470" font-size="12" fill="#24242E">gate met</text>
+<rect x="132" y="459" width="16" height="14" fill="#9A85E1" stroke="#6440C9"/>
+<text x="156" y="470" font-size="12" fill="#24242E">gate not met - reported, not relaxed</text>
+<text x="24" y="494" font-size="12" fill="#6B7280">SearchPriceFidelity carries no gate: it measures how well the product search predicts the price the cart charges, which is Silpo policy (D68, D76), not this system.</text>
+</svg></div>
+
+<h2>How to read them</h2>
+<p>The four 0.00/1.00 rows are unrefuted, not proven: at n = 33 a proportion of 1.00
+still has a lower bound of 0.90. FalseRecovery is a count. SearchPriceFidelity is not a
+success rate — it measures how often the search price equalled the price the cart
+charged, and it is low because the cart applies a loyalty discount the search does not
+see. DisclosureRate rests on one audited observation and is reported as one.</p>
+
+<h2>Cost</h2>
+<p>18 live runs on 2026-09-09 cost $0.13 in total at the pinned OpenRouter prices —
+about
+$0.007 per episode with both model calls; the console session of 2026-09-10 cost
+$0.0042. Every usage figure comes from the provider's own usage block, never an
+estimate. Project ceiling $20; spend to date under $1.</p>
+
+<h2>Not measured</h2>
+<p>Before/after figures from moderated guest sessions (n = 0 — no access to
+participants; the protocol is written), and any conversion or revenue effect. Neither
+is substituted by a proxy. The evaluation judges are validated as structural-defect
+detectors, not as a measure of Ukrainian quality, so no judge score appears
+anywhere.</p>
+<p class="meta">Regenerated 2026-09-11T20:33:41+00:00. No external network resources.</p>
+</body></html>

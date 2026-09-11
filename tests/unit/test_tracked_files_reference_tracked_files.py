@@ -2,7 +2,7 @@
 A README pointing at a gitignored spec, or a code comment
 citing `insights.md` by date, leads a fresh cloner nowhere. Scans every
 git-tracked file's text for a path matching the `docs/*` gitignore rule
-(excluding the one public exception, `docs/reports/index.html`), or a bare
+(excluding the public exception, the tracked report pages), or a bare
 mention of the other gitignored process files
 (`handoff.md`, `insights.md`).
 
@@ -21,12 +21,11 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
-# docs/reports/index.html is the one tracked exception to the docs/*
-# gitignore rule (.gitignore) — a reference to it is fine.
-_ALLOWED_DOCS_PATH = "docs/reports/index.html"
-
+# The tracked report pages (`docs/reports/*.html`, .gitignore's exception to
+# the docs/* rule) are the one kind of docs path a tracked file may name;
+# G10 split the single index page into five.
 _GITIGNORED_PATH_PATTERN = re.compile(
-    r"\bdocs/(?!reports/index\.html\b)[A-Za-z0-9_./-]+"
+    r"\bdocs/(?!reports/[A-Za-z0-9_-]+\.html\b)[A-Za-z0-9_./-]+"
 )
 _GITIGNORED_BARE_FILES = re.compile(r"\b(?:handoff|insights)\.md\b")
 
@@ -84,8 +83,6 @@ def test_no_tracked_file_references_a_gitignored_docs_path() -> None:
             continue  # binary tracked file (e.g. a PNG) — not a text reference
 
         for match in _GITIGNORED_PATH_PATTERN.finditer(text):
-            if match.group(0) == _ALLOWED_DOCS_PATH:
-                continue
             violations.append(f"{rel_path}: references {match.group(0)!r}")
 
         for match in _GITIGNORED_BARE_FILES.finditer(text):

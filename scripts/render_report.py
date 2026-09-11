@@ -30,7 +30,7 @@ from jinja2 import Template
 
 ROOT = Path(__file__).resolve().parent.parent
 UML_SVG_DIR = ROOT / "docs" / "uml" / "svg"
-METRICS_PATH = ROOT / "docs" / "evidence" / "metrics.json"
+METRICS_PATH = ROOT / "datasets" / "golden-v1.0.0" / "metrics.json"
 OUT_PATH = ROOT / "docs" / "reports" / "index.html"
 
 TEMPLATE = Template("""<!doctype html>
@@ -370,9 +370,13 @@ detail.</p>
 <h2>20. Measured outcome</h2>
 {% if metrics %}
 <table>
-<tr><th>Metric</th><th>Value</th><th>n</th></tr>
+<tr><th>Metric</th><th>Value</th><th>n</th><th>95% Wilson</th></tr>
 {% for m in metrics %}
-<tr><td>{{ m.name }}</td><td class="measured">{{ m.value }}</td><td>{{ m.n }}</td></tr>
+<tr><td>{{ m.name }}</td>
+<td class="measured">{{ "%.3f"|format(m.value) if m.value is not none else "N/A" }}</td>
+<td>{{ m.n }}</td>
+<td>{% if m.interval %}[{{ "%.2f"|format(m.interval[0]) }},
+{{ "%.2f"|format(m.interval[1]) }}]{% else %}—{% endif %}</td></tr>
 {% endfor %}
 </table>
 {% else %}
