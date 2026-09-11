@@ -12,7 +12,10 @@ docs/*
 # amendments, decisions, uml sources, per-stage evidence) stays local.
 !docs/reports
 docs/reports/*
-!docs/reports/index.html
+!docs/reports/*.html
+!docs/reports/uk
+docs/reports/uk/*
+!docs/reports/uk/*.html
 AGENTS.md
 AI_USAGE.md
 BACKGROUND_MATERIALS.md

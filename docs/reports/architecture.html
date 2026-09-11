@@ -1,0 +1,1562 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lantern — Architecture</title>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, sans-serif; color: #1a1a1a;
+background: #fafafa; line-height: 1.55; }
+.shell { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; height: 100vh; overflow-y: auto;
+padding: 1.4rem 1.2rem; border-right: 1px solid #e3e7f0; background: #fff; }
+.brand { display: block; font-weight: 700; font-size: 1.1rem; color: #1a1a1a;
+text-decoration: none; margin-bottom: 1rem; }
+.langs { display: flex; gap: .4rem; margin: 0 0 1.2rem; }
+.langs a, .langs span { font-size: .8rem; padding: .15rem .5rem; border-radius: 999px;
+border: 1px solid #e3e7f0; text-decoration: none; color: #1a1a1a; }
+.langs span { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+.nav-label { margin: 1rem 0 .3rem; font-size: .72rem; letter-spacing: .12em;
+text-transform: uppercase; color: #888; }
+.sidebar nav a { display: block; padding: .3rem .5rem; border-radius: 6px;
+color: #1a1a1a; text-decoration: none; font-size: .95rem; }
+.sidebar nav a[aria-current="page"] { background: #e8f1ff; color: #1d4ed8;
+font-weight: 600; }
+.sidebar nav a:hover { background: #f1f3f8; }
+main { max-width: none; width: 100%; padding: 2rem 3rem 3rem; }
+.eyebrow { font-size: .72rem; letter-spacing: .12em; text-transform: uppercase;
+color: #2a5; margin: 0 0 .4rem; }
+h1 { margin: 0 0 .6rem; font-size: 1.7rem; line-height: 1.25; }
+h2 { margin-top: 2.4rem; border-bottom: 1px solid #e3e7f0; padding-bottom: .25rem; }
+h3 { margin-top: 1.6rem; font-size: 1.05rem; }
+.lede { color: #444; font-size: 1.05rem; }
+.notice { background: #fff8e6; border-left: 4px solid #f2b21e; padding: .6rem .9rem;
+margin: 1rem 0; }
+.onpage { background: #fff; border: 1px solid #e3e7f0; border-radius: 8px;
+padding: .6rem 1rem; margin: 1rem 0 1.6rem; font-size: .92rem; }
+.onpage a { margin-right: .9rem; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+gap: 1rem; }
+.card { background: #fff; border: 1px solid #e3e7f0; border-radius: 8px;
+padding: 1rem; } .card h3 { margin-top: 0; }
+.diagram { background: #fff; border: 1px solid #ddd; border-radius: 6px;
+padding: 1rem; margin: 1rem 0; overflow-x: auto; }
+.diagram svg { max-width: 100%; height: auto; }
+.example { background: #fff; border-left: 4px solid #6ca2ee; padding: .6rem .9rem;
+margin: .8rem 0; font-size: .95rem; } .example b { color: #2c5fc9; }
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .95rem; }
+th, td { border: 1px solid #ccc; padding: .5rem .7rem; text-align: left;
+vertical-align: top; }
+th { background: #eee; } code { background: #eee; padding: 0 .25rem;
+border-radius: 3px; }
+.next { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid #e3e7f0;
+display: flex; justify-content: space-between; }
+.meta { color: #888; font-size: .82rem; }
+@media (max-width: 860px) { .shell { grid-template-columns: 1fr; }
+.sidebar { position: static; height: auto; border-right: 0;
+border-bottom: 1px solid #e3e7f0; } }
+</style></head>
+<body><div class="shell">
+<aside class="sidebar">
+<a class="brand" href="index.html">Lantern docs</a>
+<p class="langs"><span>English</span><a href="uk/architecture.html"
+>Українська</a></p>
+<nav>
+<p class="nav-label">Overview</p>
+<a href="index.html">Start here</a>
+<a href="architecture.html"
+ aria-current="page">Architecture</a>
+<p class="nav-label">Evidence</p>
+<a href="recovery.html">Hero recovery</a>
+<a href="safety.html">Safety & consent</a>
+<a href="evidence.html">Measurements</a>
+<a href="data-model.html">Data model</a>
+
+</nav>
+</aside>
+<main>
+<p class="eyebrow">Overview</p>
+<h1>Architecture</h1>
+<div class="onpage"><b>On this page:</b>
+<a href="#containers">Containers</a>
+<a href="#layers">Layers</a>
+<a href="#rules">The 13 domain rules</a>
+<a href="#graph">Processing one request</a>
+<a href="#deployment">Deployment</a>
+<a href="#mcp">MCP adapter</a>
+<a href="#domain">Domain core</a>
+<a href="#planner">Planner and ranking</a>
+</div>
+
+<p class="lede">The main parts of the system and how a request moves through them. The
+important rule is visible in the shape: there is one road to a cart change, and it goes
+through the Write Guard.</p>
+
+<h2 id="containers">Containers</h2>
+<p>The Customer talks only to the web page. It starts the Recovery Agent, a LangGraph
+graph. The agent uses the Domain Core to compute every number, and it must
+pass the <b>Write Guard</b> before any change to the cart: the single node in the whole
+system that is allowed to call a write tool, and which checks the consent, the cart and
+the tool's own schema before it authorises one. It is described in full on the
+<a href="safety.html#guard">safety page</a>. Only the <b>MCP Adapter</b> — labelled
+that way on the diagram below — talks to Silpo: MCP is the open protocol through which
+Silpo exposes the cart to applications, and the adapter is this project's single module
+that speaks it. The Customer's browser can never reach the Silpo server directly.</p>
+<div class="example"><b>Example.</b> A Customer opens a blocked cart and starts a
+session. The agent reads the cart, the Domain Core computes that it is 93.38 ₴ below
+the minimum
+order sum, and nothing is changed yet — the write path stays closed until the Customer
+agrees to one specific action.</div>
+<p class="meta">The diagrams label the person <code>Guest</code> — Silpo's own term for
+a signed-in shopper; these pages call them the Customer.</p>
+<div class="diagram"><svg viewBox="0 0 1400 620" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c4-container-title c4-container-desc">
+      <title id="c4-container-title">Lantern system architecture</title>
+      <desc id="c4-container-desc">Architecture diagram showing a guest reaching the interface layer, which drives the Recovery Agent orchestrator; the orchestrator computes through the Domain Core, authorizes writes through the Write Guard, and both the Write Guard and the orchestrator's read path go through the MCP Adapter to reach external services (Silpo MCP, Neon, OpenRouter, LangSmith).</desc>
+      <defs><style>text{font-family:Arial,Helvetica,"Liberation Sans","DejaVu Sans",sans-serif;}</style>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6b7280"/></marker>
+        <marker id="arrow-ink" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#24242e"/></marker>
+      </defs>
+
+      <rect width="100%" height="100%" fill="#ffffff"/>
+
+      <!-- ============ ARROWS (behind boxes) ============ -->
+
+      <!-- Guest -> Interface -->
+      <line x1="200" y1="164" x2="280" y2="164" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="204" y="132" width="72" height="16" rx="2" fill="#ffffff"/>
+      <text x="240" y="144" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">HTTPS</text>
+
+      <!-- Interface -> Recovery Agent -->
+      <line x1="450" y1="164" x2="530" y2="164" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+
+      <!-- Recovery Agent -> Domain Core (solid elbow) -->
+      <path d="M 578,208 V 276 Q 578,284 570,284 H 473 Q 465,284 465,292 V 360"
+            fill="none" stroke="#6b7280" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+      <!-- Recovery Agent -> Write Guard (solid elbow) -->
+      <path d="M 626,208 V 276 Q 626,284 634,284 H 697 Q 705,284 705,292 V 360"
+            fill="none" stroke="#6b7280" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+      <!-- Recovery Agent -> MCP Adapter, read path (dashed elbow) —
+           bends 20px higher (y=264) than the Domain Core / Write Guard
+           elbows (y=284) so its horizontal run clears both of them
+           instead of overlapping the Write Guard elbow's own run. -->
+      <path d="M 674,208 V 256 Q 674,264 682,264 H 937 Q 945,264 945,272 V 360"
+            fill="none" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <rect x="772" y="240" width="72" height="16" rx="2" fill="#ffffff"/>
+      <text x="808" y="252" fill="#6b7280" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">READ</text>
+
+      <!-- Write Guard -> MCP Adapter (row 2, horizontal) -->
+      <line x1="790" y1="404" x2="860" y2="404" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="789" y="372" width="52" height="16" rx="2" fill="#ffffff"/>
+      <text x="815" y="384" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">WRITE</text>
+
+      <!-- MCP Adapter -> External Services (row 2, horizontal) -->
+      <line x1="1030" y1="404" x2="1100" y2="404" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="1029" y="372" width="52" height="16" rx="2" fill="#ffffff"/>
+      <text x="1055" y="384" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">CALL</text>
+
+      <!-- ============ NODES ============ -->
+
+      <!-- Guest (level 1: external) -->
+      <rect x="40" y="120" width="160" height="88" rx="6" fill="#ffffff"/>
+      <rect x="40" y="120" width="160" height="88" rx="6" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
+      <rect x="52" y="132" width="36" height="16" rx="2" fill="transparent" stroke="#c9ba5e" stroke-width="0.8"/>
+      <text x="70" y="144" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">EXT</text>
+      <text x="120" y="172" fill="#24242e" font-size="14" font-weight="700" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">Guest</text>
+      <text x="120" y="190" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">browser / WebView</text>
+
+      <!-- Interface (level 2) -->
+      <rect x="280" y="120" width="170" height="88" rx="6" fill="#ffffff"/>
+      <rect x="280" y="120" width="170" height="88" rx="6" fill="#91ccf1" stroke="#2e7dbf" stroke-width="1"/>
+      <rect x="292" y="132" width="24" height="16" rx="2" fill="transparent" stroke="#2e7dbf" stroke-width="0.8"/>
+      <text x="304" y="144" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">IF</text>
+      <text x="365" y="168" fill="#24242e" font-size="14" font-weight="700" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">Interface</text>
+      <text x="365" y="186" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">apps/api · apps/web</text>
+
+      <!-- Recovery Agent (level 3: application) -->
+      <rect x="530" y="120" width="190" height="88" rx="6" fill="#ffffff"/>
+      <rect x="530" y="120" width="190" height="88" rx="6" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1"/>
+      <rect x="542" y="132" width="36" height="16" rx="2" fill="transparent" stroke="#2c5fc9" stroke-width="0.8"/>
+      <text x="560" y="144" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">APP</text>
+      <text x="625" y="168" fill="#24242e" font-size="14" font-weight="700" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">Recovery Agent</text>
+      <text x="625" y="186" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">LangGraph StateGraph</text>
+
+      <!-- Domain Core (level 4: domain/safety) -->
+      <rect x="380" y="360" width="170" height="88" rx="6" fill="#ffffff"/>
+      <rect x="380" y="360" width="170" height="88" rx="6" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <rect x="392" y="372" width="36" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
+      <text x="410" y="384" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">DOM</text>
+      <text x="465" y="408" fill="#24242e" font-size="14" font-weight="700" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">Domain Core</text>
+      <text x="465" y="426" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">13 DR · gap · diff</text>
+
+      <!-- Write Guard (level 4: domain/safety) -->
+      <rect x="620" y="360" width="170" height="88" rx="6" fill="#ffffff"/>
+      <rect x="620" y="360" width="170" height="88" rx="6" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <rect x="632" y="372" width="40" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
+      <text x="652" y="384" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">SAFE</text>
+      <text x="705" y="408" fill="#24242e" font-size="14" font-weight="700" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">Write Guard</text>
+      <text x="705" y="426" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">allowlist · consent</text>
+
+      <!-- MCP Adapter (level 5: infra) -->
+      <rect x="860" y="360" width="170" height="88" rx="6" fill="#ffffff"/>
+      <rect x="860" y="360" width="170" height="88" rx="6" fill="#afa4de" stroke="#7c6bc4" stroke-width="1"/>
+      <rect x="872" y="372" width="44" height="16" rx="2" fill="transparent" stroke="#7c6bc4" stroke-width="0.8"/>
+      <text x="894" y="384" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">INFRA</text>
+      <text x="945" y="408" fill="#24242e" font-size="14" font-weight="700" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">MCP Adapter</text>
+      <text x="945" y="426" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">registry · OAuth</text>
+
+      <!-- External Services (level 1: external, wide zone box) -->
+      <rect x="1100" y="360" width="230" height="88" rx="6" fill="#ffffff"/>
+      <rect x="1100" y="360" width="230" height="88" rx="6" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
+      <rect x="1112" y="372" width="36" height="16" rx="2" fill="transparent" stroke="#c9ba5e" stroke-width="0.8"/>
+      <text x="1130" y="384" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">EXT</text>
+      <text x="1215" y="404" fill="#24242e" font-size="14" font-weight="700" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">External Services</text>
+      <text x="1215" y="422" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">Silpo · Neon · OpenRouter</text>
+      <text x="1215" y="438" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">LangSmith</text>
+
+      <!-- ============ LEGEND ============ -->
+      <line x1="40" y1="500" x2="1340" y2="500" stroke="#d1d5db" stroke-width="0.8"/>
+      <text x="40" y="522" fill="#6b7280" font-size="12" font-weight="700" font-family="Arial, Helvetica, sans-serif" letter-spacing="0.10em">LEGEND</text>
+
+      <rect x="40" y="540" width="18" height="14" rx="2" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
+      <text x="66" y="551" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif">External actor / service</text>
+
+      <rect x="280" y="540" width="18" height="14" rx="2" fill="#91ccf1" stroke="#2e7dbf" stroke-width="1"/>
+      <text x="306" y="551" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif">Interface layer</text>
+
+      <rect x="480" y="540" width="18" height="14" rx="2" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1"/>
+      <text x="506" y="551" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif">Application layer</text>
+
+      <rect x="700" y="540" width="18" height="14" rx="2" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <text x="726" y="551" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif">Domain / Safety layer</text>
+
+      <rect x="950" y="540" width="18" height="14" rx="2" fill="#afa4de" stroke="#7c6bc4" stroke-width="1"/>
+      <text x="976" y="551" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif">Infra / adapter layer</text>
+
+      <line x1="40" y1="584" x2="72" y2="584" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <text x="80" y="588" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif">Primary flow</text>
+
+      <line x1="260" y1="584" x2="292" y2="584" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <text x="300" y="588" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif">Secondary / read path</text>
+    </svg>
+</div>
+
+<h2 id="layers">Layers and what each may do</h2>
+<table>
+<tr><th>Layer</th><th>Contents</th><th>Rule</th></tr>
+<tr><td>Domain</td><td>cart, validation, diagnosis and receipt models; the 13 domain
+rules below; gap arithmetic; evidence gate; ranking</td><td>no I/O — testable without a
+network</td></tr>
+<tr><td>Safety</td><td>the Write Guard: allowlist, consent binding, hashes, per-tool
+schema hash, budget reserve, read-back gate</td><td>the only place a write tool is
+called</td></tr>
+<tr><td>Infra (the MCP adapter)</td><td>MCP client and OAuth, dynamic tool registry
+with quarantine, Neon
+repository and checkpointer, tracing with redaction</td><td>talks to the outside;
+trusts nothing it receives</td></tr>
+<tr><td>Application</td><td>the LangGraph graph and prompts</td><td>the model plans and
+explains, never authorises</td></tr>
+<tr><td>Interface</td><td>FastAPI routes, the React Customer card and the jury
+console</td><td>Ukrainian for the Customer; English identifiers for the
+observer</td></tr>
+</table>
+<p>Layer membership is enforced by a test that walks every import, not by directory
+nesting alone.</p>
+
+<h2 id="rules">The 13 domain rules</h2>
+<p>The project applies thirteen domain rules — about money, time and evidence. Each
+one exists as its own test file named after the rule
+(<code>tests/unit/test_dr_01…13</code>), so "does the rule hold" is a question the test
+suite answers rather than a claim in a document. None of them needs a network to
+run. The five in <b>bold</b> are the product promise itself: the figure the client is
+shown, who may compute it, no offer without verified price and availability, proof by
+reading the cart back, and the boundary of what the agent never does.</p>
+<table>
+<tr><th>#</th><th>Rule</th><th>Why it is not obvious</th></tr>
+<tr><td>01</td><td>Money is <code>Decimal</code>, coordinates are floats, quantity
+keeps its fractional meaning</td><td>the cart returns coordinates as strings, which a
+sibling tool rejects if passed on unconverted</td></tr>
+<tr><td>02</td><td>Time is UTC inside, Kyiv time on screen</td><td>a delivery slot
+of 06:30 UTC is 09:30 for the Customer</td></tr>
+<tr><td>03</td><td><b>The shortfall is <code>minOrderCost − productsTotal</code></td>
+<td>comparing against the cart's grand total instead would invent a block on every
+cart that carries a delivery fee or bonuses</td></tr>
+<tr><td>04</b></td><td>A surcharge is named "service fee" only where a confirmed one
+exists; otherwise it is called a difference</td><td>naming an unknown amount invents a
+fact</td></tr>
+<tr><td>05</td><td><code>deliveryCost: null</code> means "not applicable", never
+zero</td><td>zero would read as free delivery</td></tr>
+<tr><td>06</td><td>An unregistered validation code is flagged, never treated as a
+similar known one</td><td>two live codes with no registry match were found in the very
+first field session</td></tr>
+<tr><td>07</td><td>"Product no longer sold" outranks "not enough in stock" for the
+same product</td><td>otherwise the Customer is told to reduce a quantity of something
+that
+cannot be bought at all</td></tr>
+<tr><td>08</td><td>A price of 0 is not automatically free or unavailable</td><td>
+without proof of suitability such a line is not a candidate</td></tr>
+<tr><td>09</td><td><b>Totals and the shortfall are computed, never supplied by the
+model</b></td><td>enforced by the functions' own signatures: there is no parameter
+through
+which a total could arrive</td></tr>
+<tr><td>10</td><td><b>An incomplete evidence tuple cannot be represented</b></td><td>
+product, price, availability, source tool and capture time are all required, so a
+candidate without a verified price cannot exist</td></tr>
+<tr><td>11</td><td>The before/after difference is canonical and self-checking</td>
+<td>a difference that would understate the real change raises instead of reporting</td>
+</tr>
+<tr><td>12</td><td>Re-read before the write, read back immediately after</td><td>
+Silpo's server answers a write with a success flag and the list of changed products —
+no totals, no validations. That answer therefore cannot say whether the block cleared;
+only a fresh read of the cart can</td></tr>
+<tr><td>13</td><td><b>Checkout, payment and age confirmation stay the Customer's
+own</b></td><td>a list in code, not a sentence in a comment, so a test can check it</td>
+</tr>
+</table>
+
+<h2 id="graph">How one request is processed</h2>
+<p>One customer request is processed as a sequence of steps, each next one chosen by
+the result of the last: read → diagnose → compare channels → plan → collect and gate →
+rank → explain →
+<em>wait for consent</em> → write guard → write and read-back → persist receipt.</p>
+<p>At the consent step processing stops — and nothing is left hanging in memory. The
+intermediate state (the cart as read, the diagnosis, the proposed options) is written to
+the database and the request that produced it ends: the service holds nothing and waits
+for nobody. When the Customer presses the consent button that is a new request: the
+service loads the saved state and continues from exactly the step it stopped at — even
+if it was restarted meanwhile, or the request landed on a different worker process.</p>
+<p>The diagram below is the standard shape of a LangGraph application, without project
+detail: a typed state feeds a builder that compiles to an executable graph, a
+conditional edge routes each step, and a checkpointer persists the state after every
+node — which is what makes stopping for a human answer possible at all. This project's
+own node topology is on the <a href="safety.html#compensation">safety page</a>.</p>
+<div class="diagram"><svg viewBox="0 0 1160 920" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="langgraph-structure-title langgraph-structure-desc">
+      <title id="langgraph-structure-title">LangGraph classical structure</title>
+      <desc id="langgraph-structure-desc">Diagram of a standard LangGraph application: a typed State schema feeds a StateGraph builder that compiles into an executable graph; at runtime, START enters an agent node, a conditional edge routes either to a tool node that loops back or to END, and a checkpointer persists the state after every super-step.</desc>
+      <defs><style>text{font-family:Arial,Helvetica,"Liberation Sans","DejaVu Sans",sans-serif;}</style>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6b7280"/></marker>
+        <marker id="arrow-ink" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#24242e"/></marker>
+      </defs>
+      <rect width="100%" height="100%" fill="#ffffff"/>
+
+      <!-- ============ ZONES ============ -->
+      <rect x="24" y="90" width="1112" height="160" rx="8" fill="#f7f7fa" stroke="#d1d5db" stroke-width="0.8"/>
+      <rect x="44" y="80" width="130" height="20" rx="2" fill="#ffffff"/>
+      <text x="109" y="94" fill="#6b7280" font-size="12" font-weight="700" text-anchor="middle">BUILD TIME</text>
+
+      <rect x="24" y="310" width="1112" height="260" rx="8" fill="#f7f7fa" stroke="#d1d5db" stroke-width="0.8"/>
+      <rect x="44" y="300" width="130" height="20" rx="2" fill="#ffffff"/>
+      <text x="109" y="314" fill="#6b7280" font-size="12" font-weight="700" text-anchor="middle">RUN TIME</text>
+
+      <!-- ============ ARROWS ============ -->
+
+      <!-- State -> StateGraph -->
+      <line x1="280" y1="170" x2="380" y2="170" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="288" y="138" width="84" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="330" y="150" fill="#24242e" font-size="12" text-anchor="middle">SCHEMA</text>
+
+      <!-- StateGraph -> CompiledGraph -->
+      <line x1="620" y1="170" x2="720" y2="170" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="616" y="138" width="108" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="670" y="150" fill="#24242e" font-size="12" text-anchor="middle">.compile()</text>
+
+      <!-- CompiledGraph -> runtime (drop down into START), routed through the
+           clear band between the two zones so it never crosses the loop-back edge -->
+      <path d="M 940,215 V 272 Q 940,280 932,280 H 48 Q 40,280 40,288 V 447 Q 40,455 48,455 H 82"
+            fill="none" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="412" y="252" width="176" height="16" rx="2" fill="#ffffff"/>
+      <text x="500" y="264" fill="#24242e" font-size="12" text-anchor="middle">.invoke() / .astream()</text>
+
+      <!-- START -> Agent node -->
+      <line x1="116" y1="455" x2="180" y2="455" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+
+      <!-- Agent node -> Router -->
+      <line x1="400" y1="455" x2="470" y2="455" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+
+      <!-- Router -> Tool node (right, conditional) -->
+      <line x1="670" y1="455" x2="740" y2="455" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="654" y="423" width="104" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="706" y="435" fill="#24242e" font-size="12" text-anchor="middle">TOOL CALLS</text>
+
+      <!-- Router -> END (down then right, conditional) -->
+      <path d="M 570,510 V 528 Q 570,536 578,536 H 1052 Q 1060,536 1060,528 V 490"
+            fill="none" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="740" y="508" width="128" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="804" y="520" fill="#24242e" font-size="12" text-anchor="middle">NO TOOL CALLS</text>
+
+      <!-- Tool node -> Agent node (loop back, above) -->
+      <path d="M 850,410 V 348 Q 850,340 842,340 H 298 Q 290,340 290,348 V 410"
+            fill="none" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <rect x="512" y="324" width="116" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="570" y="336" fill="#6b7280" font-size="12" text-anchor="middle">STATE UPDATE</text>
+
+      <!-- Checkpointer -> Agent node (dashed, persistence) -->
+      <path d="M 290,660 V 500" fill="none" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <rect x="302" y="568" width="164" height="16" rx="2" fill="#ffffff"/>
+      <text x="384" y="580" fill="#6b7280" font-size="12" text-anchor="middle">SAVE / RESUME STATE</text>
+
+      <!-- Checkpointer -> Tool node (dashed, persistence) -->
+      <path d="M 850,660 V 500" fill="none" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+
+      <!-- ============ NODES ============ -->
+
+      <!-- State schema (level 4: domain data) -->
+      <rect x="40" y="125" width="240" height="90" rx="6" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <rect x="52" y="137" width="52" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
+      <text x="78" y="149" fill="#24242e" font-size="12" text-anchor="middle">TYPE</text>
+      <text x="160" y="178" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">State</text>
+      <text x="160" y="198" fill="#24242e" font-size="12" text-anchor="middle">TypedDict · reducers</text>
+
+      <!-- StateGraph builder (level 3: application) -->
+      <rect x="380" y="125" width="240" height="90" rx="6" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1"/>
+      <rect x="392" y="137" width="72" height="16" rx="2" fill="transparent" stroke="#2c5fc9" stroke-width="0.8"/>
+      <text x="428" y="149" fill="#24242e" font-size="12" text-anchor="middle">BUILDER</text>
+      <text x="500" y="178" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">StateGraph</text>
+      <text x="500" y="198" fill="#24242e" font-size="12" text-anchor="middle">add_node · add_edge</text>
+
+      <!-- CompiledGraph (level 3: application) -->
+      <rect x="720" y="125" width="240" height="90" rx="6" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1"/>
+      <rect x="732" y="137" width="80" height="16" rx="2" fill="transparent" stroke="#2c5fc9" stroke-width="0.8"/>
+      <text x="772" y="149" fill="#24242e" font-size="12" text-anchor="middle">RUNNABLE</text>
+      <text x="840" y="178" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">CompiledGraph</text>
+      <text x="840" y="198" fill="#24242e" font-size="12" text-anchor="middle">executable app</text>
+
+      <!-- START pseudo-node -->
+      <circle cx="100" cy="455" r="14" fill="#24242e"/>
+      <text x="100" y="500" fill="#24242e" font-size="12" font-weight="700" text-anchor="middle">START</text>
+
+      <!-- Agent node (level 3: application) -->
+      <rect x="180" y="410" width="220" height="90" rx="6" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1"/>
+      <rect x="192" y="422" width="52" height="16" rx="2" fill="transparent" stroke="#2c5fc9" stroke-width="0.8"/>
+      <text x="218" y="434" fill="#24242e" font-size="12" text-anchor="middle">NODE</text>
+      <text x="290" y="463" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Agent node</text>
+      <text x="290" y="483" fill="#24242e" font-size="12" text-anchor="middle">state → partial update</text>
+
+      <!-- Conditional edge router (diamond, level 3) -->
+      <polygon points="570,400 670,455 570,510 470,455" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1"/>
+      <text x="570" y="450" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Router</text>
+      <text x="570" y="470" fill="#24242e" font-size="12" text-anchor="middle">conditional edge</text>
+
+      <!-- Tool node (level 3: application) -->
+      <rect x="740" y="410" width="220" height="90" rx="6" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1"/>
+      <rect x="752" y="422" width="52" height="16" rx="2" fill="transparent" stroke="#2c5fc9" stroke-width="0.8"/>
+      <text x="778" y="434" fill="#24242e" font-size="12" text-anchor="middle">NODE</text>
+      <text x="850" y="463" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Tool node</text>
+      <text x="850" y="483" fill="#24242e" font-size="12" text-anchor="middle">side effects · I/O</text>
+
+      <!-- END pseudo-node -->
+      <circle cx="1060" cy="455" r="14" fill="none" stroke="#24242e" stroke-width="1.4"/>
+      <circle cx="1060" cy="455" r="9" fill="#24242e"/>
+      <text x="1060" y="500" fill="#24242e" font-size="12" font-weight="700" text-anchor="middle">END</text>
+
+      <!-- Checkpointer (level 5: infra) -->
+      <rect x="180" y="660" width="220" height="90" rx="6" fill="#afa4de" stroke="#7c6bc4" stroke-width="1"/>
+      <rect x="192" y="672" width="60" height="16" rx="2" fill="transparent" stroke="#7c6bc4" stroke-width="0.8"/>
+      <text x="222" y="684" fill="#24242e" font-size="12" text-anchor="middle">INFRA</text>
+      <text x="290" y="713" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Checkpointer</text>
+      <text x="290" y="733" fill="#24242e" font-size="12" text-anchor="middle">per super-step</text>
+
+      <!-- Checkpointer store (level 5: infra) -->
+      <rect x="740" y="660" width="220" height="90" rx="6" fill="#afa4de" stroke="#7c6bc4" stroke-width="1"/>
+      <rect x="752" y="672" width="60" height="16" rx="2" fill="transparent" stroke="#7c6bc4" stroke-width="0.8"/>
+      <text x="782" y="684" fill="#24242e" font-size="12" text-anchor="middle">INFRA</text>
+      <text x="850" y="713" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Interrupt / resume</text>
+      <text x="850" y="733" fill="#24242e" font-size="12" text-anchor="middle">human-in-the-loop</text>
+
+      <!-- ============ LEGEND ============ -->
+      <line x1="40" y1="800" x2="1120" y2="800" stroke="#d1d5db" stroke-width="0.8"/>
+      <text x="40" y="822" fill="#6b7280" font-size="12" font-weight="700" letter-spacing="0.10em">LEGEND</text>
+
+      <rect x="40" y="840" width="18" height="14" rx="2" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <text x="66" y="851" fill="#24242e" font-size="12">State schema (domain data)</text>
+
+      <rect x="330" y="840" width="18" height="14" rx="2" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1"/>
+      <text x="356" y="851" fill="#24242e" font-size="12">Graph builder / node (application)</text>
+
+      <rect x="660" y="840" width="18" height="14" rx="2" fill="#afa4de" stroke="#7c6bc4" stroke-width="1"/>
+      <text x="686" y="851" fill="#24242e" font-size="12">Persistence (infra)</text>
+
+      <line x1="40" y1="884" x2="72" y2="884" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <text x="80" y="888" fill="#24242e" font-size="12">Graph edge</text>
+
+      <line x1="330" y1="884" x2="362" y2="884" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <text x="370" y="888" fill="#24242e" font-size="12">Loop back / persistence</text>
+    </svg>
+</div>
+
+<h2 id="deployment">Deployment</h2>
+<p>On the developer machine the web app and the API are two processes. On the public
+tier (Render, Frankfurt) they are one service: the API builds the web app at deploy time
+and serves it from the root URL. Four external services: Neon Postgres keeps all state,
+LangSmith receives traces, OpenRouter serves the language model, and the Silpo MCP
+server provides the cart. No state is kept on the service disk.</p>
+<div class="diagram"><svg viewBox="0 0 1160 860" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="deployment-title deployment-desc">
+      <title id="deployment-title">Lantern deployment topology</title>
+      <desc id="deployment-desc">Deployment diagram showing the developer machine running the web and API processes, the public Render Frankfurt tier where one service serves the API and the built web app from the same origin, and four external services the API talks to: Neon Postgres, LangSmith, OpenRouter and the Silpo MCP server.</desc>
+      <defs><style>text{font-family:Arial,Helvetica,"Liberation Sans","DejaVu Sans",sans-serif;}</style>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6b7280"/></marker>
+        <marker id="arrow-ink" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#24242e"/></marker>
+      </defs>
+      <rect width="100%" height="100%" fill="#ffffff"/>
+
+      <!-- ============ ZONES ============ -->
+      <!-- Developer machine -->
+      <rect x="40" y="110" width="500" height="180" rx="8" fill="#f7f7fa" stroke="#9ca3af" stroke-width="1"/>
+      <rect x="60" y="100" width="260" height="20" rx="2" fill="#ffffff"/>
+      <text x="190" y="114" fill="#6b7280" font-size="12" font-weight="700" text-anchor="middle">DEVELOPER MACHINE · DEV / DEMO</text>
+
+      <!-- Render (optional) -->
+      <rect x="620" y="110" width="500" height="180" rx="8" fill="#f7f7fa" stroke="#9ca3af" stroke-width="1"/>
+      <rect x="640" y="100" width="330" height="20" rx="2" fill="#ffffff"/>
+      <text x="805" y="114" fill="#6b7280" font-size="12" font-weight="700" text-anchor="middle">RENDER FRANKFURT · PUBLIC, SINCE G10</text>
+
+      <!-- ============ ARROWS ============ -->
+
+      <!-- API (dev) fans out to the four external services.
+           Each connector gets its own horizontal lane (y = 302 / 320 / 338 / 356)
+           and its own attach point on the API's bottom edge, so no two run on
+           the same path and no vertical crosses another lane. -->
+      <path d="M 480,245 V 294 Q 480,302 488,302 H 892 Q 900,302 900,310 V 420"
+            fill="none" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <path d="M 330,245 V 312 Q 330,320 322,320 H 148 Q 140,320 140,328 V 420"
+            fill="none" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <!-- LangSmith sits directly under the API, so this one runs straight down
+           (entering slightly off-centre) instead of taking a needless elbow. -->
+      <line x1="380" y1="245" x2="380" y2="420" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <path d="M 430,245 V 348 Q 430,356 438,356 H 692 Q 700,356 700,364 V 420"
+            fill="none" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+
+      <!-- The public API reaches the same four services on a shared trunk
+           routed below the service row, so it never crosses the dev lanes. -->
+      <path d="M 980,200 H 1112 Q 1120,200 1120,208 V 552 Q 1120,560 1112,560 H 148"
+            fill="none" stroke="#24242e" stroke-width="1.2"/>
+      <path d="M 140,560 V 534" fill="none" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <path d="M 420,560 V 534" fill="none" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <path d="M 700,560 V 534" fill="none" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <path d="M 980,560 V 534" fill="none" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="470" y="566" width="220" height="16" rx="2" fill="#ffffff"/>
+      <text x="580" y="578" fill="#6b7280" font-size="12" text-anchor="middle">SAME FOUR SERVICES, PUBLIC TIER</text>
+
+      <!-- Web -> API (inside dev zone) -->
+      <line x1="250" y1="200" x2="300" y2="200" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+
+
+      <!-- ============ NODES ============ -->
+
+      <!-- lantern-web (dev) — interface layer -->
+      <rect x="70" y="155" width="180" height="90" rx="6" fill="#91ccf1" stroke="#2e7dbf" stroke-width="1"/>
+      <rect x="82" y="167" width="28" height="16" rx="2" fill="transparent" stroke="#2e7dbf" stroke-width="0.8"/>
+      <text x="96" y="179" fill="#24242e" font-size="12" text-anchor="middle">IF</text>
+      <text x="160" y="208" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">lantern-web</text>
+      <text x="160" y="228" fill="#24242e" font-size="12" text-anchor="middle">Vite dev server</text>
+
+      <!-- lantern-api (dev) — interface layer -->
+      <rect x="300" y="155" width="210" height="90" rx="6" fill="#91ccf1" stroke="#2e7dbf" stroke-width="1"/>
+      <rect x="312" y="167" width="28" height="16" rx="2" fill="transparent" stroke="#2e7dbf" stroke-width="0.8"/>
+      <text x="326" y="179" fill="#24242e" font-size="12" text-anchor="middle">IF</text>
+      <text x="405" y="208" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">lantern-api</text>
+      <text x="405" y="228" fill="#24242e" font-size="12" text-anchor="middle">uvicorn · no image yet</text>
+
+      <!-- lantern-api (Render): one service, the API and the built web app
+           from one origin (G10, D87); the two-service split §1.6 named
+           collapsed into a single mount (A-G10-02). -->
+      <rect x="760" y="150" width="220" height="100" rx="6" fill="#91ccf1" stroke="#2e7dbf" stroke-width="1"/>
+      <rect x="772" y="162" width="28" height="16" rx="2" fill="transparent" stroke="#2e7dbf" stroke-width="0.8"/>
+      <text x="786" y="174" fill="#24242e" font-size="12" text-anchor="middle">IF</text>
+      <text x="870" y="200" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">lantern-api</text>
+      <text x="870" y="220" fill="#24242e" font-size="12" text-anchor="middle">uvicorn · Python 3.12.10</text>
+      <text x="870" y="238" fill="#24242e" font-size="12" text-anchor="middle">serves the built web at /</text>
+
+      <!-- External services row -->
+
+      <!-- Neon -->
+      <rect x="40" y="420" width="200" height="110" rx="6" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
+      <rect x="52" y="432" width="40" height="16" rx="2" fill="transparent" stroke="#c9ba5e" stroke-width="0.8"/>
+      <text x="72" y="444" fill="#24242e" font-size="12" text-anchor="middle">EXT</text>
+      <text x="140" y="473" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Neon Postgres</text>
+      <text x="140" y="493" fill="#24242e" font-size="12" text-anchor="middle">EU · Frankfurt</text>
+      <text x="140" y="511" fill="#24242e" font-size="12" text-anchor="middle">state · checkpointer</text>
+
+      <!-- LangSmith -->
+      <rect x="320" y="420" width="200" height="110" rx="6" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
+      <rect x="332" y="432" width="40" height="16" rx="2" fill="transparent" stroke="#c9ba5e" stroke-width="0.8"/>
+      <text x="352" y="444" fill="#24242e" font-size="12" text-anchor="middle">EXT</text>
+      <text x="420" y="473" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">LangSmith</text>
+      <text x="420" y="493" fill="#24242e" font-size="12" text-anchor="middle">EU endpoint</text>
+      <text x="420" y="511" fill="#24242e" font-size="12" text-anchor="middle">traces · spans</text>
+
+      <!-- OpenRouter -->
+      <rect x="600" y="420" width="200" height="110" rx="6" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
+      <rect x="612" y="432" width="40" height="16" rx="2" fill="transparent" stroke="#c9ba5e" stroke-width="0.8"/>
+      <text x="632" y="444" fill="#24242e" font-size="12" text-anchor="middle">EXT</text>
+      <text x="700" y="473" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">OpenRouter</text>
+      <text x="700" y="493" fill="#24242e" font-size="12" text-anchor="middle">planner · explainer</text>
+
+      <!-- Silpo MCP -->
+      <rect x="880" y="420" width="200" height="110" rx="6" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
+      <rect x="892" y="432" width="40" height="16" rx="2" fill="transparent" stroke="#c9ba5e" stroke-width="0.8"/>
+      <text x="912" y="444" fill="#24242e" font-size="12" text-anchor="middle">EXT</text>
+      <text x="980" y="473" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Silpo MCP</text>
+      <text x="980" y="493" fill="#24242e" font-size="12" text-anchor="middle">mcp.silpo.ua/mcp</text>
+      <text x="980" y="511" fill="#24242e" font-size="12" text-anchor="middle">OAuth 2.1 · PKCE</text>
+
+      <!-- ============ LEGEND ============ -->
+      <line x1="40" y1="620" x2="1120" y2="620" stroke="#d1d5db" stroke-width="0.8"/>
+      <text x="40" y="642" fill="#6b7280" font-size="12" font-weight="700" letter-spacing="0.10em">LEGEND</text>
+
+      <rect x="40" y="660" width="18" height="14" rx="2" fill="#91ccf1" stroke="#2e7dbf" stroke-width="1"/>
+      <text x="66" y="671" fill="#24242e" font-size="12">Interface layer process</text>
+
+      <rect x="300" y="660" width="18" height="14" rx="2" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
+      <text x="326" y="671" fill="#24242e" font-size="12">External service</text>
+
+      <line x1="40" y1="706" x2="80" y2="706" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <text x="90" y="710" fill="#24242e" font-size="12">Active connection (dev and public tier alike)</text>
+    </svg>
+</div>
+
+<h2 id="mcp">The MCP adapter and the tool list</h2>
+<p>Silpo's server offers what it can do as a list of <i>tools</i>: read the cart, search
+products, change the cart. The list is fetched from the server live, through
+<code>tools/list</code>, and held only briefly, with an expiry.</p>
+<p>For each tool the system keeps <b>a checksum of its description</b> — a short
+signature computed from the parameters and their types, which changes the moment the
+server alters anything in it. Beside it, in the repository, sits the list of tools
+already reviewed together with their signatures; a developer refreshes that list with a
+separate command, once they have looked at a change and accepted it.</p>
+<p>If a tool appears for the first time, or its present signature does not match the
+reviewed one, the system puts it in <b>quarantine</b>. In practice that means the tool
+never enters the list the language model sees, and no step of the run calls it. The
+Customer's current request does not stop: reading the cart, the diagnosis and the
+product search carry on with the remaining, reviewed tools. What stops is only what is
+impossible without the quarantined tool: if it was the write tool that changed, the
+Write Guard refuses the write and says plainly that Silpo's service changed its
+interface. A tool does not leave quarantine on its own — a developer looks at what
+changed and, if it is acceptable, refreshes the reviewed list.</p>
+<p>And about the description texts. The server sends a description with each tool, and
+those descriptions are written for a general shopping assistant. The product-search
+tool, for instance, carries the instruction "if user mentions a budget, ALWAYS fill the
+cart as close to the budget limit as possible" (verbatim, from the tool-list snapshot of
+5 September). For an assistant whose user has just said "I have a thousand hryvnias",
+that is sound advice.</p>
+<p>Lantern's task is narrower: the Customer named no budget — they have a blocked cart
+and a specific shortfall. A model that took that instruction personally would offer more
+than is needed to clear the block. That serves neither the Customer nor Silpo: an offer
+the Customer declines does not become a completed order, and the completed order is what
+both sides are after.</p>
+<p>So the planner is given only the tool's name and the list of its parameters; the
+description text is dropped before the model sees anything. The rule is wider than this
+one example: any text arriving from an external server is data to us, never an
+instruction to the model, whoever wrote it and with whatever intent.</p>
+<div class="diagram"><svg viewBox="0 0 1140 820" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="mcp-adapter-title mcp-adapter-desc">
+      <title id="mcp-adapter-title">MCP Adapter components</title>
+      <desc id="mcp-adapter-desc">Component diagram of the MCP adapter package: the client module holds the tool registry, the auth module holds token storage, both talk to the MCP SDK which reaches the Silpo MCP server; the errors module feeds trace redaction, and the local fixture scripts use the auth and sanitizer modules.</desc>
+      <defs><style>text{font-family:Arial,Helvetica,"Liberation Sans","DejaVu Sans",sans-serif;}</style>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6b7280"/></marker>
+        <marker id="arrow-ink" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#24242e"/></marker>
+      </defs>
+      <rect width="100%" height="100%" fill="#ffffff"/>
+
+      <!-- ============ ZONE ============ -->
+      <rect x="40" y="130" width="660" height="350" rx="8" fill="#f7f7fa" stroke="#9ca3af" stroke-width="1"/>
+      <rect x="60" y="120" width="290" height="20" rx="2" fill="#ffffff"/>
+      <text x="205" y="134" fill="#6b7280" font-size="12" font-weight="700" text-anchor="middle">src/lantern/mcp/ · INFRA LAYER</text>
+
+      <!-- ============ ARROWS ============ -->
+
+      <!-- auth.py -> mcp SDK, routed above row 1 -->
+      <path d="M 210,180 V 168 Q 210,160 218,160 H 922 Q 930,160 930,168 V 180"
+            fill="none" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="500" y="138" width="180" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="590" y="150" fill="#24242e" font-size="12" text-anchor="middle">OAUTH PROVIDER</text>
+
+      <!-- client.py -> mcp SDK -->
+      <line x1="670" y1="230" x2="800" y2="230" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="678" y="198" width="124" height="16" rx="2" fill="#ffffff"/>
+      <text x="740" y="210" fill="#24242e" font-size="12" text-anchor="middle">list · call</text>
+
+      <!-- mcp SDK -> Silpo -->
+      <line x1="930" y1="280" x2="930" y2="330" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="942" y="296" width="120" height="16" rx="2" fill="#ffffff"/>
+      <text x="1002" y="308" fill="#24242e" font-size="12" text-anchor="middle">JSON-RPC</text>
+
+      <!-- client.py -> errors.py -->
+      <path d="M 450,280 V 297 Q 450,305 442,305 H 288 Q 280,305 280,313 V 330"
+            fill="none" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="286" y="277" width="132" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="352" y="289" fill="#24242e" font-size="12" text-anchor="middle">RAISES</text>
+
+      <!-- errors.py -> redaction.py -->
+      <line x1="210" y1="430" x2="210" y2="560" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="222" y="486" width="180" height="16" rx="2" fill="#ffffff"/>
+      <text x="312" y="498" fill="#24242e" font-size="12" text-anchor="middle">CODE + MESSAGE ONLY</text>
+
+      <!-- fixture scripts -> auth.py (dashed, local only) -->
+      <path d="M 530,560 V 513 Q 530,505 522,505 H 38 Q 30,505 30,497 V 238 Q 30,230 38,230 H 70"
+            fill="none" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <rect x="120" y="513" width="150" height="16" rx="2" fill="#ffffff"/>
+      <text x="195" y="525" fill="#6b7280" font-size="12" text-anchor="middle">LOCAL LOGIN</text>
+
+      <!-- fixture scripts -> sanitizer.py (dashed) -->
+      <line x1="610" y1="560" x2="610" y2="434" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <rect x="622" y="486" width="132" height="16" rx="2" fill="#ffffff"/>
+      <text x="688" y="498" fill="#6b7280" font-size="12" text-anchor="middle">ALLOW-LIST</text>
+
+      <!-- ============ NODES ============ -->
+
+      <!-- auth.py (infra) -->
+      <rect x="70" y="180" width="280" height="100" rx="6" fill="#afa4de" stroke="#7c6bc4" stroke-width="1"/>
+      <rect x="82" y="192" width="52" height="16" rx="2" fill="transparent" stroke="#7c6bc4" stroke-width="0.8"/>
+      <text x="108" y="204" fill="#24242e" font-size="12" text-anchor="middle">INFRA</text>
+      <text x="210" y="233" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">auth.py</text>
+      <text x="210" y="253" fill="#24242e" font-size="12" text-anchor="middle">DiskTokenStorage</text>
+      <text x="210" y="271" fill="#24242e" font-size="12" text-anchor="middle">expired vs never logged in</text>
+
+      <!-- client.py (infra) -->
+      <rect x="390" y="180" width="280" height="100" rx="6" fill="#afa4de" stroke="#7c6bc4" stroke-width="1"/>
+      <rect x="402" y="192" width="52" height="16" rx="2" fill="transparent" stroke="#7c6bc4" stroke-width="0.8"/>
+      <text x="428" y="204" fill="#24242e" font-size="12" text-anchor="middle">INFRA</text>
+      <text x="530" y="233" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">client.py</text>
+      <text x="530" y="253" fill="#24242e" font-size="12" text-anchor="middle">ToolRegistry · TTL · diff</text>
+      <text x="530" y="271" fill="#24242e" font-size="12" text-anchor="middle">size ceiling</text>
+
+      <!-- errors.py (infra) -->
+      <rect x="70" y="330" width="280" height="100" rx="6" fill="#afa4de" stroke="#7c6bc4" stroke-width="1"/>
+      <rect x="82" y="342" width="52" height="16" rx="2" fill="transparent" stroke="#7c6bc4" stroke-width="0.8"/>
+      <text x="108" y="354" fill="#24242e" font-size="12" text-anchor="middle">INFRA</text>
+      <text x="210" y="383" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">errors.py</text>
+      <text x="210" y="403" fill="#24242e" font-size="12" text-anchor="middle">typed hierarchy</text>
+      <text x="210" y="421" fill="#24242e" font-size="12" text-anchor="middle">fail-safe unknown codes</text>
+
+      <!-- sanitizer.py (infra) -->
+      <rect x="390" y="330" width="280" height="100" rx="6" fill="#afa4de" stroke="#7c6bc4" stroke-width="1"/>
+      <rect x="402" y="342" width="52" height="16" rx="2" fill="transparent" stroke="#7c6bc4" stroke-width="0.8"/>
+      <text x="428" y="354" fill="#24242e" font-size="12" text-anchor="middle">INFRA</text>
+      <text x="530" y="383" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">sanitizer.py</text>
+      <text x="530" y="403" fill="#24242e" font-size="12" text-anchor="middle">allow-list payload</text>
+      <text x="530" y="421" fill="#24242e" font-size="12" text-anchor="middle">sanitization</text>
+
+      <!-- mcp SDK (external library) -->
+      <rect x="800" y="180" width="260" height="100" rx="6" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
+      <rect x="812" y="192" width="40" height="16" rx="2" fill="transparent" stroke="#c9ba5e" stroke-width="0.8"/>
+      <text x="832" y="204" fill="#24242e" font-size="12" text-anchor="middle">EXT</text>
+      <text x="930" y="233" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">mcp SDK 1.29.0</text>
+      <text x="930" y="253" fill="#24242e" font-size="12" text-anchor="middle">ClientSession</text>
+      <text x="930" y="271" fill="#24242e" font-size="12" text-anchor="middle">streamablehttp_client</text>
+
+      <!-- Silpo MCP (external service) -->
+      <rect x="800" y="330" width="260" height="100" rx="6" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
+      <rect x="812" y="342" width="40" height="16" rx="2" fill="transparent" stroke="#c9ba5e" stroke-width="0.8"/>
+      <text x="832" y="354" fill="#24242e" font-size="12" text-anchor="middle">EXT</text>
+      <text x="930" y="383" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Silpo MCP server</text>
+      <text x="930" y="403" fill="#24242e" font-size="12" text-anchor="middle">mcp.silpo.ua/mcp</text>
+      <text x="930" y="421" fill="#24242e" font-size="12" text-anchor="middle">untrusted input</text>
+
+      <!-- redaction.py (infra) -->
+      <rect x="70" y="560" width="280" height="100" rx="6" fill="#afa4de" stroke="#7c6bc4" stroke-width="1"/>
+      <rect x="82" y="572" width="52" height="16" rx="2" fill="transparent" stroke="#7c6bc4" stroke-width="0.8"/>
+      <text x="108" y="584" fill="#24242e" font-size="12" text-anchor="middle">INFRA</text>
+      <text x="210" y="613" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">redaction.py</text>
+      <text x="210" y="633" fill="#24242e" font-size="12" text-anchor="middle">observability layer</text>
+      <text x="210" y="651" fill="#24242e" font-size="12" text-anchor="middle">scrub before trace</text>
+
+      <!-- fixture scripts (interface / local CLI) -->
+      <rect x="390" y="560" width="280" height="100" rx="6" fill="#91ccf1" stroke="#2e7dbf" stroke-width="1"/>
+      <rect x="402" y="572" width="52" height="16" rx="2" fill="transparent" stroke="#2e7dbf" stroke-width="0.8"/>
+      <text x="428" y="584" fill="#24242e" font-size="12" text-anchor="middle">CLI</text>
+      <text x="530" y="613" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">fixture scripts</text>
+      <text x="530" y="633" fill="#24242e" font-size="12" text-anchor="middle">capture · sanitize</text>
+      <text x="530" y="651" fill="#24242e" font-size="12" text-anchor="middle">local only, never CI</text>
+
+      <!-- ============ LEGEND ============ -->
+      <line x1="40" y1="700" x2="1100" y2="700" stroke="#d1d5db" stroke-width="0.8"/>
+      <text x="40" y="722" fill="#6b7280" font-size="12" font-weight="700" letter-spacing="0.10em">LEGEND</text>
+
+      <rect x="40" y="740" width="18" height="14" rx="2" fill="#afa4de" stroke="#7c6bc4" stroke-width="1"/>
+      <text x="66" y="751" fill="#24242e" font-size="12">Infra / adapter module</text>
+
+      <rect x="290" y="740" width="18" height="14" rx="2" fill="#91ccf1" stroke="#2e7dbf" stroke-width="1"/>
+      <text x="316" y="751" fill="#24242e" font-size="12">Local CLI entry point</text>
+
+      <rect x="540" y="740" width="18" height="14" rx="2" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
+      <text x="566" y="751" fill="#24242e" font-size="12">External library / service</text>
+
+      <line x1="40" y1="786" x2="80" y2="786" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <text x="90" y="790" fill="#24242e" font-size="12">Runtime dependency</text>
+
+      <line x1="290" y1="786" x2="330" y2="786" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <text x="340" y="790" fill="#24242e" font-size="12">Local-only tooling path</text>
+    </svg>
+</div>
+<p>Step by step, when the agent needs the tool list: it asks the local store; if the
+entry has expired the store fetches it from Silpo's server; the names are compared with
+the previous list; and only then are the tools handed to the agent.</p>
+<p>There is one more check — on the size of the answer. If the server ever returned more
+than 500 tools, or more than 5 MB, the answer is rejected without being parsed. That is
+a guard against a corrupted or deliberately inflated response: parsing one would spend
+memory and time on data the system does not trust anyway. The ceilings are set with room
+to spare — the largest answer Silpo's server has returned so far held 40 tools.</p>
+<p>If such an answer did arrive, the Customer's request ends with an error: the service
+says the tool list could not be read and does nothing further. The stale list is not
+used instead — working from a list that may already have changed would mean calling a
+tool with an unknown set of parameters, exactly what quarantine and the signature check
+exist to prevent.</p>
+<div class="diagram"><svg viewBox="0 0 1140 1020" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="tools-list-sequence-title tools-list-sequence-desc">
+      <title id="tools-list-sequence-title">Dynamic tools/list registry sequence</title>
+      <desc id="tools-list-sequence-desc">Sequence diagram showing the recovery agent asking the tool registry for the tool list; when the cache is stale the registry fetches tools/list through the MCP SDK from the Silpo server, rejects oversized responses, diffs tool names against the last snapshot, and returns cached tools; a later tool call that fails with a protocol error invalidates the registry immediately.</desc>
+      <defs><style>text{font-family:Arial,Helvetica,"Liberation Sans","DejaVu Sans",sans-serif;}</style>
+        <marker id="arrow-filled" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#24242e"/></marker>
+        <marker id="arrow-open" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polyline points="0 0, 8 3.5, 0 7" fill="none" stroke="#6b7280" stroke-width="1.2"/></marker>
+      </defs>
+      <rect width="100%" height="100%" fill="#ffffff"/>
+
+      <!-- ============ LIFELINES ============ -->
+      <line x1="150" y1="200" x2="150" y2="830" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+      <line x1="430" y1="200" x2="430" y2="830" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+      <line x1="710" y1="200" x2="710" y2="830" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+      <line x1="990" y1="200" x2="990" y2="830" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+
+      <!-- ============ OPT FRAGMENT (cache stale) ============ -->
+      <rect x="418" y="274" width="584" height="288" rx="4" fill="#f7f7fa" stroke="#9ca3af" stroke-width="1"/>
+      <rect x="418" y="274" width="60" height="20" rx="2" fill="#ffffff" stroke="#9ca3af" stroke-width="1"/>
+      <text x="448" y="288" fill="#24242e" font-size="12" font-weight="700" text-anchor="middle">OPT</text>
+      <text x="492" y="288" fill="#6b7280" font-size="12">[cache stale, invalidated, or force refresh]</text>
+
+      <!-- ============ ACTIVATION BARS ============ -->
+      <rect x="424" y="250" width="12" height="336" fill="#e8ecf5" stroke="#6b7280" stroke-width="0.8"/>
+      <rect x="704" y="298" width="12" height="144" fill="#e8ecf5" stroke="#6b7280" stroke-width="0.8"/>
+      <rect x="704" y="682" width="12" height="96" fill="#e8ecf5" stroke="#6b7280" stroke-width="0.8"/>
+
+      <!-- ============ MESSAGES ============ -->
+
+      <!-- 1. Agent -> Registry -->
+      <line x1="150" y1="250" x2="424" y2="250" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="196" y="218" width="180" height="16" rx="2" fill="#ffffff"/>
+      <text x="286" y="230" fill="#24242e" font-size="12" text-anchor="middle">1 · get()</text>
+
+      <!-- 2. Registry -> SDK -->
+      <line x1="436" y1="298" x2="704" y2="298" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="480" y="312" width="180" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="570" y="324" fill="#24242e" font-size="12" text-anchor="middle">2 · list_tools()</text>
+
+      <!-- 3. SDK -> Silpo -->
+      <line x1="716" y1="346" x2="984" y2="346" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="762" y="360" width="180" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="852" y="372" fill="#24242e" font-size="12" text-anchor="middle">3 · tools/list</text>
+
+      <!-- 4. Silpo -> SDK (return) -->
+      <line x1="984" y1="394" x2="720" y2="394" stroke="#6b7280" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-open)"/>
+      <rect x="756" y="408" width="192" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="852" y="420" fill="#6b7280" font-size="12" text-anchor="middle">4 · ListToolsResult</text>
+
+      <!-- 5. SDK -> Registry (return) -->
+      <line x1="704" y1="442" x2="440" y2="442" stroke="#6b7280" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-open)"/>
+      <rect x="476" y="456" width="192" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="572" y="468" fill="#6b7280" font-size="12" text-anchor="middle">5 · ListToolsResult</text>
+
+      <!-- 6. Registry self: size ceiling -->
+      <path d="M 436,478 H 510 V 502 H 440" fill="none" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="522" y="482" width="216" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="630" y="494" fill="#24242e" font-size="12" text-anchor="middle">6 · REJECT IF OVERSIZED (F11)</text>
+
+      <!-- 7. Registry self: diff -->
+      <path d="M 436,522 H 510 V 546 H 440" fill="none" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="522" y="526" width="228" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="636" y="538" fill="#24242e" font-size="12" text-anchor="middle">7 · DIFF TOOL NAMES (F4)</text>
+
+      <!-- 8. Registry -> Agent (return) -->
+      <line x1="424" y1="586" x2="156" y2="586" stroke="#6b7280" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-open)"/>
+      <rect x="180" y="600" width="216" height="16" rx="2" fill="#ffffff"/>
+      <text x="288" y="612" fill="#6b7280" font-size="12" text-anchor="middle">8 · CachedTools + unknown_to_registry</text>
+
+      <!-- 9. Agent -> SDK -->
+      <line x1="150" y1="682" x2="704" y2="682" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="336" y="650" width="188" height="16" rx="2" fill="#ffffff"/>
+      <text x="430" y="662" fill="#24242e" font-size="12" text-anchor="middle">9 · call_tool(name, args)</text>
+
+      <!-- 10. SDK -> Silpo -->
+      <line x1="716" y1="730" x2="984" y2="730" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="762" y="698" width="180" height="16" rx="2" fill="#ffffff"/>
+      <text x="852" y="710" fill="#24242e" font-size="12" text-anchor="middle">10 · tools/call</text>
+
+      <!-- 11. Silpo -> SDK (return, error) -->
+      <line x1="984" y1="778" x2="720" y2="778" stroke="#6b7280" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-open)"/>
+      <rect x="740" y="746" width="228" height="16" rx="2" fill="#ffffff"/>
+      <text x="854" y="758" fill="#6b7280" font-size="12" text-anchor="middle">11 · McpError (-32601 / -32602)</text>
+
+      <!-- 12. Agent -> Registry (invalidate) -->
+      <line x1="150" y1="822" x2="424" y2="822" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="164" y="790" width="248" height="16" rx="2" fill="#ffffff"/>
+      <text x="288" y="802" fill="#24242e" font-size="12" text-anchor="middle">12 · observe_error() → INVALIDATE (F3)</text>
+
+      <!-- ============ ACTOR BOXES ============ -->
+
+      <!-- Recovery Agent (level 3) -->
+      <rect x="40" y="110" width="220" height="90" rx="6" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1"/>
+      <rect x="52" y="122" width="44" height="16" rx="2" fill="transparent" stroke="#2c5fc9" stroke-width="0.8"/>
+      <text x="74" y="134" fill="#24242e" font-size="12" text-anchor="middle">APP</text>
+      <text x="150" y="163" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Recovery Agent</text>
+      <text x="150" y="183" fill="#24242e" font-size="12" text-anchor="middle">LangGraph</text>
+
+      <!-- ToolRegistry (level 5) -->
+      <rect x="320" y="110" width="220" height="90" rx="6" fill="#afa4de" stroke="#7c6bc4" stroke-width="1"/>
+      <rect x="332" y="122" width="52" height="16" rx="2" fill="transparent" stroke="#7c6bc4" stroke-width="0.8"/>
+      <text x="358" y="134" fill="#24242e" font-size="12" text-anchor="middle">INFRA</text>
+      <text x="430" y="163" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">ToolRegistry</text>
+      <text x="430" y="183" fill="#24242e" font-size="12" text-anchor="middle">TTL · diff · ceiling</text>
+
+      <!-- mcp SDK (level 5) -->
+      <rect x="600" y="110" width="220" height="90" rx="6" fill="#afa4de" stroke="#7c6bc4" stroke-width="1"/>
+      <rect x="612" y="122" width="52" height="16" rx="2" fill="transparent" stroke="#7c6bc4" stroke-width="0.8"/>
+      <text x="638" y="134" fill="#24242e" font-size="12" text-anchor="middle">INFRA</text>
+      <text x="710" y="163" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">mcp SDK</text>
+      <text x="710" y="183" fill="#24242e" font-size="12" text-anchor="middle">ClientSession</text>
+
+      <!-- Silpo MCP (level 1: external) -->
+      <rect x="880" y="110" width="220" height="90" rx="6" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
+      <rect x="892" y="122" width="40" height="16" rx="2" fill="transparent" stroke="#c9ba5e" stroke-width="0.8"/>
+      <text x="912" y="134" fill="#24242e" font-size="12" text-anchor="middle">EXT</text>
+      <text x="990" y="163" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Silpo MCP</text>
+      <text x="990" y="183" fill="#24242e" font-size="12" text-anchor="middle">mcp.silpo.ua</text>
+
+      <!-- ============ LEGEND ============ -->
+      <line x1="40" y1="880" x2="1100" y2="880" stroke="#d1d5db" stroke-width="0.8"/>
+      <text x="40" y="902" fill="#6b7280" font-size="12" font-weight="700" letter-spacing="0.10em">LEGEND</text>
+
+      <rect x="40" y="920" width="18" height="14" rx="2" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
+      <text x="66" y="931" fill="#24242e" font-size="12">External service</text>
+
+      <rect x="250" y="920" width="18" height="14" rx="2" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1"/>
+      <text x="276" y="931" fill="#24242e" font-size="12">Application layer</text>
+
+      <rect x="470" y="920" width="18" height="14" rx="2" fill="#afa4de" stroke="#7c6bc4" stroke-width="1"/>
+      <text x="496" y="931" fill="#24242e" font-size="12">Infra / adapter layer</text>
+
+      <rect x="700" y="916" width="8" height="20" fill="#e8ecf5" stroke="#6b7280" stroke-width="0.8"/>
+      <text x="718" y="931" fill="#24242e" font-size="12">Activation</text>
+
+      <line x1="40" y1="966" x2="80" y2="966" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <text x="90" y="970" fill="#24242e" font-size="12">Synchronous call (UML)</text>
+
+      <line x1="320" y1="966" x2="360" y2="966" stroke="#6b7280" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-open)"/>
+      <text x="372" y="970" fill="#24242e" font-size="12">Reply (UML)</text>
+
+      <rect x="560" y="958" width="18" height="14" rx="2" fill="#f7f7fa" stroke="#9ca3af" stroke-width="1"/>
+      <text x="586" y="970" fill="#24242e" font-size="12">Optional fragment (opt)</text>
+    </svg>
+</div>
+
+<h2 id="domain">The domain core</h2>
+<p>The data models that describe one recovery, from a raw cart to a receipt: cart,
+validation, blocker, diagnosis, proposal, consent, receipt.</p>
+<p>Along with the cart the server returns a list of <b>validations</b> — messages about
+its state, each with a level: error, warning or informational. A validation at error
+level is what stops the order being placed; those the system calls <b>blockers</b>. The
+rest are still shown to the Customer — and it is among them that the constraint the app
+displays nowhere turns up.</p>
+<p>The core reads the cart and produces a <b>diagnosis</b>: exactly how many hryvnias
+are missing. This is neither an estimate nor an answer from the language model — the
+threshold comes from the validation's own data (<code>699</code> in
+<code>orderCostMin</code>), the products total from the cart, and the system subtracts
+one from the other.</p>
+<p>The diagnosis is then used like this: it goes into the request to the language model,
+which proposes search terms. Products that come back with a verified price and
+availability are turned into concrete proposals by code — which computes the quantity
+from the shortfall rather than asking the model for it. When the Customer agrees to one
+of them the server records the consent; only the Write Guard may use that record.</p>
+<p>None of these data models reach outside — not to Silpo's server, not to the language
+model, not to the database. That is why every rule about them is checked by ordinary
+tests, with no network call at all.</p>
+<div class="diagram"><svg viewBox="0 0 1220 760" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="domain-core-class-title domain-core-class-desc">
+      <title id="domain-core-class-title">Domain Core class diagram</title>
+      <desc id="domain-core-class-desc">Class diagram of the nine Domain Core models: a Cart carries Validations that wrap into Blockers, both feeding a Diagnosis; a Diagnosis feeds an ActionProposal carrying Evidence tuples, which G5+G6 turns into a ConsentRecord that authorizes a Receipt; a CartDiff compares a before and after Cart.</desc>
+      <defs><style>text{font-family:Arial,Helvetica,"Liberation Sans","DejaVu Sans",sans-serif;}</style>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6440c9"/></marker>
+        <marker id="arrow-ink" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#24242e"/></marker>
+      </defs>
+      <rect width="100%" height="100%" fill="#ffffff"/>
+
+      <!-- ============ ZONE ============ -->
+      <rect x="40" y="60" width="1140" height="620" rx="8" fill="#f7f7fa" stroke="#9ca3af" stroke-width="1"/>
+      <rect x="60" y="48" width="330" height="20" rx="2" fill="#ffffff"/>
+      <text x="225" y="62" fill="#6b7280" font-size="12" font-weight="700" text-anchor="middle">src/lantern/domain/models.py · DOMAIN LAYER</text>
+
+      <!-- ============ ARROWS ============ -->
+
+      <!-- Cart -> Validation (row1) -->
+      <line x1="360" y1="170" x2="440" y2="170" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="374" y="154" width="52" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="400" y="166" fill="#24242e" font-size="12" text-anchor="middle">1..*</text>
+
+      <!-- Validation -> Blocker (row1) -->
+      <line x1="720" y1="170" x2="800" y2="170" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="734" y="154" width="52" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="760" y="166" fill="#24242e" font-size="12" text-anchor="middle">wraps</text>
+
+      <!-- Blocker -> Diagnosis: straight vertical, same column, no crossing -->
+      <line x1="940" y1="220" x2="940" y2="330" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="952" y="267" width="40" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="972" y="279" fill="#24242e" font-size="12" text-anchor="middle">0..*</text>
+
+      <!-- Cart -> Diagnosis: lane at y=300 (below row1, above row2 — clear of every box), entering
+           Diagnosis's TOP edge at x=850, fanned 90px from Blocker's own top-edge entry at x=940
+           (rule: shared edge -> distinct attach points). A left-edge entry was tried first but its
+           only open corridor (x=720-800) is already occupied by the Diagnosis->ActionProposal
+           arrow at y=380 — the top edge has no such conflict. -->
+      <path d="M 220,220 V 292 Q 220,300 228,300 H 842 Q 850,300 850,308 V 330"
+            fill="none" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="440" y="284" width="88" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="484" y="296" fill="#24242e" font-size="12" text-anchor="middle">diagnose()</text>
+
+      <!-- Diagnosis -> ActionProposal (dashed, G4): row2, right-to-left -->
+      <line x1="800" y1="380" x2="720" y2="380" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <rect x="734" y="364" width="76" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="772" y="376" fill="#6b7280" font-size="12" text-anchor="middle">plan, G4</text>
+
+      <!-- ActionProposal -> EvidenceTuple: row2, right-to-left -->
+      <line x1="440" y1="380" x2="360" y2="380" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="374" y="364" width="52" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="400" y="376" fill="#24242e" font-size="12" text-anchor="middle">1..*</text>
+
+      <!-- ActionProposal -> ConsentRecord: straight vertical, same column (dashed, G5+G6) -->
+      <line x1="580" y1="430" x2="580" y2="520" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <rect x="592" y="467" width="112" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="648" y="479" fill="#6b7280" font-size="12" text-anchor="middle">consent, G5+G6</text>
+
+      <!-- ConsentRecord -> Receipt (dashed, G5+G6): row3 -->
+      <line x1="720" y1="570" x2="800" y2="570" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <rect x="734" y="554" width="52" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="760" y="566" fill="#6b7280" font-size="12" text-anchor="middle">writes</text>
+
+      <!-- Cart -> CartDiff: routed down the left margin (x=52), clear of EvidenceTuple (which starts at x=80) -->
+      <path d="M 100,220 Q 100,228 92,228 H 60 Q 52,228 52,236 V 560 Q 52,568 60,568 H 80"
+            fill="none" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="60" y="452" width="92" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="106" y="464" fill="#24242e" font-size="12" text-anchor="middle">before/after</text>
+
+      <!-- ============ ROW 1: Cart, Validation, Blocker ============ -->
+
+      <rect x="80" y="120" width="280" height="100" rx="6" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <rect x="92" y="132" width="60" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
+      <text x="122" y="144" fill="#24242e" font-size="12" text-anchor="middle">DOMAIN</text>
+      <text x="220" y="163" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Cart</text>
+      <text x="220" y="183" fill="#24242e" font-size="12" text-anchor="middle">extra=allow, frozen</text>
+      <text x="220" y="201" fill="#24242e" font-size="12" text-anchor="middle">productsTotal: Decimal</text>
+
+      <rect x="440" y="120" width="280" height="100" rx="6" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <rect x="452" y="132" width="60" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
+      <text x="482" y="144" fill="#24242e" font-size="12" text-anchor="middle">DOMAIN</text>
+      <text x="580" y="163" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Validation</text>
+      <text x="580" y="183" fill="#24242e" font-size="12" text-anchor="middle">code: from wire "message"</text>
+      <text x="580" y="201" fill="#24242e" font-size="12" text-anchor="middle">level, type, context</text>
+
+      <rect x="800" y="120" width="280" height="100" rx="6" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <rect x="812" y="132" width="60" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
+      <text x="842" y="144" fill="#24242e" font-size="12" text-anchor="middle">DOMAIN</text>
+      <text x="940" y="163" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Blocker</text>
+      <text x="940" y="183" fill="#24242e" font-size="12" text-anchor="middle">policy: PolicyEntry | None</text>
+      <text x="940" y="201" fill="#24242e" font-size="12" text-anchor="middle">is_known, product_ref</text>
+
+      <!-- ============ ROW 2: EvidenceTuple, ActionProposal, Diagnosis ============ -->
+
+      <rect x="80" y="330" width="280" height="100" rx="6" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <rect x="92" y="342" width="60" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
+      <text x="122" y="354" fill="#24242e" font-size="12" text-anchor="middle">DOMAIN</text>
+      <text x="220" y="373" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">EvidenceTuple</text>
+      <text x="220" y="393" fill="#24242e" font-size="12" text-anchor="middle">4 fields, all required</text>
+      <text x="220" y="411" fill="#24242e" font-size="12" text-anchor="middle">(DR-10 Evidence Gate)</text>
+
+      <rect x="440" y="330" width="280" height="100" rx="6" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <rect x="452" y="342" width="60" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
+      <text x="482" y="354" fill="#24242e" font-size="12" text-anchor="middle">DOMAIN</text>
+      <text x="580" y="373" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">ActionProposal</text>
+      <text x="580" y="393" fill="#24242e" font-size="12" text-anchor="middle">product_name, quantity</text>
+      <text x="580" y="411" fill="#24242e" font-size="12" text-anchor="middle">canonical_args (pinned keys)</text>
+
+      <rect x="800" y="330" width="280" height="100" rx="6" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <rect x="812" y="342" width="60" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
+      <text x="842" y="354" fill="#24242e" font-size="12" text-anchor="middle">DOMAIN</text>
+      <text x="940" y="373" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Diagnosis</text>
+      <text x="940" y="393" fill="#24242e" font-size="12" text-anchor="middle">gap: Decimal | None</text>
+      <text x="940" y="411" fill="#24242e" font-size="12" text-anchor="middle">threshold_source, blockers[]</text>
+
+      <!-- ============ ROW 3: CartDiff, ConsentRecord, Receipt ============ -->
+
+      <rect x="80" y="520" width="280" height="100" rx="6" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <rect x="92" y="532" width="60" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
+      <text x="122" y="544" fill="#24242e" font-size="12" text-anchor="middle">DOMAIN</text>
+      <text x="220" y="563" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">CartDiff</text>
+      <text x="220" y="583" fill="#24242e" font-size="12" text-anchor="middle">canonical_diff()</text>
+      <text x="220" y="601" fill="#24242e" font-size="12" text-anchor="middle">asserts its own total delta</text>
+
+      <!-- ConsentRecord (dashed = shape built at G3, behavior at G5+G6) -->
+      <rect x="440" y="520" width="280" height="100" rx="6" fill="#9a85e1" stroke="#6440c9" stroke-width="1" stroke-dasharray="5,4"/>
+      <rect x="452" y="532" width="60" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
+      <text x="482" y="544" fill="#24242e" font-size="12" text-anchor="middle">DOMAIN</text>
+      <text x="580" y="563" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">ConsentRecord</text>
+      <text x="580" y="583" fill="#24242e" font-size="12" text-anchor="middle">mirrors 0003_consents.sql</text>
+      <text x="580" y="601" fill="#24242e" font-size="12" text-anchor="middle">args_hash, state_hash</text>
+
+      <!-- Receipt (dashed) -->
+      <rect x="800" y="520" width="280" height="100" rx="6" fill="#9a85e1" stroke="#6440c9" stroke-width="1" stroke-dasharray="5,4"/>
+      <rect x="812" y="532" width="60" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
+      <text x="842" y="544" fill="#24242e" font-size="12" text-anchor="middle">DOMAIN</text>
+      <text x="940" y="563" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Receipt</text>
+      <text x="940" y="583" fill="#24242e" font-size="12" text-anchor="middle">mirrors 0005_receipts.sql</text>
+      <text x="940" y="601" fill="#24242e" font-size="12" text-anchor="middle">verified: bool (DR-12)</text>
+
+      <!-- ============ LEGEND ============ -->
+      <line x1="40" y1="700" x2="1180" y2="700" stroke="#d1d5db" stroke-width="0.8"/>
+      <text x="40" y="722" fill="#6b7280" font-size="12" font-weight="700" letter-spacing="0.10em">LEGEND</text>
+
+      <rect x="40" y="740" width="18" height="14" rx="2" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <text x="66" y="751" fill="#24242e" font-size="12">Domain model, built at G3</text>
+
+      <rect x="330" y="740" width="18" height="14" rx="2" fill="#9a85e1" stroke="#6440c9" stroke-width="1" stroke-dasharray="4,3"/>
+      <text x="356" y="751" fill="#24242e" font-size="12">Shape built at G3, behavior at G5+G6</text>
+
+      <line x1="700" y1="747" x2="740" y2="747" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <text x="750" y="751" fill="#24242e" font-size="12">Used by, at G3</text>
+
+      <line x1="940" y1="747" x2="980" y2="747" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <text x="990" y="751" fill="#24242e" font-size="12">Used by, at a later stage</text>
+    </svg></div>
+<p>The next diagram follows one cart from the server's answer to the message the
+Customer sees. First the answer is unpacked into known fields: totals, products,
+validations. If its shape is unexpected — a required field missing, a type that does not
+fit — processing stops at once with a named error and the Customer is told the cart
+could not be read: better to say so than to compute a shortfall from data the system
+does not trust.</p>
+<p>If the answer unpacked cleanly, the system looks for the minimum-order threshold and
+subtracts the products total from it. It also happens that the threshold is in none of
+the known fields — then the Customer still gets a message, but one that says plainly
+that the amount could not be confirmed; an invented number never takes its place.</p>
+<p>Wherever the path leads, the message to the Customer lists <b>every</b> validation
+the cart carries, not only the one that caused the block. From the audit of 10
+September: the server returned two. The first is an error about the minimum order sum —
+that is what blocks checkout, and the Silpo app shows it as a large button. The second
+is informational: paying in instalments is unavailable because the cart is under 1000 ₴.
+A Customer could only meet that on the payment screen — and while the cart is blocked by
+the minimum, they never reach checkout, so it is shown to them nowhere at all. That
+difference between what the server knows and what the Customer
+sees is what Lantern exists to show.</p>
+<div class="diagram"><svg viewBox="0 0 900 980" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="diagnose-activity-title diagnose-activity-desc">
+      <title id="diagnose-activity-title">Diagnose activity diagram</title>
+      <desc id="diagnose-activity-desc">Activity diagram from a raw cart payload through normalize and diagnose to disclosure: a malformed payload exits as CartShapeError, a card with no resolvable order.cost.min threshold flows on as an explicit unverified state rather than aborting, and every path that reaches disclosure shows every validation, including ones the app UI would hide.</desc>
+      <defs><style>text{font-family:Arial,Helvetica,"Liberation Sans","DejaVu Sans",sans-serif;}</style>
+        <marker id="arrow-ink" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#24242e"/></marker>
+        <marker id="arrow-muted" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6b7280"/></marker>
+      </defs>
+      <rect width="100%" height="100%" fill="#ffffff"/>
+
+      <!-- ============ ZONE ============ -->
+      <rect x="40" y="40" width="820" height="900" rx="8" fill="#f7f7fa" stroke="#9ca3af" stroke-width="1"/>
+      <rect x="60" y="28" width="300" height="20" rx="2" fill="#ffffff"/>
+      <text x="210" y="42" fill="#6b7280" font-size="12" font-weight="700" text-anchor="middle">src/lantern/domain/ · DOMAIN LAYER</text>
+
+      <!-- ============ ARROWS ============ -->
+
+      <!-- start -> normalize -->
+      <line x1="450" y1="94" x2="450" y2="140" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+
+      <!-- normalize -> decision1 -->
+      <line x1="450" y1="220" x2="450" y2="284" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+
+      <!-- decision1 -> CartShapeError (invalid, left) -->
+      <path d="M 396,320 Q 340,320 340,336 V 360" fill="none" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="220" y="328" width="90" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="265" y="340" fill="#24242e" font-size="12" text-anchor="middle">invalid shape</text>
+
+      <!-- decision1 -> diagnose (valid, right/down) -->
+      <path d="M 504,320 Q 560,320 560,336 V 360" fill="none" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="565" y="328" width="50" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="590" y="340" fill="#24242e" font-size="12" text-anchor="middle">valid</text>
+
+      <!-- diagnose -> decision2 -->
+      <line x1="560" y1="440" x2="560" y2="484" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+
+      <!-- decision2 -> disclosure (validation_context / time_slots, straight down) -->
+      <line x1="560" y1="540" x2="560" y2="584" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="572" y="548" width="150" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="647" y="560" fill="#24242e" font-size="12" text-anchor="middle">context or slots resolve</text>
+
+      <!-- decision2 -> Unverified (dashed, branch hangs left off the main flow) -->
+      <path d="M 484,510 Q 340,510 340,526 V 550" fill="none" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow-muted)"/>
+      <rect x="230" y="518" width="130" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="295" y="530" fill="#6b7280" font-size="12" text-anchor="middle">no threshold anywhere</text>
+
+      <!-- Unverified -> disclosure (still flows forward, dashed) — stops exactly at the box's
+           own left edge (x=450), never travels inside its footprint (that segment would be
+           hidden once the box, drawn afterward, paints over it) -->
+      <path d="M 340,610 Q 340,660 400,660 H 450" fill="none" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow-muted)"/>
+      <rect x="360" y="636" width="90" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="405" y="648" fill="#6b7280" font-size="12" text-anchor="middle">gap = None</text>
+
+      <!-- disclosure -> final -->
+      <line x1="560" y1="664" x2="560" y2="716" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+
+      <!-- final ring -> filled inner circle already drawn together below -->
+
+      <!-- ============ NODES ============ -->
+
+      <!-- Initial pseudostate: filled circle -->
+      <circle cx="450" cy="80" r="14" fill="#24242e"/>
+      <text x="450" y="66" fill="#6b7280" font-size="12" text-anchor="middle">raw cart payload</text>
+
+      <!-- Normalize (action) -->
+      <rect x="340" y="140" width="220" height="80" rx="14" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <text x="450" y="174" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Normalize</text>
+      <text x="450" y="194" fill="#24242e" font-size="12" text-anchor="middle">normalize_cart()</text>
+
+      <!-- Decision 1: shape valid? — sized so its bottom tip (y=356) clears the row below
+           (boxes start at y=360) with a 4px gap; the previous, taller diamond's tip reached
+           y=376, poking 16px into both boxes' top corners -->
+      <path d="M 450,284 L 504,320 L 450,356 L 396,320 Z" fill="#ffffff" stroke="#24242e" stroke-width="1.2"/>
+      <text x="450" y="316" fill="#24242e" font-size="12" text-anchor="middle">shape</text>
+      <text x="450" y="332" fill="#24242e" font-size="12" text-anchor="middle">valid?</text>
+
+      <!-- CartShapeError: exception terminal (dashed border marks the exception state itself —
+           no separate final-pseudostate icon needed, the raise IS the stop) -->
+      <rect x="240" y="360" width="200" height="80" rx="14" fill="#9a85e1" stroke="#6440c9" stroke-width="1.2" stroke-dasharray="5,4"/>
+      <text x="340" y="392" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">CartShapeError</text>
+      <text x="340" y="412" fill="#24242e" font-size="12" text-anchor="middle">raised, named key</text>
+
+      <!-- Diagnose (action) -->
+      <rect x="450" y="360" width="220" height="80" rx="14" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <text x="560" y="394" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Diagnose</text>
+      <text x="560" y="414" fill="#24242e" font-size="12" text-anchor="middle">diagnose()</text>
+
+      <!-- Decision 2: threshold resolvable? -->
+      <path d="M 560,484 L 624,512 L 560,540 L 496,512 Z" fill="#ffffff" stroke="#24242e" stroke-width="1.2"/>
+      <text x="560" y="508" fill="#24242e" font-size="12" text-anchor="middle">threshold</text>
+      <text x="560" y="524" fill="#24242e" font-size="12" text-anchor="middle">resolvable?</text>
+
+      <!-- Unverified state (exception/abnormal, dashed border, hangs off the flow — G3-F2/F2b) -->
+      <rect x="240" y="550" width="200" height="60" rx="14" fill="#9a85e1" stroke="#6440c9" stroke-width="1.2" stroke-dasharray="5,4"/>
+      <text x="340" y="576" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Unverified</text>
+      <text x="340" y="596" fill="#24242e" font-size="12" text-anchor="middle">threshold_source</text>
+
+      <!-- Build disclosure (action) -->
+      <rect x="450" y="584" width="220" height="80" rx="14" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <text x="560" y="618" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Build disclosure</text>
+      <text x="560" y="638" fill="#24242e" font-size="12" text-anchor="middle">build_disclosure()</text>
+
+      <!-- Final pseudostate: outer ring + filled inner circle -->
+      <circle cx="560" cy="732" r="16" fill="none" stroke="#24242e" stroke-width="1.5"/>
+      <circle cx="560" cy="732" r="9" fill="#24242e"/>
+      <text x="560" y="770" fill="#6b7280" font-size="12" text-anchor="middle">every validation shown,</text>
+      <text x="560" y="788" fill="#6b7280" font-size="12" text-anchor="middle">including UI-invisible ones</text>
+
+      <!-- ============ LEGEND ============ -->
+      <line x1="40" y1="850" x2="860" y2="850" stroke="#d1d5db" stroke-width="0.8"/>
+      <text x="40" y="872" fill="#6b7280" font-size="12" font-weight="700" letter-spacing="0.10em">LEGEND</text>
+
+      <rect x="40" y="890" width="18" height="14" rx="2" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <text x="66" y="901" fill="#24242e" font-size="12">Action, on the main flow</text>
+
+      <rect x="290" y="890" width="18" height="14" rx="2" fill="#9a85e1" stroke="#6440c9" stroke-width="1.2" stroke-dasharray="4,3"/>
+      <text x="316" y="901" fill="#24242e" font-size="12">Exception / fail-safe state</text>
+
+      <path d="M 560,890 L 590,897 L 560,904 L 540,897 Z" fill="#ffffff" stroke="#24242e" stroke-width="1.2"/>
+      <text x="600" y="901" fill="#24242e" font-size="12">Decision</text>
+
+      <circle cx="720" cy="897" r="10" fill="#24242e"/>
+      <text x="738" y="901" fill="#24242e" font-size="12">Initial</text>
+
+      <circle cx="800" cy="897" r="10" fill="none" stroke="#24242e" stroke-width="1.5"/>
+      <circle cx="800" cy="897" r="5" fill="#24242e"/>
+      <text x="818" y="901" fill="#24242e" font-size="12">Final</text>
+    </svg></div>
+
+<h2 id="planner">Planner, evidence gate, ranking</h2>
+<p>After the diagnosis the language model sees what is already in the cart and how much
+is missing, and proposes <b>search terms</b> — product or category names such as "milk",
+"bread", "coffee". That is all it can return: there is no field for a price or a product
+id in the shape it answers with. Its answer is a guess about <i>what to look for</i>,
+and it decides nothing.</p>
+<p>With those words the system queries Silpo's product search — in the same branch and
+for the same delivery slot as the cart. The search returns a structured answer: name,
+price, availability, identifiers. A candidate goes further only if its <b>price and
+availability come from that same answer</b>: one with no confirmed price, or marked
+unavailable, is dropped. The model has no part in those numbers.</p>
+<p>For each survivor the system computes the smallest quantity that closes the
+shortfall: the shortfall divided by the price, rounded to the catalogue's selling step
+and capped by stock. It then orders the candidates <b>by one thing only — the top-up
+amount, smallest first</b> — and shows the Customer the top two or three.</p>
+<p>It is worth saying plainly what is <b>not</b> used to choose. The search is confined
+to the same branch, delivery type and slot as the cart — otherwise the product found
+could not be ordered at all. After that only the evidence gate filters: a confirmed
+price and availability pass, anything else does not. Customer preferences, food
+restrictions, favourites, promotions or semantic closeness to what is already in the
+cart are <b>not</b> taken into account: Silpo's server offers tools for those, and this
+version does not use them. The reason is plain: every extra signal is one more place to
+be wrong in front of a Customer, and there was no measured way to validate relevance
+within this version. So relevance stays with the model and with the Customer, who picks
+one of two or three offers — or none.</p>
+<div class="diagram"><svg viewBox="0 0 900 1120" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g4-activity-title g4-activity-desc">
+      <title id="g4-activity-title">G4 planner-to-ranking activity diagram</title>
+      <desc id="g4-activity-desc">Activity diagram from a completed diagnosis through the planner, the deterministic product search, the Evidence Gate, and ranking to the explainer, ending in awaiting_consent. The candidates-empty branch and a budget-exceeded condition both exit to an explicit Aborted state rather than a successful outcome.</desc>
+      <defs><style>text{font-family:Arial,Helvetica,"Liberation Sans","DejaVu Sans",sans-serif;}</style>
+        <marker id="arrow-ink" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#24242e"/></marker>
+        <marker id="arrow-muted" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6b7280"/></marker>
+      </defs>
+      <rect width="100%" height="100%" fill="#ffffff"/>
+
+      <!-- ============ ZONE ============ -->
+      <rect x="40" y="40" width="820" height="940" rx="8" fill="#f7f7fa" stroke="#9ca3af" stroke-width="1"/>
+      <rect x="60" y="28" width="360" height="20" rx="2" fill="#ffffff"/>
+      <text x="240" y="42" fill="#6b7280" font-size="12" font-weight="700" text-anchor="middle">src/lantern/graph/ + domain/ &middot; G4 READ-PATH</text>
+
+      <!-- ============ ARROWS ============ -->
+
+      <!-- start -> plan -->
+      <line x1="480" y1="94" x2="480" y2="140" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+
+      <!-- plan -> collect_options -->
+      <line x1="480" y1="220" x2="480" y2="268" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+
+      <!-- collect_options -> Evidence Gate -->
+      <line x1="480" y1="348" x2="480" y2="396" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+
+      <!-- Evidence Gate -> decision -->
+      <line x1="480" y1="476" x2="480" y2="516" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+
+      <!-- decision -> Aborted (empty, left) -->
+      <path d="M 426,552 Q 200,552 200,568 V 596" fill="none" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow-muted)"/>
+      <rect x="120" y="560" width="90" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="165" y="572" fill="#6b7280" font-size="12" text-anchor="middle">0 survivors</text>
+
+      <!-- decision -> rank (>=1 survivor, straight down) -->
+      <line x1="480" y1="588" x2="480" y2="628" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+      <rect x="492" y="596" width="110" height="16" rx="2" fill="#f7f7fa"/>
+      <text x="547" y="608" fill="#24242e" font-size="12" text-anchor="middle">1-3 survivors</text>
+
+      <!-- rank -> explain -->
+      <line x1="480" y1="708" x2="480" y2="756" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+
+      <!-- explain -> final -->
+      <line x1="480" y1="836" x2="480" y2="872" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
+
+      <!-- ============ NODES ============ -->
+
+      <!-- Initial pseudostate -->
+      <circle cx="480" cy="80" r="14" fill="#24242e"/>
+      <text x="480" y="66" fill="#6b7280" font-size="12" text-anchor="middle">diagnosis + channel comparison ready</text>
+
+      <!-- Plan (LLM node, application layer) -->
+      <rect x="370" y="140" width="220" height="80" rx="14" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1"/>
+      <text x="480" y="174" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Plan</text>
+      <text x="480" y="194" fill="#24242e" font-size="12" text-anchor="middle">LLM &middot; structured SearchIntent</text>
+
+      <!-- Collect options (deterministic, application layer) -->
+      <rect x="370" y="268" width="220" height="80" rx="14" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1"/>
+      <text x="480" y="302" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Collect options</text>
+      <text x="480" y="322" fill="#24242e" font-size="12" text-anchor="middle">find_products_batch(search_terms)</text>
+
+      <!-- Evidence Gate (pure, domain layer, DR-10) -->
+      <rect x="370" y="396" width="220" height="80" rx="14" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <text x="480" y="430" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Evidence Gate</text>
+      <text x="480" y="450" fill="#24242e" font-size="12" text-anchor="middle">gate_candidates() &middot; DR-10</text>
+
+      <!-- Decision: candidates survive gate? -->
+      <path d="M 480,516 L 534,552 L 480,588 L 426,552 Z" fill="#ffffff" stroke="#24242e" stroke-width="1.2"/>
+      <text x="480" y="548" fill="#24242e" font-size="12" text-anchor="middle">candidates</text>
+      <text x="480" y="564" fill="#24242e" font-size="12" text-anchor="middle">survive gate?</text>
+
+      <!-- Aborted (exception/abnormal state, dashed, application layer — RecoveryState.status) -->
+      <rect x="100" y="596" width="200" height="80" rx="14" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1.2" stroke-dasharray="5,4"/>
+      <text x="200" y="628" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Aborted</text>
+      <text x="200" y="646" fill="#24242e" font-size="12" text-anchor="middle">empty gate OR budget</text>
+      <text x="200" y="662" fill="#24242e" font-size="12" text-anchor="middle">exceeded (§4.1)</text>
+
+      <!-- Rank (pure, domain layer) -->
+      <rect x="370" y="628" width="220" height="80" rx="14" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <text x="480" y="662" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Rank</text>
+      <text x="480" y="682" fill="#24242e" font-size="12" text-anchor="middle">rank_candidates() &middot; min top-up first</text>
+
+      <!-- Explain (LLM node, application layer) -->
+      <rect x="370" y="756" width="220" height="80" rx="14" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1"/>
+      <text x="480" y="790" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Explain</text>
+      <text x="480" y="810" fill="#24242e" font-size="12" text-anchor="middle">LLM &middot; sets guest_text_uk</text>
+
+      <!-- Final pseudostate -->
+      <circle cx="480" cy="888" r="16" fill="none" stroke="#24242e" stroke-width="1.5"/>
+      <circle cx="480" cy="888" r="9" fill="#24242e"/>
+      <text x="480" y="926" fill="#6b7280" font-size="12" text-anchor="middle">awaiting_consent &middot; 1-3 evidenced,</text>
+      <text x="480" y="944" fill="#6b7280" font-size="12" text-anchor="middle">explained proposals</text>
+
+      <!-- ============ LEGEND ============ -->
+      <line x1="40" y1="1012" x2="860" y2="1012" stroke="#d1d5db" stroke-width="0.8"/>
+      <text x="40" y="1034" fill="#6b7280" font-size="12" font-weight="700" letter-spacing="0.10em">LEGEND</text>
+
+      <rect x="40" y="1052" width="18" height="14" rx="2" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1"/>
+      <text x="66" y="1063" fill="#24242e" font-size="12">Application (graph node)</text>
+
+      <rect x="290" y="1052" width="18" height="14" rx="2" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <text x="316" y="1063" fill="#24242e" font-size="12">Domain (pure)</text>
+
+      <rect x="460" y="1052" width="18" height="14" rx="2" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1.2" stroke-dasharray="4,3"/>
+      <text x="486" y="1063" fill="#24242e" font-size="12">Exception / fail-safe state</text>
+
+      <path d="M 700,1052 L 730,1059 L 700,1066 L 670,1059 Z" fill="#ffffff" stroke="#24242e" stroke-width="1.2"/>
+      <text x="740" y="1063" fill="#24242e" font-size="12">Decision</text>
+    </svg>
+</div>
+<p>The next diagram shows the two places where a language model is involved at all, and
+what each of them receives. Step by step: the system takes the tool list and keeps from
+each tool only its name and the list of its parameters with their types; passes that to
+the model together with the cart data and the shortfall; the model returns search
+terms; the product search runs on them, and each result goes through <b>the evidence
+gate</b> — a step of Lantern's own, with no model involved, which drops anything without
+a confirmed price and availability in that same search answer. Once a candidate is
+chosen the model is called a second time — to
+write one Ukrainian sentence about that product; the product name is passed as plain
+data, so no text inside it can become an instruction. Neither call ever sees the raw
+tool descriptions, or the write tool.</p>
+<div class="diagram"><svg viewBox="0 0 1160 1060" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g4-seq-title g4-seq-desc">
+      <title id="g4-seq-title">G4 LLM tool-choice sequence</title>
+      <desc id="g4-seq-desc">Sequence diagram drawn from a real captured LangGraph trace (2026-09-06, session g4-live): the Recovery Agent reads the cart and compares delivery channels through Silpo MCP, asks the domain core to diagnose the block, calls the planner LLM with a reviewed tool view (name and JSON Schema only, never a raw tool description) to get a SearchIntent carrying no price or product id, searches the live catalogue through Silpo MCP, runs the result through the Evidence Gate and ranking in the domain core, and finally calls the explainer LLM once per surviving ActionProposal inside a loop, with the product name quoted as inert data, to produce the guest-facing sentence.</desc>
+      <defs>
+        <marker id="arrow-filled" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#24242e"/></marker>
+        <marker id="arrow-open" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polyline points="0 0, 8 3.5, 0 7" fill="none" stroke="#6b7280" stroke-width="1.2"/></marker>
+        <style>text{font-family:Arial,Helvetica,"Liberation Sans","DejaVu Sans",sans-serif;}</style>
+      </defs>
+      <rect width="100%" height="100%" fill="#ffffff"/>
+
+      <!-- ============ LIFELINES ============ -->
+      <line x1="150" y1="200" x2="150" y2="890" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+      <line x1="460" y1="200" x2="460" y2="890" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+      <line x1="770" y1="200" x2="770" y2="890" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+      <line x1="1040" y1="200" x2="1040" y2="890" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+
+      <!-- ============ ACTIVATION BAR (Recovery Agent, whole flow) ============ -->
+      <rect x="144" y="248" width="12" height="596" fill="#e8ecf5" stroke="#6b7280" stroke-width="0.8"/>
+
+      <!-- ============ MESSAGES ============ -->
+
+      <!-- 1. Recovery Agent -> Silpo MCP: read + compare channels -->
+      <line x1="156" y1="248" x2="1034" y2="248" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="500" y="216" width="240" height="16" rx="2" fill="#ffffff"/>
+      <text x="620" y="228" fill="#24242e" font-size="12" text-anchor="middle">1 · READ CART + COMPARE CHANNELS</text>
+
+      <!-- 2. Silpo MCP --> Recovery Agent (return) -->
+      <line x1="1034" y1="292" x2="160" y2="292" stroke="#6b7280" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-open)"/>
+      <rect x="500" y="260" width="240" height="16" rx="2" fill="#ffffff"/>
+      <text x="620" y="272" fill="#6b7280" font-size="12" text-anchor="middle">2 · CART + CHANNEL SNAPSHOTS</text>
+
+      <!-- 3. Recovery Agent -> Domain Core: diagnose -->
+      <line x1="156" y1="336" x2="764" y2="336" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="380" y="304" width="160" height="16" rx="2" fill="#ffffff"/>
+      <text x="460" y="316" fill="#24242e" font-size="12" text-anchor="middle">3 · DIAGNOSE(cart)</text>
+
+      <!-- 4. Domain Core --> Recovery Agent (return) -->
+      <line x1="764" y1="380" x2="160" y2="380" stroke="#6b7280" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-open)"/>
+      <rect x="380" y="348" width="160" height="16" rx="2" fill="#ffffff"/>
+      <text x="460" y="360" fill="#6b7280" font-size="12" text-anchor="middle">4 · DIAGNOSIS + GAP</text>
+
+      <!-- 5. Recovery Agent -> LLM: plan(tool view) -->
+      <line x1="156" y1="424" x2="1034" y2="424" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="490" y="392" width="260" height="16" rx="2" fill="#ffffff"/>
+      <text x="620" y="404" fill="#24242e" font-size="12" text-anchor="middle">5 · PLAN(diagnosis, tool view)</text>
+      <rect x="490" y="440" width="260" height="16" rx="2" fill="#ffffff"/>
+      <text x="620" y="452" fill="#6b7280" font-size="12" text-anchor="middle" font-style="italic">name + JSON Schema only — never a raw description</text>
+
+      <!-- 6. LLM --> Recovery Agent: SearchIntent -->
+      <line x1="1034" y1="480" x2="160" y2="480" stroke="#6b7280" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-open)"/>
+      <rect x="480" y="488" width="280" height="16" rx="2" fill="#ffffff"/>
+      <text x="620" y="500" fill="#6b7280" font-size="12" text-anchor="middle">6 · SEARCH INTENT (terms only, no price/id)</text>
+
+      <!-- 7. Recovery Agent -> Silpo MCP: find_products_batch -->
+      <line x1="156" y1="536" x2="1034" y2="536" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="500" y="504" width="240" height="16" rx="2" fill="#ffffff"/>
+      <text x="620" y="516" fill="#24242e" font-size="12" text-anchor="middle">7 · FIND PRODUCTS BATCH</text>
+
+      <!-- 8. Silpo MCP --> Recovery Agent: raw candidates -->
+      <line x1="1034" y1="580" x2="160" y2="580" stroke="#6b7280" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-open)"/>
+      <rect x="500" y="548" width="240" height="16" rx="2" fill="#ffffff"/>
+      <text x="620" y="560" fill="#6b7280" font-size="12" text-anchor="middle">8 · PRICE + AVAILABILITY + ID</text>
+
+      <!-- 9. Recovery Agent -> Domain Core: evidence gate + rank -->
+      <line x1="156" y1="624" x2="764" y2="624" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="330" y="592" width="260" height="16" rx="2" fill="#ffffff"/>
+      <text x="460" y="604" fill="#24242e" font-size="12" text-anchor="middle">9 · EVIDENCE GATE + RANK</text>
+
+      <!-- 10. Domain Core --> Recovery Agent: action proposals -->
+      <line x1="764" y1="668" x2="160" y2="668" stroke="#6b7280" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-open)"/>
+      <rect x="330" y="636" width="260" height="16" rx="2" fill="#ffffff"/>
+      <text x="460" y="648" fill="#6b7280" font-size="12" text-anchor="middle">10 · RANKED ACTION PROPOSALS</text>
+
+      <!-- ============ LOOP fragment: per surviving ActionProposal ============ -->
+      <rect x="140" y="700" width="904" height="140" fill="none" stroke="#9ca3af" stroke-width="1"/>
+      <path d="M 140,700 h48 v14 l-8,8 h-40 z" fill="#f7f7fa" stroke="#9ca3af" stroke-width="1"/>
+      <text x="152" y="712" fill="#24242e" font-size="12" font-weight="700">LOOP</text>
+      <text x="300" y="712" fill="#6b7280" font-size="12" font-style="italic">[per surviving ActionProposal]</text>
+
+      <!-- 11. Recovery Agent -> LLM: explain(proposal) -->
+      <line x1="156" y1="752" x2="1034" y2="752" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <rect x="480" y="720" width="280" height="16" rx="2" fill="#ffffff"/>
+      <text x="620" y="732" fill="#24242e" font-size="12" text-anchor="middle">11 · EXPLAIN(proposal)</text>
+      <rect x="480" y="768" width="280" height="16" rx="2" fill="#ffffff"/>
+      <text x="620" y="780" fill="#6b7280" font-size="12" text-anchor="middle" font-style="italic">product name quoted as &lt;product_data&gt;</text>
+
+      <!-- 12. LLM --> Recovery Agent: guest text -->
+      <line x1="1034" y1="808" x2="160" y2="808" stroke="#6b7280" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-open)"/>
+      <rect x="500" y="816" width="240" height="16" rx="2" fill="#ffffff"/>
+      <text x="620" y="828" fill="#6b7280" font-size="12" text-anchor="middle">12 · GUEST TEXT (UA)</text>
+
+      <!-- ============ ACTOR BOXES ============ -->
+
+      <!-- Recovery Agent (application) -->
+      <rect x="50" y="110" width="200" height="90" rx="6" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1"/>
+      <rect x="62" y="122" width="44" height="16" rx="2" fill="transparent" stroke="#2c5fc9" stroke-width="0.8"/>
+      <text x="84" y="134" fill="#24242e" font-size="12" text-anchor="middle">APP</text>
+      <text x="150" y="163" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Recovery Agent</text>
+      <text x="150" y="183" fill="#24242e" font-size="12" text-anchor="middle">LangGraph nodes</text>
+
+      <!-- Domain Core (domain) -->
+      <rect x="360" y="110" width="200" height="90" rx="6" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <rect x="372" y="122" width="56" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
+      <text x="400" y="134" fill="#24242e" font-size="12" text-anchor="middle">DOMAIN</text>
+      <text x="460" y="163" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Domain Core</text>
+      <text x="460" y="183" fill="#24242e" font-size="12" text-anchor="middle">diagnose · gate · rank</text>
+
+      <!-- LLM (external, OpenRouter) -->
+      <rect x="670" y="110" width="200" height="90" rx="6" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
+      <rect x="682" y="122" width="40" height="16" rx="2" fill="transparent" stroke="#c9ba5e" stroke-width="0.8"/>
+      <text x="702" y="134" fill="#24242e" font-size="12" text-anchor="middle">EXT</text>
+      <text x="770" y="163" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">LLM</text>
+      <text x="770" y="183" fill="#24242e" font-size="12" text-anchor="middle">OpenRouter · planner/explainer</text>
+
+      <!-- Silpo MCP (external) -->
+      <rect x="940" y="110" width="200" height="90" rx="6" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
+      <rect x="952" y="122" width="40" height="16" rx="2" fill="transparent" stroke="#c9ba5e" stroke-width="0.8"/>
+      <text x="972" y="134" fill="#24242e" font-size="12" text-anchor="middle">EXT</text>
+      <text x="1040" y="163" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Silpo MCP</text>
+      <text x="1040" y="183" fill="#24242e" font-size="12" text-anchor="middle">mcp.silpo.ua</text>
+
+      <!-- ============ LEGEND ============ -->
+      <line x1="20" y1="920" x2="1140" y2="920" stroke="#d1d5db" stroke-width="0.8"/>
+      <text x="20" y="942" fill="#6b7280" font-size="12" font-weight="700" letter-spacing="0.10em">LEGEND</text>
+
+      <rect x="20" y="960" width="18" height="14" rx="2" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1"/>
+      <text x="46" y="971" fill="#24242e" font-size="12">Application layer</text>
+
+      <rect x="230" y="960" width="18" height="14" rx="2" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
+      <text x="256" y="971" fill="#24242e" font-size="12">Domain layer</text>
+
+      <rect x="420" y="960" width="18" height="14" rx="2" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
+      <text x="446" y="971" fill="#24242e" font-size="12">External actor / service</text>
+
+      <line x1="640" y1="967" x2="680" y2="967" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-filled)"/>
+      <text x="690" y="971" fill="#24242e" font-size="12">Synchronous call (UML)</text>
+
+      <line x1="920" y1="967" x2="960" y2="967" stroke="#6b7280" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-open)"/>
+      <text x="972" y="971" fill="#24242e" font-size="12">Reply (UML)</text>
+
+      <text x="20" y="1000" fill="#6b7280" font-size="12">Drawn from a captured trace: LangSmith session "lantern", trace id starting 01a077e4, 2026-09-06T18:13Z (tags: g4-live-evidence-gate, criterion-8).</text>
+    </svg></div>
+<div class="next"><a href="index.html">← Start here</a>
+
+<a href="recovery.html">Hero recovery →</a></div>
+<p class="meta">Regenerated 2026-09-11T22:55:09+00:00. No external network resources.</p>
+</main></div></body></html>

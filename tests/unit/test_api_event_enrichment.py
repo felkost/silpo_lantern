@@ -146,3 +146,79 @@ def test_no_frame_carries_a_forbidden_key(monkeypatch: pytest.MonkeyPatch) -> No
         body = _client(_make_app(graph, monkeypatch)).get("/session/s1/events").text
         for match in re.findall(r"data: (.*?)\n\n", body, re.S):
             assert not FORBIDDEN_KEYS & _keys(json.loads(match)), match
+
+
+def test_diagnosis_carries_the_cart_lines_but_no_id_or_address(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The console's cart column: what the server sees, so a jury has the
+    starting state in front of them. Product names, quantities, prices,
+    the total and the slot -- never the cart id, address or coordinates
+    (the forbidden-key walk above covers every frame)."""
+    from decimal import Decimal
+
+    from src.lantern.domain.models import Cart, LineItem
+
+    cart = Cart(
+        cart_id="cart-1",
+        products_total=Decimal("404.89"),
+        delivery_type="DeliveryHome",
+        products=[
+            LineItem(
+                product_id="p1",
+                name="Молоко",
+                quantity=Decimal("2"),
+                price=Decimal("39.99"),
+            ),
+        ],
+    )
+    chunks = _read_pipeline_chunks()
+    chunks[0] = {"read": {"cart": cart}}
+    graph = _FakeGraph(
+        chunks=chunks, final_state={**_awaiting_consent_state(), "cart": cart}
+    )
+    client = _client(_make_app(graph, monkeypatch))
+
+    (frame,) = _frames(client.get("/session/s1/events").text, "diagnosis")
+
+    assert frame["cart"]["delivery_type"] == "DeliveryHome"
+    assert frame["cart"]["lines"] == [
+        {"name": "Молоко", "quantity": "2", "price": "39.99"}
+    ]
+    assert "cart_id" not in frame["cart"] and "product_id" not in json.dumps(frame)
+
+
+def test_receipt_carries_the_read_back_cart_and_null_when_unreachable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The cart column's second state: the cart as the read-back saw it,
+    projected the same way as the first (names, quantities, prices, total)
+    -- never the wholesale `after_state`, which carries coordinates. An
+    unreachable read-back (`after_state == {}`) yields null, not a guess."""
+    from tests.unit.test_api_emits_compensation_option import _receipt as _r
+
+    receipt = _r()
+    unreachable = receipt.model_copy(
+        update={"after_state": {}, "verified": False, "status": "unverified"}
+    )
+    graph = _FakeGraph(
+        chunks=[
+            {"write_and_readback": {"receipt": receipt, "status": "verified"}},
+            {"persist_receipt": {"receipt": unreachable, "status": "unverified"}},
+        ],
+        final_state={
+            **_consented_state(),
+            "status": "unverified",
+            "receipt": unreachable,
+        },
+        initial_state=_consented_state(),
+    )
+    client = _client(_make_app(graph, monkeypatch))
+
+    first, second = _frames(client.get("/session/s1/events").text, "receipt")
+
+    assert first["cart"]["products_total"] == "587.61"
+    assert first["cart"]["lines"] == [
+        {"name": "Товар", "quantity": "1", "price": "86.84"}
+    ]
+    assert second["cart"] is None

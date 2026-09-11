@@ -45,7 +45,7 @@ from src.lantern.domain.consent_hash import (
     compute_owner,
     compute_state_hash,
 )
-from src.lantern.domain.models import ConsentRecord
+from src.lantern.domain.models import Cart, ConsentRecord
 from src.lantern.domain.repeat_accounting import TokenUsage, cost_usd
 from src.lantern.graph.llm_adapter import current_usage_log, load_llm_prices
 from src.lantern.graph.state import (
@@ -111,6 +111,27 @@ def _is_known(code: str) -> bool:
     if _registry is None:
         _registry = load_registry()
     return _registry.lookup(code) is not None
+
+
+def _cart_view(cart: Any) -> Optional[Dict[str, Any]]:
+    if cart is None:
+        return None
+    return {
+        "delivery_type": cart.delivery_type,
+        "timeslot_start": (
+            cart.timeslot_start.isoformat() if cart.timeslot_start else None
+        ),
+        "timeslot_end": cart.timeslot_end.isoformat() if cart.timeslot_end else None,
+        "products_total": str(cart.products_total),
+        "lines": [
+            {
+                "name": line.name,
+                "quantity": str(line.quantity),
+                "price": str(line.price),
+            }
+            for line in cart.products
+        ],
+    }
 
 
 def _sse_line(event: str, data: Dict[str, Any]) -> str:
@@ -294,6 +315,11 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
                     "products_total": (
                         str(cart.products_total) if cart is not None else None
                     ),
+                    # G10 (the console's cart column): the starting state a
+                    # jury needs in front of them -- lines, total, channel,
+                    # slot. Product names are allowed; the cart id, the
+                    # address and the coordinates never leave the server.
+                    "cart": _cart_view(cart),
                     "threshold_source": diagnosis.threshold_source,
                     "validations": [
                         {
@@ -336,6 +362,15 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
                     ),
                     "verified": bool(receipt and receipt.verified),
                     "kind": receipt.kind if receipt else None,
+                    # The cart column's next state: the read-back's own
+                    # cart, projected like the first (never the wholesale
+                    # `after_state`, which carries coordinates); null when
+                    # the read-back was unreachable.
+                    "cart": (
+                        _cart_view(Cart.model_validate(receipt.after_state))
+                        if receipt and receipt.after_state
+                        else None
+                    ),
                     "actual_delta": (
                         str(receipt.actual_delta)
                         if receipt and receipt.actual_delta is not None

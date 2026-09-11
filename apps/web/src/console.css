@@ -148,16 +148,127 @@ code,
 
 .shell-body {
   display: grid;
-  grid-template-columns: 1fr 2fr;
+  grid-template-columns: 1fr 1.5fr 1fr;
   gap: 24px;
   padding: 24px 28px;
   align-items: start;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
+  .shell-body {
+    grid-template-columns: 1fr 1.5fr;
+  }
+  .cart-column {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
   .shell-body {
     grid-template-columns: 1fr;
   }
+}
+
+/* three columns, three eyebrows, hairlines between them */
+
+.eyebrow {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.guest > .eyebrow {
+  align-self: stretch;
+}
+
+@media (min-width: 1101px) {
+  .guest,
+  .cart-column {
+    border-left: 1px solid var(--hairline);
+    padding-left: 24px;
+  }
+}
+
+.cart-state {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--hairline);
+}
+
+.cart-state h3 {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cart-added {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-radius: 6px;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+/* ---- cart column (right, Ukrainian): the starting state ---- */
+
+.cart-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cart-column h2 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.cart-column .plain {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+}
+
+.cart-lines li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.cart-lines li:first-child {
+  border-top: 0;
+}
+
+.cart-name {
+  overflow-wrap: anywhere;
+}
+
+.cart-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 12px 0 0;
+}
+
+.cart-facts dt {
+  color: var(--ink-2);
+}
+
+.cart-facts dd {
+  margin: 0;
+  text-align: right;
+}
+
+.cart-column .uk {
+  font-size: 13px;
+  margin: 4px 0 6px;
 }
 
 .shell-footer {

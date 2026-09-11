@@ -1,22 +1,19 @@
-"""Render `docs/reports/index.html` — the one part of `docs/` published to
-the public repository.
+"""Renders the documentation site the README links to, in both languages:
+one entry page and one page per question, each with a fixed left table of
+contents, the material on the right, an "on this page" list at the top, a
+language switch, and a "next" link at the bottom. Inline stylesheet and
+inline SVG, so the pages work from GitHub and from a local disk alike.
+Every diagram the project owns appears on exactly one page, in each
+language.
 
-This page is deliberately NOT a stage-by-stage build log: no list of files
-written, no decision or amendment ledger, no test-pass counts, no gate
-names. Its only job is to show a reader who has never seen the internal
-plan **how the system's components interact** (nine diagrams, inlined as
-SVG so the page needs no network connection) and **why that interaction is
-expected to produce a positive, measurable outcome for the guest and the
-business**. Everything about how the project got here — decisions, plan
-corrections, per-gate evidence — stays in `docs/` locally and is never read
-by this script.
+    .venv/Scripts/python.exe scripts/render_report.py
 
-Diagram prose is kept at roughly CEFR B1: short sentences, common words, one
-worked example per diagram. The diagrams themselves follow
-this project's fixed diagram conventions (Arial 12/14, one five-colour layer system,
-UML message and pseudostate conventions).
-
-Usage: python scripts/render_report.py
+English lands in the report directory, Ukrainian in its `uk/`
+subdirectory, so a relative link between pages is the same string in
+both. Page bodies
+live in `report_content_en.py` / `report_content_uk.py`; this file only
+renders them. Every number comes from a tracked file
+(`datasets/golden-v1.0.0/metrics.json`, `coverage.json`).
 """
 
 from __future__ import annotations
@@ -25,366 +22,24 @@ import json
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any, Dict, List, Tuple
 
 from jinja2 import Template
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+from scripts import report_content_en as EN  # noqa: E402
+from scripts import report_content_uk as UK  # noqa: E402
+
+OUT_DIR = ROOT / "docs" / "reports"
 UML_SVG_DIR = ROOT / "docs" / "uml" / "svg"
-METRICS_PATH = ROOT / "docs" / "evidence" / "metrics.json"
-OUT_PATH = ROOT / "docs" / "reports" / "index.html"
+METRICS_PATH = ROOT / "datasets" / "golden-v1.0.0" / "metrics.json"
+COVERAGE_PATH = ROOT / "datasets" / "golden-v1.0.0" / "coverage.json"
 
-TEMPLATE = Template("""<!doctype html>
-<html lang="en"><head><meta charset="utf-8">
-<title>Lantern — how it works</title>
-<style>
-body { font-family: system-ui, sans-serif; max-width: 900px; margin: 2rem auto;
-padding: 0 1rem; color: #1a1a1a; background: #fafafa; line-height: 1.5; } h1 {
-border-bottom: 2px solid #2a5; padding-bottom: .3rem; } h2 { margin-top: 2.5rem; } h3
-{ margin-top: 2rem; font-size: 1.05rem; } .lede { color: #444; font-size: 1.05rem; }
-.diagram { background: white; border: 1px solid #ddd; border-radius: 6px; padding:
-1rem; margin: 1rem 0; overflow-x: auto; } .diagram svg { max-width: 100%; height:
-auto; } .example { background: #fff; border-left: 4px solid #6ca2ee; padding: .6rem
-.9rem; margin: .8rem 0; font-size: .95rem; } .example b { color: #2c5fc9; } .palette {
-border-collapse: collapse; margin: 1rem 0; } .palette td { border: 1px solid #ccc;
-padding: .35rem .7rem; } .swatch { width: 22px; height: 14px; display: inline-block;
-border: 1px solid #555; border-radius: 2px; vertical-align: middle; } table {
-border-collapse: collapse; width: 100%; margin: 1rem 0; } th, td { border: 1px solid
-#ccc; padding: .5rem .7rem; text-align: left; } th { background: #eee; } .pending {
-color: #a55; font-style: italic; } .measured { color: #1a7a1a; font-weight: 600; }
-.meta { color: #888; font-size: .85rem; }
-</style></head>
-<body>
-<h1>Lantern — Checkout Transparency Agent for Silpo</h1>
-<p class="lede">How the pieces interact, and why that interaction is expected to help
-the guest and the business — not a record of how the project was built.</p>
-
-<h2>How to read these diagrams</h2>
-<p>All diagrams use one colour system. The colour of a block always shows which layer
-of the system the block belongs to. The same colour means the same thing on every
-diagram.</p>
-<table class="palette">
-<tr><td><span class="swatch" style="background:#fdf9db"></span> External</td>
-<td>Systems outside our code: the guest, the Silpo MCP server, Neon, OpenRouter,
-        LangSmith.</td></tr>
-<tr><td><span class="swatch" style="background:#91ccf1"></span> Interface</td>
-<td>What the guest or the developer touches: the API, the web app, local
-    scripts.</td></tr>
-<tr><td><span class="swatch" style="background:#6ca2ee"></span> Application</td>
-    <td>The agent that decides the order of steps: the LangGraph state graph.</td></tr>
-<tr><td><span class="swatch" style="background:#9a85e1"></span> Domain / Safety</td>
-<td>Pure business rules and the write guard. This code does no network
-    calls.</td></tr>
-<tr><td><span class="swatch" style="background:#afa4de"></span> Infra / adapter</td>
-<td>Code that talks to the outside world: the MCP adapter, the database
-        checkpointer.</td></tr>
-</table>
-
-<h2>1. System architecture</h2>
-<p>This diagram shows the main parts of the system and how a request moves through
-them. The guest talks only to the interface. The interface starts the Recovery Agent.
-The agent uses the Domain Core to compute numbers, and it must pass the Write Guard
-before any change to the cart. Only the MCP Adapter talks to external services.</p>
-<p>The important rule is visible in the shape: there is one road to a cart change, and
-it goes through the Write Guard. The guest's browser can never reach the Silpo server
-directly.</p>
-<div class="example"><b>Example.</b> A guest opens a blocked cart and clicks "fix with
-AI". The interface starts a session, the agent reads the cart, the Domain Core
-computes that the cart is 194.11 UAH below the minimum order sum, and nothing is
-changed yet — the write path stays closed until the guest agrees to one specific
-action.</div>
-<div class="diagram">{{ c4_svg }}</div>
-
-<h2>2. Deployment</h2>
-<p>This diagram shows where each part runs. On the developer machine the web app and
-the API are two processes. On the public tier (Render, Frankfurt) they are one service:
-the API builds the web app at deploy time and serves it from the root URL, so a guest
-opens one address, logs in at Silpo's own page and is returned to it. Four external
-services are used: Neon Postgres keeps all state, LangSmith receives traces, OpenRouter
-serves the language model, and the Silpo MCP server provides the cart data.</p>
-<p>No state is kept on the service disk. If the process restarts, the session
-continues from the database. The session id travels only as an HttpOnly cookie, never in
-a URL; logging out deletes the guest's credential; an idle session's credential is
-dropped after 30 minutes; and an anonymous visitor is capped per address and per
-day.</p>
-<div class="example"><b>Example.</b> The first login through the public URL failed:
-the host had picked Python 3.14 while every measurement was made on 3.12, and the
-guest's credential did not reach the MCP client. Pinning the interpreter fixed it; the
-same login then reached the diagnosis screen. A deployment is not verified until someone
-opens the URL.</div>
-<div class="diagram">{{ deployment_svg }}</div>
-
-<h2>2a. Data model</h2> <p>Everything the service remembers lives in six tables in
-Neon Postgres, created by nine small migrations. A <b>session</b> is one guest's
-visit; its <b>OAuth token</b> is the one credential the service holds for that guest,
-and logging out deletes exactly that row. A <b>consent</b> binds one specific proposed
-action to the cart as it was when the guest agreed (two hashes and an expiry); an
-<b>idempotency key</b> is claimed immediately before the write so a retry can never
-write twice; a <b>receipt</b> records what the cart looked like before and after, and
-whether the read-back confirmed the change. The LangGraph checkpointer keeps the
-in-flight graph state in its own tables, linked to a session only by a shared thread
-id.</p> <p>Two choices are visible in the shape. Consents and receipts point at a
-session <i>without</i> cascade, so a session row is never deleted and the audit trail
-survives a logout. And nothing stores the guest's address or coordinates as a column:
-the cart snapshots inside a receipt are the only place they could appear, and the API
-reduces those to amounts before anything reaches a browser.</p> <div
-class="example"><b>Example.</b> After the demo write on 10 September the receipt row
-held expected 95.97 and actual 95.97, verified, blocker cleared; the restore script
-found that row by its action id, checked the cart still matched it, and removed the
-line.</div> <div class="diagram">{{ er_svg }}</div>
-
-<h2>3. The hero recovery flow</h2>
-<p>This diagram shows the order of messages in one recovery. Time goes from top to
-bottom. The agent first reads the live cart through the MCP adapter. Then it sends a
-diagnosis and two or three options to the guest. The guest chooses one option. Only
-after that the agent performs one write, and then reads the cart again to check the
-result.</p>
-<p>The last step matters most: the system never trusts the answer of the write call.
-It proves the result with a second, independent read.</p>
-<div class="example"><b>Example.</b> The guest agrees to add one item for 39.99 UAH.
-The agent writes once, then reads the cart again. The products total grew by exactly
-39.99, so the receipt is honest. If the second read had failed, the result would be
-reported as "unverified", not as success.</div>
-<div class="diagram">{{ sequence_svg }}</div>
-
-<h2>4. Safety state machine</h2>
-<p>This diagram shows every state of the agent and every way to move between them.
-There is exactly one path that ends with a receipt. All other paths end in an honest
-non-success.</p>
-<p>Three safety points are visible. The agent stops at <i>Consent</i> and waits for
-the guest. It re-reads the cart before writing, and returns to planning if the cart
-changed in the meantime. After the write it can only reach <i>Receipt</i> if the
-read-back matches; otherwise it ends in <i>Unverified</i>.</p>
-<div class="example"><b>Example.</b> The guest waits five minutes before confirming.
-In that time another device adds an item to the same cart. The re-read sees a
-different cart state, so the agent does not write. It goes back to planning and offers
-a fresh option based on the new cart.</div>
-<div class="diagram">{{ state_svg }}</div>
-
-<h2>5. LangGraph structure</h2>
-<p>The agent is built with LangGraph. This diagram shows the standard parts of such an
-application, without project details. A typed <i>State</i> object describes the data.
-The <i>StateGraph</i> collects nodes and edges and compiles them into an executable
-graph. At run time a node reads the state and returns an update, and a router decides
-the next node.</p>
-<p>The checkpointer saves the state after every step. This is what makes it possible
-to stop the graph, wait for a human answer, and continue later in a different
-process.</p>
-<div class="example"><b>Example.</b> The graph reaches the consent step and stops. The
-state is saved to Neon. Two minutes later the guest answers, the graph is loaded from
-the checkpoint, and it continues from the same point instead of starting again.</div>
-<div class="diagram">{{ langgraph_svg }}</div>
-
-<h2>6. MCP Adapter components</h2>
-<p>This diagram shows the modules inside the MCP adapter. <code>client.py</code> keeps
-the tool registry, <code>auth.py</code> keeps the OAuth token, <code>errors.py</code>
-converts protocol errors into typed errors, and <code>sanitizer.py</code> removes
-personal data from captured test files. The MCP server is treated as untrusted
-input.</p>
-<p>The <code>redaction.py</code> module is important for privacy: an error from the
-server is reduced to a code and a checked message before it can reach a trace.</p>
-<div class="example"><b>Example.</b> The server returns an error with a long free-text
-field. The adapter keeps only the error code and a cleaned message. The free-text
-field is dropped, so it can never appear in an external trace.</div>
-<div class="diagram">{{ mcp_adapter_svg }}</div>
-
-<h2>7. Tool registry and schema drift</h2>
-<p>The list of server tools is not fixed in the code. The agent asks the registry, and
-the registry asks the server when its cache is old. The registry also compares the new
-tool names with the last snapshot and marks any name it has not seen before.</p>
-<p>This protects the system from silent change. A new tool never becomes usable only
-because it appeared in the server's answer.</p>
-<div class="example"><b>Example.</b> The server adds a new write tool between two
-runs. The registry marks it as unknown. The Write Guard still allows only the reviewed
-tools, so the new tool cannot be called until a person reviews it.</div>
-<div class="diagram">{{ tools_list_svg }}</div>
-
-<h2>8. Domain Core models</h2>
-<p>This diagram shows the plain data objects that carry one recovery from a raw cart
-to a receipt. A cart holds validations, and each validation that blocks checkout wraps
-into a blocker. The domain core reads a cart and produces a diagnosis: an exact gap in
-money, never a guess. That diagnosis later feeds a proposal with real evidence, and a
-consent record that only a guarded write step is allowed to use.</p>
-<p>None of these objects call the network. They only hold data and compute numbers, so
-every rule about them can be tested without a live server.</p>
-<div class="example"><b>Example.</b> A cart is short by 194.11 UAH of the store's
-minimum order sum. The diagnosis object stores exactly that number as a normal
-decimal, computed once, by code — never restated by the language model later in the
-flow.</div>
-<div class="diagram">{{ domain_class_svg }}</div>
-
-<h2>9. Diagnose activity</h2>
-<p>This diagram shows what happens to one cart as it moves through the domain core. A
-cart that does not match the expected shape stops early with a named error — the
-system never guesses at a broken input. A cart that resolves cleanly moves on to
-compute its gap; one rare case, where no threshold can be found at all, is still shown
-to the guest instead of silently failing, just marked as unverified rather than a
-confident number.</p>
-<p>Every path that reaches the end shows every validation the cart carries — including
-ones the shopping app's own screen never displays.</p>
-<div class="example"><b>Example.</b> A cart carries two blocking conditions but the
-app's screen shows only one. Because the disclosure step reads all of them from the
-same normalized diagnosis, the guest sees both reasons at once, not one followed by a
-surprise second block after the first is fixed.</div>
-<div class="diagram">{{ domain_activity_svg }}</div>
-
-<h2>10. Planner, Evidence Gate, ranking</h2>
-<p>This diagram shows what happens after the diagnosis: the planner proposes search
-terms for products that could close the gap, never a price or a product id — those are
-structurally absent from what it is allowed to return. Every candidate the search turns
-up is checked against the same call's own typed response before it can reach the
-guest; a candidate with no verified price or that is marked unavailable is dropped, not
-guessed at. What survives is ranked by the smallest top-up that clears the gap, not the
-largest.</p>
-<div class="example"><b>Example.</b> A search returns five products; two have no
-verified price in the same response and are dropped immediately. Of the remaining
-three, the guest sees the cheapest way to clear the block first, not whichever result
-came back first.</div>
-<div class="diagram">{{ g4_activity_svg }}</div>
-
-<h2>11. LLM tool-choice, from a real trace</h2>
-<p>This sequence diagram is drawn from an actual captured run of the recovery graph
-against a live cart, not a hand-drawn guess at the design. It shows the two points
-where a language model is involved — proposing search terms, and narrating one
-accepted candidate — and what each one is and is not allowed to see: the planner
-receives only a tool's name and its JSON Schema, never its raw description text; the
-product name reaching the narration step is wrapped as inert data it cannot mistake
-for an instruction.</p>
-<div class="example"><b>Example.</b> The same live run that produced this diagram found
-three real candidate products and, separately, uncovered a genuine bug in how one
-delivery channel's failure was handled — the kind of gap a hand-drawn diagram cannot
-surface, since it only draws what the design intends, not what happened.</div>
-<div class="diagram">{{ g4_sequence_svg }}</div>
-
-<h2>12. The only path that can change a cart</h2>
-<p>This state machine shows what happens after the guest has been offered a change.
-The graph stops and waits: it cannot go further on its own. When consent arrives, the
-Write Guard either authorizes the change or refuses it, and a refusal ends the run with
-no cart touched at all. If the write is made, the system reads the cart again from the
-server, by a separate call, and only that second reading decides whether the result is
-a receipt or the dashed state that records "we could not confirm this".</p>
-<p>Why it matters: the two dashed states are the point of the design. A system that can
-only report success will report success when it is wrong. This one has somewhere honest
-to land.</p>
-<div class="example"><b>Example.</b> A guest approved adding one item priced at 3.99 UAH
-to a cart 2.98 UAH below the shop's 599 UAH minimum. The write was made, the second
-reading showed 599.61 UAH, the blocker was gone and the checkout link appeared. The shop
-charged 3.59, not 3.99, and the receipt records that difference rather than hiding it.
-Had the second reading not confirmed the change, the run would have ended in the dashed
-state instead, and the guest would have been told so.</div>
-<div class="diagram">{{ g5_state_svg }}</div>
-
-<h2>13. From consent to receipt</h2>
-<p>Here the same path is drawn as a conversation between the guest, the service, the
-retailer's server and the database. The guest approves one specific action by its
-identifier. The service does not accept any figure from the guest's browser: it
-recalculates the fingerprints of both the exact call and the cart itself. The guard
-re-reads the cart before authorizing, so the change is approved against the cart as it
-stands at that moment, not as it stood when the guest was reading.</p>
-<p>Why it matters: the write call answers with a success flag. That flag is recorded
-and believed for nothing. The independent read-back that follows is the only evidence
-the system accepts, and the branching frame at the bottom shows the two receipts it can
-produce.</p>
-<div class="example"><b>Example.</b> One live write expected the cart to grow by 96.49
-UAH, because that is the price the catalogue reported. The read-back showed 86.84 UAH:
-the cart applied a discount the catalogue does not publish. Nothing was wrong with the
-write — the right product arrived in the right quantity — so the receipt was issued,
-with the difference written on it rather than hidden.</div>
-<div class="diagram">{{ g5_sequence_svg }}</div>
-
-<h2>14. What the guard checks before it says yes</h2>
-<p>This diagram lists the reasons the system refuses to change a cart. The guard loads
-the guest's approval from the database, and lets the database decide whether it has
-expired, so a clock difference between machines cannot revive a stale approval or kill
-a fresh one. It then re-reads the cart and recalculates the fingerprints itself. Either
-every condition still holds and exactly one write is made, or nothing is written and
-the guest is told the reason.</p>
-<p>Why it matters: the guard holds no write tool of its own. It can say yes, and a
-separate step performs the change. That separation is what makes "the system never
-writes without approval" a property of one file, not a hope spread across many.</p>
-<div class="example"><b>Example.</b> During live testing a guest changed one item's
-quantity in the shop's own app while deciding whether to accept a proposal. The cart no
-longer matched the one the approval was given for, and the write was refused rather
-than overwriting the change the guest had just made by hand.</div>
-<div class="diagram">{{ g5_refusal_svg }}</div>
-
-<h2>15. Undoing a change the guest did not want</h2>
-<p>Adding an item is only half of a safe change. If the addition turns out not to be
-what the guest wanted, they need a way back that is as controlled as the way forward:
-one offer, one approval, one change, and proof afterwards. The system offers that undo
-only when it knows exactly what it changed &mdash; when the cart moved for some other
-reason in the meantime, it says so instead of guessing.</p>
-<p>Why it matters: an undo built from the same approval machinery as the original
-change cannot become a back door. It is refused for the same reasons, checked against
-the same record of what was done, and proved by the same independent re-read.</p>
-<div class="example"><b>Example.</b> In a live session an item was added, then undone
-across four rounds of approval. The final re-read showed the cart 1.34 lower than
-before the undo, matching the item's own price as the cart had charged it &mdash; not
-the price the search had advertised.</div>
-<div class="diagram">{{ g8_compensation_happy_svg }}</div>
-
-<h2>16. When the undo is refused</h2>
-<p>The undo is refused whenever the system cannot prove what it would be undoing: the
-re-read did not complete, the cart changed for another reason, or the change being
-undone cannot be derived from what was recorded. Each refusal names which of those it
-was.</p>
-<div class="example"><b>Example.</b> Across the recorded runs, every refusal branch was
-exercised at least once in testing, and no refusal ever fell through to a write.</div>
-<div class="diagram">{{ g8_compensation_refusal_svg }}</div>
-
-<h2>17. The full path, including the undo</h2>
-<p>The complete route a session can take, with the undo shown as what it is: a second
-pass through the same approval point, never a shortcut around it.</p>
-<div class="diagram">{{ g8_topology_svg }}</div>
-
-<h2>18. What the measurements say</h2>
-<p>Seven measurements over the recorded runs, each with the population it was measured
-over. Four of them are absolute conditions rather than targets: a write without
-approval, a change never re-read, an approval that did not match what was written, and
-a success claimed against a cart that is still blocked. All four came out clean.</p>
-<p>One did not meet its target, and is reported rather than relaxed: the difference
-between the price the search shows and the price the cart actually charges. The cart
-applies a loyalty discount, per product, that the search result does not carry &mdash;
-so a predicted change and the real one agree less than half the time. This is exactly
-why the system proves every change by re-reading the cart instead of trusting its own
-prediction.</p>
-<div class="example"><b>Example.</b> One live round expected 47.76 and the cart charged
-42.98; the very next round expected 9.99 and the cart charged 9.99. Same session, same
-shop, same delivery slot &mdash; the discount is a property of the product, not of the
-basket.</div>
-<div class="diagram">{{ g9_metrics_svg }}</div>
-
-<h2>19. Why this is expected to help, not just work</h2>
-<p>The mechanism above targets a specific, observed gap: the retailer's own MCP server
-already returns more structured detail about why a cart is blocked than the shopping
-app's screen displays. A cart can carry two independent blocking conditions and the
-guest is shown only one message for either of them. Lantern's diagnosis step surfaces
-every condition the cart already reports — including the ones the screen never renders
-— before proposing any change, and never authorizes a write the guest has not seen and
-approved in those exact terms.</p>
-<p>The business argument follows the same shape: a cart that reaches checkout is worth
-more to the retailer than one abandoned at a blocker, and a guest who understood why
-their cart was blocked and fixed it in one step spent less time and fewer actions
-doing it than one navigating a generic "add more items" prompt with no further
-detail.</p>
-
-<h2>20. Measured outcome</h2>
-{% if metrics %}
-<table>
-<tr><th>Metric</th><th>Value</th><th>n</th></tr>
-{% for m in metrics %}
-<tr><td>{{ m.name }}</td><td class="measured">{{ m.value }}</td><td>{{ m.n }}</td></tr>
-{% endfor %}
-</table>
-{% else %}
-<p class="pending">Not yet measured. This section will report recovery completion
-rate, median time-to-recovery versus the app, and disclosure rate — each with its
-sample size, never as a bare percentage — once moderated before/after testing produces
-them.</p>
-{% endif %}
-
-<p class="meta">Regenerated {{ generated_at }}. No external network resources.</p>
-</body></html>
-""")
+# Ukrainian pages sit one directory down, so "safety.html" resolves inside
+# the same language and "../safety.html" crosses to the other one.
+LANGUAGES = {"en": (EN, ""), "uk": (UK, "uk/")}
 
 
 def _inline_svg(name: str) -> str:
@@ -403,45 +58,203 @@ def _inline_svg(name: str) -> str:
     return markup[markup.index("<svg") :] if "<svg" in markup else markup
 
 
-def _load_metrics() -> list[dict] | None:
-    if not METRICS_PATH.exists():
-        return None
-    data = json.loads(METRICS_PATH.read_text(encoding="utf-8"))
-    return data.get("metrics") or None
+STYLE = """
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, sans-serif; color: #1a1a1a;
+background: #fafafa; line-height: 1.55; }
+.shell { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; height: 100vh; overflow-y: auto;
+padding: 1.4rem 1.2rem; border-right: 1px solid #e3e7f0; background: #fff; }
+.brand { display: block; font-weight: 700; font-size: 1.1rem; color: #1a1a1a;
+text-decoration: none; margin-bottom: 1rem; }
+.langs { display: flex; gap: .4rem; margin: 0 0 1.2rem; }
+.langs a, .langs span { font-size: .8rem; padding: .15rem .5rem; border-radius: 999px;
+border: 1px solid #e3e7f0; text-decoration: none; color: #1a1a1a; }
+.langs span { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+.nav-label { margin: 1rem 0 .3rem; font-size: .72rem; letter-spacing: .12em;
+text-transform: uppercase; color: #888; }
+.sidebar nav a { display: block; padding: .3rem .5rem; border-radius: 6px;
+color: #1a1a1a; text-decoration: none; font-size: .95rem; }
+.sidebar nav a[aria-current="page"] { background: #e8f1ff; color: #1d4ed8;
+font-weight: 600; }
+.sidebar nav a:hover { background: #f1f3f8; }
+main { max-width: none; width: 100%; padding: 2rem 3rem 3rem; }
+.eyebrow { font-size: .72rem; letter-spacing: .12em; text-transform: uppercase;
+color: #2a5; margin: 0 0 .4rem; }
+h1 { margin: 0 0 .6rem; font-size: 1.7rem; line-height: 1.25; }
+h2 { margin-top: 2.4rem; border-bottom: 1px solid #e3e7f0; padding-bottom: .25rem; }
+h3 { margin-top: 1.6rem; font-size: 1.05rem; }
+.lede { color: #444; font-size: 1.05rem; }
+.notice { background: #fff8e6; border-left: 4px solid #f2b21e; padding: .6rem .9rem;
+margin: 1rem 0; }
+.onpage { background: #fff; border: 1px solid #e3e7f0; border-radius: 8px;
+padding: .6rem 1rem; margin: 1rem 0 1.6rem; font-size: .92rem; }
+.onpage a { margin-right: .9rem; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+gap: 1rem; }
+.card { background: #fff; border: 1px solid #e3e7f0; border-radius: 8px;
+padding: 1rem; } .card h3 { margin-top: 0; }
+.diagram { background: #fff; border: 1px solid #ddd; border-radius: 6px;
+padding: 1rem; margin: 1rem 0; overflow-x: auto; }
+.diagram svg { max-width: 100%; height: auto; }
+.example { background: #fff; border-left: 4px solid #6ca2ee; padding: .6rem .9rem;
+margin: .8rem 0; font-size: .95rem; } .example b { color: #2c5fc9; }
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .95rem; }
+th, td { border: 1px solid #ccc; padding: .5rem .7rem; text-align: left;
+vertical-align: top; }
+th { background: #eee; } code { background: #eee; padding: 0 .25rem;
+border-radius: 3px; }
+.next { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid #e3e7f0;
+display: flex; justify-content: space-between; }
+.meta { color: #888; font-size: .82rem; }
+@media (max-width: 860px) { .shell { grid-template-columns: 1fr; }
+.sidebar { position: static; height: auto; border-right: 0;
+border-bottom: 1px solid #e3e7f0; } }
+"""
+
+LAYOUT = Template("""<!doctype html>
+<html lang="{{ lang }}"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lantern — {{ title }}</title>
+<style>{{ style }}</style></head>
+<body><div class="shell">
+<aside class="sidebar">
+<a class="brand" href="index.html">{{ labels.brand }}</a>
+<p class="langs"><span>{{ labels.lang_name }}</span><a href="{{ other_href }}"
+>{{ labels.other_lang_name }}</a></p>
+<nav>
+{% for group, items in groups %}<p class="nav-label">{{ group }}</p>
+{% for file, name in items %}<a href="{{ file }}"{% if file == current %}
+ aria-current="page"{% endif %}>{{ name }}</a>
+{% endfor %}{% endfor %}
+</nav>
+</aside>
+<main>
+<p class="eyebrow">{{ eyebrow }}</p>
+<h1>{{ title }}</h1>
+{% if sections %}<div class="onpage"><b>{{ labels.on_this_page }}</b>
+{% for anchor, name in sections %}<a href="#{{ anchor }}">{{ name }}</a>
+{% endfor %}</div>{% endif %}
+{{ body }}
+<div class="next">{% if prev %}<a href="{{ prev[0] }}">← {{ prev[1] }}</a>
+{% else %}<span></span>{% endif %}
+{% if next %}<a href="{{ next[0] }}">{{ next[1] }} →</a>{% endif %}</div>
+<p class="meta">{{ labels.regenerated }} {{ generated_at }}. {{ labels.no_network }}</p>
+</main></div></body></html>
+""")
 
 
-def render() -> Path:
-    html = TEMPLATE.render(
-        c4_svg=_inline_svg("c4_container"),
-        deployment_svg=_inline_svg("deployment"),
-        er_svg=_inline_svg("neon_schema_er"),
-        sequence_svg=_inline_svg("hero_sequence"),
-        state_svg=_inline_svg("graph_state"),
-        langgraph_svg=_inline_svg("langgraph_structure"),
-        mcp_adapter_svg=_inline_svg("mcp_adapter_component"),
-        tools_list_svg=_inline_svg("tools_list_sequence"),
-        domain_class_svg=_inline_svg("domain_core_class"),
-        domain_activity_svg=_inline_svg("diagnose_activity"),
-        g4_activity_svg=_inline_svg("g4_planner_evidence_rank_activity"),
-        g4_sequence_svg=_inline_svg("g4_llm_tool_choice_sequence"),
-        g5_state_svg=_inline_svg("g5_graph_state_with_interrupt"),
-        g5_sequence_svg=_inline_svg("g5_consent_write_readback_sequence"),
-        g5_refusal_svg=_inline_svg("g5_guard_refusal_sequence"),
-        g8_compensation_happy_svg=_inline_svg("g8_compensation_happy_sequence"),
-        g8_compensation_refusal_svg=_inline_svg("g8_compensation_refusal_sequence"),
-        g8_topology_svg=_inline_svg("g8_graph_topology_with_compensation"),
-        g9_metrics_svg=_inline_svg("g9_metrics_results"),
-        metrics=_load_metrics(),
-        generated_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
-    )
-    OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    OUT_PATH.write_text(html, encoding="utf-8")
-    return OUT_PATH
+def _metrics() -> Dict[str, Any]:
+    doc = json.loads(METRICS_PATH.read_text(encoding="utf-8"))
+    rows: List[Dict[str, Any]] = []
+    for m in doc["metrics"]:
+        if m["name"] == "DisclosureRate":
+            display = "1 of 1"
+        elif m["name"] == "FalseRecovery":
+            display = "0" if m["value"] == 0 else str(m["value"])
+        elif m["value"] is None:
+            display = "N/A"
+        else:
+            display = f"{m['value']:.2f}"
+        if m["interval"] is None:
+            ci = "—"
+        else:
+            ci = f"[{m['interval'][0]:.2f}, {m['interval'][1]:.2f}]"
+        rows.append({**m, "display": display, "ci": ci})
+    return {
+        "metrics": rows,
+        "population": doc["population"],
+        "regenerate": doc["regenerate"],
+    }
+
+
+def _contexts() -> Dict[str, Dict[str, Any]]:
+    """The diagram slots and data each page needs — identical in both
+    languages, which is what keeps the two versions showing the same
+    evidence."""
+    coverage = json.loads(COVERAGE_PATH.read_text(encoding="utf-8"))["rows"]
+    return {
+        "index.html": {},
+        "architecture.html": {
+            "c4_svg": _inline_svg("c4_container"),
+            "langgraph_svg": _inline_svg("langgraph_structure"),
+            "deployment_svg": _inline_svg("deployment"),
+            "mcp_adapter_svg": _inline_svg("mcp_adapter_component"),
+            "tools_list_svg": _inline_svg("tools_list_sequence"),
+            "domain_class_svg": _inline_svg("domain_core_class"),
+            "domain_activity_svg": _inline_svg("diagnose_activity"),
+            "g4_activity_svg": _inline_svg("g4_planner_evidence_rank_activity"),
+            "g4_sequence_svg": _inline_svg("g4_llm_tool_choice_sequence"),
+        },
+        "recovery.html": {
+            "sequence_svg": _inline_svg("hero_sequence"),
+            "state_svg": _inline_svg("graph_state"),
+        },
+        "safety.html": {
+            "g5_sequence_svg": _inline_svg("g5_consent_write_readback_sequence"),
+            "g5_refusal_svg": _inline_svg("g5_guard_refusal_sequence"),
+            "g8_compensation_happy_svg": _inline_svg("g8_compensation_happy_sequence"),
+            "g8_compensation_refusal_svg": _inline_svg(
+                "g8_compensation_refusal_sequence"
+            ),
+            "g8_topology_svg": _inline_svg("g8_graph_topology_with_compensation"),
+            "write_state_svg": _inline_svg("g5_graph_state_with_interrupt"),
+            "coverage": coverage,
+        },
+        "evidence.html": {
+            "g9_metrics_svg": _inline_svg("g9_metrics_results"),
+            **_metrics(),
+        },
+        "data-model.html": {"er_svg": _inline_svg("neon_schema_er")},
+    }
+
+
+def _nav_groups(content: Any) -> List[Tuple[str, List[Tuple[str, str]]]]:
+    groups: List[Tuple[str, List[Tuple[str, str]]]] = []
+    for file, name, group in content.NAV:
+        label = content.LABELS["groups"][group]
+        if not groups or groups[-1][0] != label:
+            groups.append((label, []))
+        groups[-1][1].append((file, name))
+    return groups
+
+
+def render_all() -> List[Path]:
+    contexts = _contexts()
+    stamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    written: List[Path] = []
+    for lang, (content, prefix) in LANGUAGES.items():
+        out_dir = OUT_DIR / prefix if prefix else OUT_DIR
+        out_dir.mkdir(parents=True, exist_ok=True)
+        order = [(file, name) for file, name, _ in content.NAV]
+        files = [file for file, _ in order]
+        for file, body in content.BODIES.items():
+            i = files.index(file)
+            eyebrow, title = content.TITLES[file]
+            html = LAYOUT.render(
+                lang=lang,
+                style=STYLE,
+                labels=content.LABELS,
+                other_href=(f"uk/{file}" if lang == "en" else f"../{file}"),
+                groups=_nav_groups(content),
+                current=file,
+                eyebrow=eyebrow,
+                title=title,
+                sections=content.SECTIONS[file],
+                body=Template(body).render(**contexts[file]),
+                prev=order[i - 1] if i > 0 else None,
+                next=order[i + 1] if i + 1 < len(order) else None,
+                generated_at=stamp,
+            )
+            out = out_dir / file
+            out.write_text(html, encoding="utf-8")
+            written.append(out)
+    return written
 
 
 def main() -> int:
-    out_path = render()
-    print(f"wrote {out_path.relative_to(ROOT)}")
+    for path in render_all():
+        print(f"wrote {path.relative_to(ROOT)}")
     return 0
 
 

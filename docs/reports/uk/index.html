@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="uk"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lantern — Зробити зрозумілим — і безпечно виправним — те, що блокує оформлення</title>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, sans-serif; color: #1a1a1a;
+background: #fafafa; line-height: 1.55; }
+.shell { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; height: 100vh; overflow-y: auto;
+padding: 1.4rem 1.2rem; border-right: 1px solid #e3e7f0; background: #fff; }
+.brand { display: block; font-weight: 700; font-size: 1.1rem; color: #1a1a1a;
+text-decoration: none; margin-bottom: 1rem; }
+.langs { display: flex; gap: .4rem; margin: 0 0 1.2rem; }
+.langs a, .langs span { font-size: .8rem; padding: .15rem .5rem; border-radius: 999px;
+border: 1px solid #e3e7f0; text-decoration: none; color: #1a1a1a; }
+.langs span { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+.nav-label { margin: 1rem 0 .3rem; font-size: .72rem; letter-spacing: .12em;
+text-transform: uppercase; color: #888; }
+.sidebar nav a { display: block; padding: .3rem .5rem; border-radius: 6px;
+color: #1a1a1a; text-decoration: none; font-size: .95rem; }
+.sidebar nav a[aria-current="page"] { background: #e8f1ff; color: #1d4ed8;
+font-weight: 600; }
+.sidebar nav a:hover { background: #f1f3f8; }
+main { max-width: none; width: 100%; padding: 2rem 3rem 3rem; }
+.eyebrow { font-size: .72rem; letter-spacing: .12em; text-transform: uppercase;
+color: #2a5; margin: 0 0 .4rem; }
+h1 { margin: 0 0 .6rem; font-size: 1.7rem; line-height: 1.25; }
+h2 { margin-top: 2.4rem; border-bottom: 1px solid #e3e7f0; padding-bottom: .25rem; }
+h3 { margin-top: 1.6rem; font-size: 1.05rem; }
+.lede { color: #444; font-size: 1.05rem; }
+.notice { background: #fff8e6; border-left: 4px solid #f2b21e; padding: .6rem .9rem;
+margin: 1rem 0; }
+.onpage { background: #fff; border: 1px solid #e3e7f0; border-radius: 8px;
+padding: .6rem 1rem; margin: 1rem 0 1.6rem; font-size: .92rem; }
+.onpage a { margin-right: .9rem; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+gap: 1rem; }
+.card { background: #fff; border: 1px solid #e3e7f0; border-radius: 8px;
+padding: 1rem; } .card h3 { margin-top: 0; }
+.diagram { background: #fff; border: 1px solid #ddd; border-radius: 6px;
+padding: 1rem; margin: 1rem 0; overflow-x: auto; }
+.diagram svg { max-width: 100%; height: auto; }
+.example { background: #fff; border-left: 4px solid #6ca2ee; padding: .6rem .9rem;
+margin: .8rem 0; font-size: .95rem; } .example b { color: #2c5fc9; }
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .95rem; }
+th, td { border: 1px solid #ccc; padding: .5rem .7rem; text-align: left;
+vertical-align: top; }
+th { background: #eee; } code { background: #eee; padding: 0 .25rem;
+border-radius: 3px; }
+.next { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid #e3e7f0;
+display: flex; justify-content: space-between; }
+.meta { color: #888; font-size: .82rem; }
+@media (max-width: 860px) { .shell { grid-template-columns: 1fr; }
+.sidebar { position: static; height: auto; border-right: 0;
+border-bottom: 1px solid #e3e7f0; } }
+</style></head>
+<body><div class="shell">
+<aside class="sidebar">
+<a class="brand" href="index.html">Ліхтарик · документація</a>
+<p class="langs"><span>Українська</span><a href="../index.html"
+>English</a></p>
+<nav>
+<p class="nav-label">Загальне</p>
+<a href="index.html"
+ aria-current="page">Почніть звідси</a>
+<a href="architecture.html">Будова системи</a>
+<p class="nav-label">Докази</p>
+<a href="recovery.html">Головний сценарій</a>
+<a href="safety.html">Безпека і згода</a>
+<a href="evidence.html">Виміряні результати</a>
+<a href="data-model.html">Що зберігається</a>
+
+</nav>
+</aside>
+<main>
+<p class="eyebrow">Документація</p>
+<h1>Зробити зрозумілим — і безпечно виправним — те, що блокує оформлення</h1>
+<div class="onpage"><b>На цій сторінці:</b>
+<a href="#route">Порядок читання</a>
+<a href="#claim">Головне твердження</a>
+<a href="#how">Одним рядком</a>
+</div>
+
+<p class="lede">«Ліхтарик» читає кошик у Сільпо через офіційний сервер Сільпо для
+застосунків, пояснює всі результати перевірок, які сервер повертає разом із кошиком,
+— зокрема
+ті, що їх застосунок не показує на жодному екрані, — рахує недостачу звичайним
+відніманням, а не питає про неї
+мовну модель, пропонує найменшу потрібну дію і змінює кошик лише після згоди на
+конкретний товар. Результат доводить окреме повторне читання кошика.</p>
+<div class="notice"><strong>Межі.</strong> У цій версії — один шлях відновлення: кошик,
+який не дотягує до мінімальної суми замовлення, плюс порівняння способів доставки
+(тільки читання). Оформлення й оплату завжди робить клієнт. Працює за адресою
+<code>https://silpo-lantern.onrender.com/</code>.</div>
+
+<h2 id="route">П'ять кроків для читання</h2>
+<div class="grid">
+<article class="card"><h3>1. Будова системи</h3><p>Межі системи: один сервіс із
+вебсторінкою, робочий процес агента, з'єднання із Сільпо, база даних — і єдиний шлях,
+яким кошик може змінитися.</p>
+<a href="architecture.html">Як це влаштовано →</a></article>
+<article class="card"><h3>2. Головний сценарій</h3><p>Один наскрізний випадок і те, що
+сталося, коли його пройшли наживо в браузері: діагноз, варіанти, згода, захищений
+запис, підсумок.</p><a href="recovery.html">Пройти крок за кроком →</a></article>
+<article class="card"><h3>3. Безпека і згода</h3><p>Непорушні правила: єдине місце
+запису, модель, яка нічого не дозволяє, прив'язана згода з терміном дії, незалежна
+перевірка результату.</p><a href="safety.html">Переглянути запобіжники →</a></article>
+<article class="card"><h3>4. Виміряні результати</h3><p>Вісім показників із розміром
+вибірки, довірчим інтервалом і застереженням; вартість одного звернення; і те, чого
+свідомо не виміряно.</p><a href="evidence.html">Переглянути докази →</a></article>
+<article class="card"><h3>5. Що зберігається</h3><p>Шість таблиць бази: сесії, згоди,
+захист від подвійного запису, підсумки, доступи — і збережений стан роботи
+поруч.</p><a href="data-model.html">Переглянути сховище →</a></article>
+</div>
+
+<h2 id="claim">Головне твердження</h2>
+<p>Відповідь «успішно» від сервера — ще не доказ. Система розрізняє <em>«погоджена
+зміна відбулася»</em> і <em>«кошик тепер можна оформити»</em>, і для кожного з двох
+потрібне свіже читання кошика. Усе інше на цих сторінках — єдине місце запису, згода,
+прив'язана до конкретної дії, карантин для змінених інструментів, показники зі своїми
+інтервалами — існує для того, щоб це твердження можна було перевірити, а не просто
+взяти на віру.</p>
+
+<h2 id="how">Як це працює, одним рядком</h2>
+<p><code>заблокований кошик → діагноз → конкретні варіанти → згода → мінімальна зміна →
+підсумок із повторного читання</code></p>
+<div class="next"><span></span>
+<a href="architecture.html">Будова системи →</a></div>
+<p class="meta">Згенеровано 2026-09-11T22:55:09+00:00. Жодних зовнішніх ресурсів.</p>
+</main></div></body></html>

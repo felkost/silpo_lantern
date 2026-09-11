@@ -71,7 +71,16 @@ def build_svg(metrics: List[dict]) -> str:
     parts.append('<?xml version="1.0" encoding="UTF-8"?>')
     parts.append(
         '<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" '
-        'viewBox="0 0 %d %d">' % (width, height, width, height)
+        'viewBox="0 0 %d %d" role="img" '
+        'aria-labelledby="metrics-title metrics-desc">' % (width, height, width, height)
+    )
+    # The one diagram that used to carry no label at all -- on a jury-facing
+    # page an unlabelled chart is an unlabelled claim.
+    parts.append(
+        '<title id="metrics-title">Measured results with 95% Wilson intervals</title>'
+        '<desc id="metrics-desc">Bar chart of the project metrics over the offline '
+        "repeat population, each bar drawn with its 95% Wilson interval; FalseRecovery "
+        "is a count and carries no interval.</desc>"
     )
     # The font trap: a standalone SVG cannot borrow the page's CSS.
     parts.append(

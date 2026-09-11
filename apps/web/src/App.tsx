@@ -18,6 +18,7 @@ import {
   submitConsent,
 } from "./api";
 import { AnswerRating } from "./components/AnswerRating";
+import { CartColumn, type CartState } from "./components/CartColumn";
 import { ClaimPanel } from "./components/ClaimPanel";
 import { ConsentScreen } from "./components/ConsentScreen";
 import { MeasuredEarlier } from "./components/MeasuredEarlier";
@@ -84,6 +85,8 @@ function App() {
   const [consentAck, setConsentAck] = useState<ConsentAckResponse | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
   const [evidence, setEvidence] = useState<EvidenceResponse | null>(null);
+  // The cart column's history: one state at the read, one per read-back.
+  const [cartStates, setCartStates] = useState<CartState[]>([]);
   // Seen live on Render: a cold start keeps `/events` open for 20+ s, and
   // «Вийти» pressed meanwhile left `busy` stuck and let the late stream
   // overwrite the idle screen. Every stream checks it is still the
@@ -98,14 +101,25 @@ function App() {
       if (event.event === "stage") {
         setStages((prev) => [...prev, event.data as unknown as StageRow]);
       } else if (event.event === "diagnosis") {
-        setDiagnosis(event.data as unknown as DiagnosisEvent);
+        const d = event.data as unknown as DiagnosisEvent;
+        if (d.cart) {
+          setCartStates((prev) => [...prev, { step: "read", cart: d.cart!, delta: null }]);
+        }
+        setDiagnosis(d);
         setScreen("diagnosis");
       } else if (event.event === "options") {
         setCandidates((event.data as { candidates: Candidate[] }).candidates);
       } else if (event.event === "consent_required") {
         setScreen("consent");
       } else if (event.event === "receipt") {
-        setReceipts((prev) => [...prev, event.data as unknown as ReceiptEvent]);
+        const r = event.data as unknown as ReceiptEvent;
+        if (r.cart) {
+          setCartStates((prev) => [
+            ...prev,
+            { step: "readback", cart: r.cart!, delta: r.actual_delta },
+          ]);
+        }
+        setReceipts((prev) => [...prev, r]);
         setScreen("receipt");
       } else if (event.event === "error") {
         const reason = String((event.data as { error?: string }).error ?? "невідома помилка");
@@ -191,6 +205,7 @@ function App() {
     setReceipts([]);
     setStages([]);
     setConsentAck(null);
+    setCartStates([]);
     setRefusal(null);
     setError(null);
     setScreen("idle");
@@ -242,6 +257,7 @@ function App() {
             for a jury; the guest card on the right stays Ukrainian and is
             not edited beyond classNames. */}
         <aside className="panel" aria-label="Observer panel">
+          <p className="eyebrow">Спостерігач</p>
           <StageFeed rows={stages} streaming={busy} />
           <ClaimPanel
             diagnosis={screen === "consent" && compensationOffer ? null : diagnosis}
@@ -256,6 +272,7 @@ function App() {
         </aside>
 
         <main className="guest">
+          <p className="eyebrow">Гість</p>
 
           {/* «Вийти» only once there is a login to end; on the login screen
               the same action is a cancel, not an exit (the author, live). */}
@@ -319,6 +336,8 @@ function App() {
             </section>
           )}
         </main>
+
+        <CartColumn states={cartStates} gap={diagnosis?.gap ?? null} evidence={evidence} />
       </div>
 
       <footer className="shell-footer">silpo lantern</footer>

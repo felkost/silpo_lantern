@@ -100,12 +100,29 @@ export interface ChannelComparisonRow {
   reason: string;
 }
 
+export interface CartLine {
+  name: string;
+  quantity: string;
+  price: string;
+}
+
+export interface CartView {
+  delivery_type: string | null;
+  timeslot_start: string | null;
+  timeslot_end: string | null;
+  products_total: string;
+  lines: CartLine[];
+}
+
 export interface DiagnosisEvent extends EventEnvelope {
   primary_code: string | null;
   gap: string | null;
   gap_is_borderline: boolean;
   /** G10 (claim 2): the arithmetic's inputs, as decimal strings. */
   products_total: string | null;
+  /** The cart as the server returned it -- never its id, address or
+   * coordinates. `null` until the read node has run. */
+  cart: CartView | null;
   threshold_source: "validation_context" | "time_slots" | "unverified";
   validations: DisclosedValidation[];
   channels: ChannelComparisonRow[];
@@ -123,6 +140,8 @@ export interface ReceiptEvent extends EventEnvelope {
   verified: boolean;
   kind: "add" | "compensate" | null;
   actual_delta: string | null;
+  /** The cart as the read-back saw it; null when the read-back was unreachable. */
+  cart: CartView | null;
   /** D42: a verified write is not a recovered cart -- distinguishes
    * "the write landed" from "you can check out". */
   blocker_cleared: boolean;

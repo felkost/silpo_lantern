@@ -41,6 +41,13 @@ def _diagnosis_data(**overrides: object) -> dict:
         "gap_is_borderline": False,
         # G10: the arithmetic's inputs and per-code `is_known` ride along.
         "products_total": "404.89",
+        "cart": {
+            "delivery_type": "DeliveryHome",
+            "timeslot_start": None,
+            "timeslot_end": None,
+            "products_total": "404.89",
+            "lines": [{"name": "Молоко", "quantity": "2", "price": "39.99"}],
+        },
         "threshold_source": "validation_context",
         "validations": [
             {
@@ -77,6 +84,7 @@ def _receipt_data(**overrides: object) -> dict:
         "expected_delta": "39.99",
         "verified": True,
         "kind": "add",
+        "cart": None,
     }
     data.update(overrides)
     return data
