@@ -10,7 +10,11 @@ The agent never checks out or pays on behalf of the guest.
 
 **Live demo:** https://silpo-lantern.onrender.com/ (a guest logs in at Silpo's own page;
 one credential per session, deletable with «Вийти»)
-**Full report with every diagram:** [`docs/reports/index.html`](docs/reports/index.html)
+**Documentation:** [`docs/reports/index.html`](docs/reports/index.html) — start there;
+one page per question (architecture, hero recovery, safety, measurements, data model),
+every diagram on the page that explains it. Ukrainian version:
+[`docs/reports/uk/index.html`](docs/reports/uk/index.html); every page carries a
+language switch.
 
 ## Why it matters
 
@@ -22,14 +26,15 @@ actionable:
 `blocked cart → diagnosis → concrete options → consent → minimal change → read-back receipt`
 
 The MVP covers one recovery path, the minimum-order-sum blocker, plus a read-only
-delivery-channel comparison. Detail: [`docs/reports/hero-run.html`](docs/reports/hero-run.html).
+delivery-channel comparison. Detail: [`docs/reports/recovery.html`](docs/reports/recovery.html).
 
 ## How the recovery works
 
 1. **Read and diagnose.** The agent reads the cart and exposes all validations, not only
    the first blocker the UI shows.
-2. **Plan.** It computes the shortfall in code and proposes 2–3 products from live MCP
-   search data, quantity derived from the measured gap.
+2. **Plan.** It subtracts the cart's total from the threshold the validation names, and
+   proposes 2–3 products that close the difference, priced from live MCP search data.
+   Neither the amount nor the quantity comes from the language model.
 3. **Ask for consent.** Consent is bound to one proposed action and the cart state at
    that moment (two hashes, a five-minute expiry).
 4. **Guard the write.** The Write Guard — the only place a write tool can be called —
@@ -64,7 +69,8 @@ piece of state; Silpo MCP is the only commerce integration.
 
 ![C4 container diagram](assets/uml/c4_container.svg)
 
-Data model (six tables, keys and relationships):
+Detail, with layers, the graph, deployment and the MCP adapter:
+[`docs/reports/architecture.html`](docs/reports/architecture.html). Data model:
 [`docs/reports/data-model.html`](docs/reports/data-model.html).
 
 ## Evidence and current result
@@ -83,7 +89,7 @@ was restored afterwards.
 | Model cost | ≈ $0.007 per episode | Measured over 18 live runs; $0.13 in total. |
 
 All eight metrics with `n`, 95% Wilson intervals and caveats, the results chart and the
-command that regenerates them: [`docs/reports/metrics.html`](docs/reports/metrics.html).
+command that regenerates them: [`docs/reports/evidence.html`](docs/reports/evidence.html).
 
 **Not measured:** conversion uplift, revenue impact, and moderated guest sessions
 (n = 0). They need Silpo's analytics and a controlled pilot, and are not inferred from

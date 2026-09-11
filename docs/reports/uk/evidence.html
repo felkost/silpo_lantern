@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="uk"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lantern — Виміряні результати</title>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, sans-serif; color: #1a1a1a;
+background: #fafafa; line-height: 1.55; }
+.shell { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; height: 100vh; overflow-y: auto;
+padding: 1.4rem 1.2rem; border-right: 1px solid #e3e7f0; background: #fff; }
+.brand { display: block; font-weight: 700; font-size: 1.1rem; color: #1a1a1a;
+text-decoration: none; margin-bottom: 1rem; }
+.langs { display: flex; gap: .4rem; margin: 0 0 1.2rem; }
+.langs a, .langs span { font-size: .8rem; padding: .15rem .5rem; border-radius: 999px;
+border: 1px solid #e3e7f0; text-decoration: none; color: #1a1a1a; }
+.langs span { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+.nav-label { margin: 1rem 0 .3rem; font-size: .72rem; letter-spacing: .12em;
+text-transform: uppercase; color: #888; }
+.sidebar nav a { display: block; padding: .3rem .5rem; border-radius: 6px;
+color: #1a1a1a; text-decoration: none; font-size: .95rem; }
+.sidebar nav a[aria-current="page"] { background: #e8f1ff; color: #1d4ed8;
+font-weight: 600; }
+.sidebar nav a:hover { background: #f1f3f8; }
+main { max-width: none; width: 100%; padding: 2rem 3rem 3rem; }
+.eyebrow { font-size: .72rem; letter-spacing: .12em; text-transform: uppercase;
+color: #2a5; margin: 0 0 .4rem; }
+h1 { margin: 0 0 .6rem; font-size: 1.7rem; line-height: 1.25; }
+h2 { margin-top: 2.4rem; border-bottom: 1px solid #e3e7f0; padding-bottom: .25rem; }
+h3 { margin-top: 1.6rem; font-size: 1.05rem; }
+.lede { color: #444; font-size: 1.05rem; }
+.notice { background: #fff8e6; border-left: 4px solid #f2b21e; padding: .6rem .9rem;
+margin: 1rem 0; }
+.onpage { background: #fff; border: 1px solid #e3e7f0; border-radius: 8px;
+padding: .6rem 1rem; margin: 1rem 0 1.6rem; font-size: .92rem; }
+.onpage a { margin-right: .9rem; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+gap: 1rem; }
+.card { background: #fff; border: 1px solid #e3e7f0; border-radius: 8px;
+padding: 1rem; } .card h3 { margin-top: 0; }
+.diagram { background: #fff; border: 1px solid #ddd; border-radius: 6px;
+padding: 1rem; margin: 1rem 0; overflow-x: auto; }
+.diagram svg { max-width: 100%; height: auto; }
+.example { background: #fff; border-left: 4px solid #6ca2ee; padding: .6rem .9rem;
+margin: .8rem 0; font-size: .95rem; } .example b { color: #2c5fc9; }
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .95rem; }
+th, td { border: 1px solid #ccc; padding: .5rem .7rem; text-align: left;
+vertical-align: top; }
+th { background: #eee; } code { background: #eee; padding: 0 .25rem;
+border-radius: 3px; }
+.next { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid #e3e7f0;
+display: flex; justify-content: space-between; }
+.meta { color: #888; font-size: .82rem; }
+@media (max-width: 860px) { .shell { grid-template-columns: 1fr; }
+.sidebar { position: static; height: auto; border-right: 0;
+border-bottom: 1px solid #e3e7f0; } }
+</style></head>
+<body><div class="shell">
+<aside class="sidebar">
+<a class="brand" href="index.html">Ліхтарик · документація</a>
+<p class="langs"><span>Українська</span><a href="../evidence.html"
+>English</a></p>
+<nav>
+<p class="nav-label">Загальне</p>
+<a href="index.html">Почніть звідси</a>
+<a href="architecture.html">Будова системи</a>
+<p class="nav-label">Докази</p>
+<a href="recovery.html">Головний сценарій</a>
+<a href="safety.html">Безпека і згода</a>
+<a href="evidence.html"
+ aria-current="page">Виміряні результати</a>
+<a href="data-model.html">Що зберігається</a>
+
+</nav>
+</aside>
+<main>
+<p class="eyebrow">Докази</p>
+<h1>Виміряні результати</h1>
+<div class="onpage"><b>На цій сторінці:</b>
+<a href="#metrics">Показники</a>
+<a href="#reading">Як їх читати</a>
+<a href="#cost">Вартість</a>
+<a href="#economics">Економіка</a>
+<a href="#unmeasured">Чого не виміряно</a>
+</div>
+
+<p class="lede">Вісім чисел, кожне — з вибіркою, на якій його виміряно, довірчим
+інтервалом і застереженням. Жодного голого відсотка.</p>
+
+<h2 id="metrics">Показники</h2>
+<table>
+<tr><th>Показник</th><th>Значення</th><th>n</th><th>95% інтервал</th>
+<th>Застереження</th></tr>
+
+<tr><td><code>UnauthorizedWriteRate</code></td><td>0.00</td><td>33</td>
+<td>[0.00, 0.10]</td><td>Gate 0.00 absolute. Denominator: idempotency claims.</td></tr>
+
+<tr><td><code>ReadbackCoverage</code></td><td>1.00</td><td>33</td>
+<td>[0.90, 1.00]</td><td>Gate 1.00. Every claimed write followed by an independent read-back.</td></tr>
+
+<tr><td><code>ConsentBindingIntegrity</code></td><td>1.00</td><td>33</td>
+<td>[0.90, 1.00]</td><td>Gate 1.00. Consent hashes match what the guard authorised.</td></tr>
+
+<tr><td><code>WriteDeltaFidelity</code></td><td>1.00</td><td>33</td>
+<td>[0.90, 1.00]</td><td>Gate 1.00 absolute. The recorded delta against the cart's own movement -- what this system controls (D82).</td></tr>
+
+<tr><td><code>SearchPriceFidelity</code></td><td>0.27</td><td>33</td>
+<td>[0.15, 0.44]</td><td>No gate. NOT a success rate: how often the search price equalled the price the cart charged. Low because the cart applies a per-product loyalty discount the search does not carry (D68/D76/D82).</td></tr>
+
+<tr><td><code>RecoveryCompletionRate</code></td><td>1.00</td><td>18</td>
+<td>[0.82, 1.00]</td><td>Gate 0.85 on the core cases. Offline population.</td></tr>
+
+<tr><td><code>FalseRecovery</code></td><td>0</td><td>33</td>
+<td>—</td><td>Gate 0 absolute. A count of false 'recovered' claims, not a rate.</td></tr>
+
+<tr><td><code>DisclosureRate</code></td><td>1 of 1</td><td>1</td>
+<td>[0.21, 1.00]</td><td>One audited observation, not a rate (section 12.3): the app showed the blocking constraint and showed order.payment_types.disabled on no reachable surface.</td></tr>
+
+</table>
+<p>Вибірка <code>offline</code>: 18 повторів на збережених записах прогонів,
+відтворених тим самим графом, яким іде живий шлях. Відтворити:
+<code>python -m scripts.compute_metrics --tracked</code>; окремий тест звіряє збережений файл із щойно
+перерахованим. Живих повторів: 18 із 18 (9 вересня 2026).</p>
+<div class="diagram"><svg xmlns="http://www.w3.org/2000/svg" width="1000" height="524" viewBox="0 0 1000 524" role="img" aria-labelledby="metrics-title metrics-desc">
+<title id="metrics-title">Measured results with 95% Wilson intervals</title><desc id="metrics-desc">Bar chart of the project metrics over the offline repeat population, each bar drawn with its 95% Wilson interval; FalseRecovery is a count and carries no interval.</desc>
+<defs><style>text{font-family:Arial,Helvetica,"Liberation Sans","DejaVu Sans",sans-serif;}</style></defs>
+<rect width="1000" height="524" fill="#FFFFFF"/>
+<text x="24" y="34" font-size="14" font-weight="700" fill="#24242E">G9 measurement results - seven metrics, 95% Wilson intervals</text>
+<text x="24" y="58" font-size="12" fill="#6B7280">Computed by scripts/compute_metrics.py from the offline repeats own emitted run records (D61: reproducible from the repository, which a live LLM run is not).</text>
+<text x="24" y="78" font-size="12" fill="#6B7280">n is the population each metric was measured over. A metric with n = 0 is N/A, never a zero bar.</text>
+<line x1="260.0" y1="96" x2="260.0" y2="436" stroke="#D1D5DB"/>
+<text x="260.0" y="90" font-size="12" fill="#6B7280" text-anchor="middle">0.00</text>
+<line x1="370.0" y1="96" x2="370.0" y2="436" stroke="#D1D5DB"/>
+<text x="370.0" y="90" font-size="12" fill="#6B7280" text-anchor="middle">0.25</text>
+<line x1="480.0" y1="96" x2="480.0" y2="436" stroke="#D1D5DB"/>
+<text x="480.0" y="90" font-size="12" fill="#6B7280" text-anchor="middle">0.50</text>
+<line x1="590.0" y1="96" x2="590.0" y2="436" stroke="#D1D5DB"/>
+<text x="590.0" y="90" font-size="12" fill="#6B7280" text-anchor="middle">0.75</text>
+<line x1="700.0" y1="96" x2="700.0" y2="436" stroke="#D1D5DB"/>
+<text x="700.0" y="90" font-size="12" fill="#6B7280" text-anchor="middle">1.00</text>
+<text x="24" y="126" font-size="12" font-weight="700" fill="#24242E">UnauthorizedWriteRate</text>
+<text x="200" y="126" font-size="12" fill="#6B7280" text-anchor="end">n = 33</text>
+<rect x="260" y="116" width="0.0" height="20" fill="#2C5FC9" stroke="#6440C9"/>
+<line x1="260.0" y1="126" x2="305.9" y2="126" stroke="#24242E" stroke-width="1.5"/>
+<line x1="260.0" y1="120" x2="260.0" y2="132" stroke="#24242E" stroke-width="1.5"/>
+<line x1="305.9" y1="120" x2="305.9" y2="132" stroke="#24242E" stroke-width="1.5"/>
+<text x="712" y="126" font-size="12" font-weight="700" fill="#24242E">0.00</text>
+<text x="762" y="126" font-size="12" fill="#6B7280">gate: 0.00 absolute</text>
+<text x="24" y="168" font-size="12" font-weight="700" fill="#24242E">ReadbackCoverage</text>
+<text x="200" y="168" font-size="12" fill="#6B7280" text-anchor="end">n = 33</text>
+<rect x="260" y="158" width="440.0" height="20" fill="#2C5FC9" stroke="#6440C9"/>
+<line x1="654.1" y1="168" x2="700.0" y2="168" stroke="#24242E" stroke-width="1.5"/>
+<line x1="654.1" y1="162" x2="654.1" y2="174" stroke="#24242E" stroke-width="1.5"/>
+<line x1="700.0" y1="162" x2="700.0" y2="174" stroke="#24242E" stroke-width="1.5"/>
+<text x="712" y="168" font-size="12" font-weight="700" fill="#24242E">1.00</text>
+<text x="762" y="168" font-size="12" fill="#6B7280">gate: 1.00</text>
+<text x="24" y="210" font-size="12" font-weight="700" fill="#24242E">ConsentBindingIntegrity</text>
+<text x="200" y="210" font-size="12" fill="#6B7280" text-anchor="end">n = 33</text>
+<rect x="260" y="200" width="440.0" height="20" fill="#2C5FC9" stroke="#6440C9"/>
+<line x1="654.1" y1="210" x2="700.0" y2="210" stroke="#24242E" stroke-width="1.5"/>
+<line x1="654.1" y1="204" x2="654.1" y2="216" stroke="#24242E" stroke-width="1.5"/>
+<line x1="700.0" y1="204" x2="700.0" y2="216" stroke="#24242E" stroke-width="1.5"/>
+<text x="712" y="210" font-size="12" font-weight="700" fill="#24242E">1.00</text>
+<text x="762" y="210" font-size="12" fill="#6B7280">gate: 1.00</text>
+<text x="24" y="252" font-size="12" font-weight="700" fill="#24242E">WriteDeltaFidelity</text>
+<text x="200" y="252" font-size="12" fill="#6B7280" text-anchor="end">n = 33</text>
+<rect x="260" y="242" width="440.0" height="20" fill="#2C5FC9" stroke="#6440C9"/>
+<line x1="654.1" y1="252" x2="700.0" y2="252" stroke="#24242E" stroke-width="1.5"/>
+<line x1="654.1" y1="246" x2="654.1" y2="258" stroke="#24242E" stroke-width="1.5"/>
+<line x1="700.0" y1="246" x2="700.0" y2="258" stroke="#24242E" stroke-width="1.5"/>
+<text x="712" y="252" font-size="12" font-weight="700" fill="#24242E">1.00</text>
+<text x="762" y="252" font-size="12" fill="#6B7280">gate: 1.00 absolute</text>
+<text x="24" y="294" font-size="12" font-weight="700" fill="#24242E">SearchPriceFidelity</text>
+<text x="200" y="294" font-size="12" fill="#6B7280" text-anchor="end">n = 33</text>
+<rect x="260" y="284" width="120.0" height="20" fill="#2C5FC9" stroke="#6440C9"/>
+<line x1="326.3" y1="294" x2="454.6" y2="294" stroke="#24242E" stroke-width="1.5"/>
+<line x1="326.3" y1="288" x2="326.3" y2="300" stroke="#24242E" stroke-width="1.5"/>
+<line x1="454.6" y1="288" x2="454.6" y2="300" stroke="#24242E" stroke-width="1.5"/>
+<text x="712" y="294" font-size="12" font-weight="700" fill="#24242E">0.27</text>
+<text x="762" y="294" font-size="12" fill="#6B7280">gate: no gate - observation</text>
+<text x="24" y="336" font-size="12" font-weight="700" fill="#24242E">RecoveryCompletionRate</text>
+<text x="200" y="336" font-size="12" fill="#6B7280" text-anchor="end">n = 18</text>
+<rect x="260" y="326" width="440.0" height="20" fill="#2C5FC9" stroke="#6440C9"/>
+<line x1="622.6" y1="336" x2="700.0" y2="336" stroke="#24242E" stroke-width="1.5"/>
+<line x1="622.6" y1="330" x2="622.6" y2="342" stroke="#24242E" stroke-width="1.5"/>
+<line x1="700.0" y1="330" x2="700.0" y2="342" stroke="#24242E" stroke-width="1.5"/>
+<text x="712" y="336" font-size="12" font-weight="700" fill="#24242E">1.00</text>
+<text x="762" y="336" font-size="12" fill="#6B7280">gate: 0.85 core</text>
+<text x="24" y="378" font-size="12" font-weight="700" fill="#24242E">FalseRecovery</text>
+<text x="200" y="378" font-size="12" fill="#6B7280" text-anchor="end">n = 33</text>
+<text x="260" y="378" font-size="12" font-weight="700" fill="#24242E">0 false claim(s) across 33 receipts - a count, not a rate</text>
+<text x="762" y="378" font-size="12" fill="#6B7280">gate: 0 absolute</text>
+<text x="24" y="420" font-size="12" font-weight="700" fill="#24242E">DisclosureRate</text>
+<text x="200" y="420" font-size="12" fill="#6B7280" text-anchor="end">n = 1</text>
+<rect x="260" y="410" width="440.0" height="20" fill="#2C5FC9" stroke="#6440C9"/>
+<line x1="350.9" y1="420" x2="700.0" y2="420" stroke="#24242E" stroke-width="1.5"/>
+<line x1="350.9" y1="414" x2="350.9" y2="426" stroke="#24242E" stroke-width="1.5"/>
+<line x1="700.0" y1="414" x2="700.0" y2="426" stroke="#24242E" stroke-width="1.5"/>
+<text x="712" y="420" font-size="12" font-weight="700" fill="#24242E">1.00</text>
+<text x="762" y="420" font-size="12" fill="#6B7280">gate: measured</text>
+<rect x="24" y="459" width="16" height="14" fill="#2C5FC9" stroke="#6440C9"/>
+<text x="48" y="470" font-size="12" fill="#24242E">gate met</text>
+<rect x="132" y="459" width="16" height="14" fill="#9A85E1" stroke="#6440C9"/>
+<text x="156" y="470" font-size="12" fill="#24242E">gate not met - reported, not relaxed</text>
+<text x="24" y="494" font-size="12" fill="#6B7280">SearchPriceFidelity carries no gate: it measures how well the product search predicts the price the cart charges, which is Silpo policy (D68, D76), not this system.</text>
+</svg></div>
+
+<h2 id="reading">Як їх читати</h2>
+<p>Чотири рядки зі значеннями 0.00 і 1.00 — це «жодного спростування», а не «доведено»:
+при 33 спробах навіть частка 1.00 має нижню межу 0.90. «Хибне відновлення» — це
+кількість випадків, а не частка. «Точність ціни з пошуку» — не показник успіху: вона
+каже, як часто ціна з пошуку збіглася з ціною, яку застосував кошик, і вона низька
+саме тому, що кошик має знижку лояльності, якої пошук не бачить. «Прихований блокер»
+спирається на одне перевірене спостереження і подається як одне спостереження.</p>
+
+<h2 id="cost">Вартість</h2>
+<p>18 живих прогонів 9 вересня коштували $0.13 разом за зафіксованими цінами — близько
+$0.007 за одне звернення з обома викликами моделі; сесія через панель 10 вересня
+коштувала $0.0042. Кожне число про витрати походить від самого постачальника моделі, а
+не з оцінки. Стеля проєкту — $20; витрачено на сьогодні менше $1.</p>
+
+<h2 id="economics">Економіка одного звернення</h2>
+<p>Подана як формула зі змінними, а не як прогноз:
+<code>Vnet = B × (p₁ × M₁ − p₀ × M₀ − c) + ΔS × C − F</code>. B — кількість звернень,
+придатних для відновлення; p₁ і p₀ — частка завершених покупок з агентом і без нього;
+M₁ і M₀ — маржинальний внесок однієї покупки; c — змінні витрати агента на одне
+звернення; ΔS — звернення до підтримки, яких вдалося уникнути; C — вартість одного
+такого звернення; F — постійні витрати на впровадження. Виміряно лише c. При c ≈ $0.01
+агент окупається, якщо одна відновлена покупка на сто звернень приносить понад долар
+маржі — за умови, що p₁ − p₀ &gt; 0, а це якраз і має встановити пілотне
+порівняння.</p>
+
+<h2 id="unmeasured">Чого не виміряно</h2>
+<p>Порівняння «до і після» на модерованих сесіях із гостями (n = 0 — немає доступу до
+учасників; протокол написано) і будь-який вплив на конверсію чи виручку. Жодне з двох
+не підмінено схожим числом. Автоматичні оцінювачі відповідей перевірені як засіб
+виявляти структурні дефекти, а не як міра якості української мови, тому їхніх оцінок
+тут немає ніде.</p>
+<div class="next"><a href="safety.html">← Безпека і згода</a>
+
+<a href="data-model.html">Що зберігається →</a></div>
+<p class="meta">Згенеровано 2026-09-11T21:46:21+00:00. Жодних зовнішніх ресурсів.</p>
+</main></div></body></html>

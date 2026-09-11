@@ -1,7 +1,7 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8">
+<html lang="uk"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Lantern — Safety & consent</title>
+<title>Lantern — Безпека і згода</title>
 <style>
 * { box-sizing: border-box; }
 body { margin: 0; font-family: system-ui, sans-serif; color: #1a1a1a;
@@ -57,89 +57,90 @@ border-bottom: 1px solid #e3e7f0; } }
 </style></head>
 <body><div class="shell">
 <aside class="sidebar">
-<a class="brand" href="index.html">Lantern docs</a>
-<p class="langs"><span>English</span><a href="uk/safety.html"
->Українська</a></p>
+<a class="brand" href="index.html">Ліхтарик · документація</a>
+<p class="langs"><span>Українська</span><a href="../safety.html"
+>English</a></p>
 <nav>
-<p class="nav-label">Overview</p>
-<a href="index.html">Start here</a>
-<a href="architecture.html">Architecture</a>
-<p class="nav-label">Evidence</p>
-<a href="recovery.html">Hero recovery</a>
+<p class="nav-label">Загальне</p>
+<a href="index.html">Почніть звідси</a>
+<a href="architecture.html">Будова системи</a>
+<p class="nav-label">Докази</p>
+<a href="recovery.html">Головний сценарій</a>
 <a href="safety.html"
- aria-current="page">Safety & consent</a>
-<a href="evidence.html">Measurements</a>
-<a href="data-model.html">Data model</a>
+ aria-current="page">Безпека і згода</a>
+<a href="evidence.html">Виміряні результати</a>
+<a href="data-model.html">Що зберігається</a>
 
 </nav>
 </aside>
 <main>
-<p class="eyebrow">Evidence</p>
-<h1>Safety & consent</h1>
-<div class="onpage"><b>On this page:</b>
-<a href="#guard">What the Write Guard is</a>
-<a href="#invariants">Invariants</a>
-<a href="#consent">Consent → read-back</a>
-<a href="#refusal">Refusal</a>
-<a href="#compensation">Compensation</a>
-<a href="#rg">Regression net</a>
+<p class="eyebrow">Докази</p>
+<h1>Безпека і згода</h1>
+<div class="onpage"><b>На цій сторінці:</b>
+<a href="#guard">Що таке вартовий запису</a>
+<a href="#invariants">Непорушні правила</a>
+<a href="#consent">Згода і перевірка</a>
+<a href="#refusal">Відмова</a>
+<a href="#compensation">Скасування</a>
+<a href="#rg">Мережа перевірок</a>
 </div>
 
-<p class="lede">What keeps a language model from touching a real cart on its own.</p>
+<p class="lede">Що саме не дає мовній моделі самій торкнутися справжнього кошика.</p>
 
-<h2 id="guard">What the Write Guard is</h2>
-<p>One node in the graph, and the only place in the whole system from which a write tool
-can be called. This is not a convention: no other module may even import the list of
-allowed write tools, and a test that walks every import fails the build if one
-tries.</p>
-<p>Before any write it answers one question — may this exact change happen right now? —
-and returns either an authorisation or a refusal with its reason. There are 22 ways to
-refuse:</p>
+<h2 id="guard">Що таке вартовий запису</h2>
+<p>Це один вузол графа і єдине місце в усій системі, звідки можна викликати інструмент
+запису. Це не домовленість: жоден інший модуль не має права навіть згадати перелік
+дозволених інструментів запису, і тест, який обходить усі імпорти, зупиняє збірку, якщо
+хтось спробує.</p>
+<p>Перед кожним записом він відповідає на одне питання — чи можна саме цю зміну саме
+зараз? — і повертає або дозвіл, або відмову з причиною. Причин відмовити двадцять
+дві:</p>
 <table>
-<tr><th>It checks</th><th>And refuses when</th></tr>
-<tr><td>The tool</td><td>it is not on the allowlist for this kind of action, it is a
-guest-only action (checkout, payment, age confirmation), or it is quarantined</td></tr>
-<tr><td>The tool's schema</td><td>the hash of the schema the server returns now differs
-from the reviewed one — the server changed its interface mid-session</td></tr>
-<tr><td>The consent</td><td>it expired, it was already used, or it belongs to a
-different action, owner or session</td></tr>
-<tr><td>The cart</td><td>the cart re-read a moment before the write no longer matches
-the one the guest agreed about — someone changed it in another tab</td></tr>
-<tr><td>The arguments</td><td>their fingerprint differs from the one recorded with the
-consent; neither fingerprint is ever accepted from the browser, both are recomputed on
-the server</td></tr>
-<tr><td>The budget</td><td>there is not enough reserve left to read the cart back —
-writing without being able to prove the outcome is not allowed</td></tr>
-<tr><td>An undo</td><td>eight further checks that a compensation undoes exactly the
-change this system itself made, as its receipt records it</td></tr>
+<tr><th>Що перевіряє</th><th>І відмовляє, коли</th></tr>
+<tr><td>Інструмент</td><td>його немає в переліку дозволених для цього виду дії, це дія
+самого гостя (оформлення, оплата, підтвердження повноліття) або він у карантині</td>
+</tr>
+<tr><td>Опис інструмента</td><td>відбиток опису, який сервер віддає зараз, не збігається
+з переглянутим — сервер змінив свій інтерфейс посеред сесії</td></tr>
+<tr><td>Згоду</td><td>вона протермінована, вже використана або належить іншій дії,
+іншому власникові чи іншій сесії</td></tr>
+<tr><td>Кошик</td><td>кошик, перечитаний за мить до запису, більше не збігається з тим,
+щодо якого гість погодився — хтось змінив його в іншій вкладці</td></tr>
+<tr><td>Аргументи</td><td>їхній відбиток відрізняється від записаного разом зі згодою;
+жоден із відбитків ніколи не приймається з браузера — обидва рахує сервер</td></tr>
+<tr><td>Запас</td><td>не лишилося запасу на повторне читання: записувати, не маючи змоги
+довести результат, не дозволено</td></tr>
+<tr><td>Скасування</td><td>ще вісім перевірок, що скасування скасовує саме ту зміну, яку
+зробила ця система, і саме так, як записано в її підсумку</td></tr>
 </table>
-<p>The language model never reaches this point: it proposes and explains, the guard is
-handed only typed data, and the raw write tool is never shown to the model at all.</p>
+<p>Мовна модель сюди не дістає: вона пропонує і пояснює, вартовий отримує лише
+типізовані дані, а сам інструмент запису моделі не показують узагалі.</p>
 
-<h2 id="invariants">The invariants</h2>
+<h2 id="invariants">Непорушні правила</h2>
 <ul>
-<li><b>One write site.</b> Only the Write Guard node may call a write tool; a layering
-test bans importing the write allowlist anywhere else.</li>
-<li><b>The model never authorises.</b> It plans and explains; money, gap arithmetic and
-post-conditions are ordinary deterministic code.</li>
-<li><b>Consent is bound to one action and one cart state</b> — <code>action_id</code>,
-canonical arguments, <code>args_hash</code>, <code>state_hash</code>, expiry. A generic
-"yes" after the plan changed carries nothing forward.</li>
-<li><b><code>success</code> from the server proves nothing.</b> Every write is followed
-by an independent read-back; an unreachable read-back yields <code>unverified</code>,
-never a successful receipt.</li>
-<li><b>The tool list is untrusted input.</b> Discovered live, hashed per tool; a new or
-changed tool is quarantined until reviewed.</li>
-<li><b>The session is the ordinary web-session model.</b> An <code>HttpOnly; Secure;
-SameSite=Lax</code> cookie, one credential per session, logout deletes it, idle tokens
-expire after 30 minutes, and every route checks the cookie against the path.</li>
+<li><b>Єдине місце запису.</b> Лише вузол вартового може викликати інструмент запису;
+тест шарів забороняє згадувати перелік дозволених будь-де ще.</li>
+<li><b>Модель нічого не дозволяє.</b> Вона планує і пояснює; гроші, арифметика
+недостачі та перевірки після запису — звичайний передбачуваний код.</li>
+<li><b>Згода прив'язана до однієї дії та одного стану кошика</b> — ідентифікатор дії,
+аргументи, їхній відбиток, відбиток кошика, термін дії. Загальне «так», сказане до
+того, як план змінився, далі не переноситься.</li>
+<li><b>Відповідь «успішно» нічого не доводить.</b> За кожним записом іде окреме
+повторне читання; якщо воно не вдалося, результат — «не підтверджено», а не вдалий
+підсумок.</li>
+<li><b>Перелік інструментів — недовірене джерело.</b> Отримується наживо, з окремим
+відбитком на інструмент; новий чи змінений потрапляє в карантин до перегляду.</li>
+<li><b>Сесія працює як звичайна вебсесія.</b> Ідентифікатор сесії живе лише у файлі
+cookie, недоступному для сценаріїв сторінки і лише через захищене з'єднання; один
+доступ на сесію; вихід його видаляє; неактивний доступ зникає за 30 хвилин; кожен
+маршрут звіряє адресу запиту з цим файлом.</li>
 </ul>
 
-<h2 id="consent">Consent → guard → write → read-back</h2>
-<p>One consented action, end to end: the client posts only an action id, the server
-recomputes both hashes from what it already holds, the graph resumes at the guard, the
-cart is re-read, one write tool is called, the cart is read back independently, and the
-receipt records the difference between what was expected and what the cart returned.</p>
+<h2 id="consent">Згода → вартовий → запис → повторне читання</h2>
+<p>Одна погоджена дія від початку до кінця: сторінка надсилає лише ідентифікатор дії,
+сервер сам перераховує обидва відбитки з того, що вже має, робота відновлюється на
+вартовому, кошик перечитується, викликається один інструмент запису, кошик читають ще
+раз окремо, і підсумок фіксує різницю між очікуваним і тим, що повернув кошик.</p>
 <div class="diagram"><svg viewBox="0 0 1200 1030" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g5-seq-title g5-seq-desc">
       <title id="g5-seq-title">Consent, write, read-back and receipt</title>
       <desc id="g5-seq-desc">Sequence diagram of the write path, drawn from live runs on 2026-09-07. The guest approves one action by its id; the API recomputes both hashes server-side and never accepts one from the client. A second request resumes the graph from its consent interrupt. The Write Guard re-reads the cart through Silpo MCP and authorizes only if every binding still holds. The write call is issued once, and its own success field is believed for nothing: an independent read-back follows, and the alternative fragment shows the two outcomes it can produce. The Write Guard and the writing node share one lifeline here because five lifelines is this project's diagram budget; they are separate nodes in the code, and the refusal diagram shows the guard alone. The receipt reaches the guest on the same event stream opened by message two.</desc>
@@ -260,12 +261,12 @@ receipt records the difference between what was expected and what the cart retur
       <text x="1100" y="196" fill="#24242e" font-size="12" text-anchor="middle">consents · receipts</text>
     </svg>
 </div>
-<p>The only path that can change a cart, as a state machine. The graph stops and waits;
-when consent arrives the guard authorises or refuses, and a refusal ends the run with no
-cart touched. If the write is made, a separate read decides whether the result is a
-receipt or the dashed state that records "we could not confirm this". A system that can
-only report success will report success when it is wrong; this one has somewhere honest
-to land.</p>
+<p>Єдиний шлях, яким кошик може змінитися, у вигляді станів. Робота зупиняється і чекає;
+коли надходить згода, вартовий дозволяє або відмовляє, і відмова завершує роботу, не
+торкнувшись кошика. Якщо запис відбувся, окреме читання вирішує, чим це буде: підсумком
+чи станом «підтвердити не вдалося», позначеним пунктиром. Система, яка вміє звітувати
+лише про успіх, звітуватиме про успіх і тоді, коли помиляється; цій є куди чесно
+приземлитися.</p>
 <div class="diagram"><svg viewBox="0 0 980 790" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g5-state-title g5-state-desc">
       <title id="g5-state-title">Write segment states and the consent interrupt</title>
       <desc id="g5-state-desc">State machine of the recovery graph's write segment. The graph pauses in Awaiting consent at a static interrupt before the Write Guard. The guard either authorizes, moving to Consented, or refuses, moving to the dashed exception state Aborted with no write performed. From Consented the write call and an independent read-back run, reaching Written, which resolves to Verified when the read-back confirms the consented change or to the dashed exception state Unverified when it does not. A verified write whose receipt shows the blocker still standing returns the graph to diagnose for a further consent round, capped at three.</desc>
@@ -401,9 +402,9 @@ to land.</p>
     </svg>
 </div>
 
-<h2 id="refusal">When the guard refuses</h2>
-<p>A refusal is terminal for the ordinary path, and the guest is told which of the
-reasons above it was, in plain Ukrainian rather than in the wording of the code.</p>
+<h2 id="refusal">Коли вартовий відмовляє</h2>
+<p>Відмова остаточна для звичайного шляху, і гість дізнається, яка саме з наведених
+вище причин спрацювала, — звичайною українською, а не формулюванням із коду.</p>
 <div class="diagram"><svg viewBox="0 0 1200 1050" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g5-refuse-title g5-refuse-desc">
       <title id="g5-refuse-title">Write Guard refusal paths</title>
       <desc id="g5-refuse-desc">Sequence diagram of the checks the Write Guard runs before any cart is changed. It loads the consent from the database, where expiry is evaluated by the database clock rather than the application's, re-reads the cart from Silpo MCP so the write is authorized against the cart as it stands now, and recomputes both binding hashes itself. The alternative fragment shows the only two outcomes: one write is issued, or the run is refused with a stated reason and no write at all. The legend lists every refusal the guard can raise and marks the five observed against the live server on 2026-09-07.</desc>
@@ -527,10 +528,10 @@ reasons above it was, in plain Ukrainian rather than in the wording of the code.
     </svg>
 </div>
 
-<h2 id="compensation">Undoing a change the guest did not want</h2>
-<p>A verified write is not a recovered cart. When a write left an unwanted diff, the
-guest is offered a compensation — a second, separately allowlisted tool, re-authorised
-by the same guard and read back the same way.</p>
+<h2 id="compensation">Скасувати зміну, якої гість не хотів</h2>
+<p>Підтверджений запис — ще не відновлений кошик. Якщо запис дав небажаний результат,
+гостю пропонують скасування: другий, окремо дозволений інструмент, знову перевірений тим
+самим вартовим і так само перечитаний.</p>
 <div class="diagram"><svg viewBox="0 0 1200 1030" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g8-happy-title g8-happy-desc">
       <title id="g8-happy-title">Compensation offer, consented</title>
       <desc id="g8-happy-desc">Sequence diagram of the guest-facing compensation write, drawn from the graph and guard code this stage added. persist_receipt already found the last write verified but the blocker still standing and built a compensation offer; this diagram starts at the guest's consent to that offer. The API recomputes both hashes server-side, the same as any other consent, and resumes the graph -- which re-enters the Write Guard through a new self-loop edge on that same node, not through a different one. The guard re-reads the cart and runs nine compensation-specific checks in addition to every existing binding check, then the write node calls either the remove tool or the add tool at the original quantity, depending on whether the write being undone added a new line or increased an existing one. The read-back and its alternative fragment mirror the ordinary write path exactly, with one difference: a verified outcome here carries a negative delta, and produces no further round or offer -- a compensation is never itself compensated.</desc>
@@ -650,10 +651,9 @@ by the same guard and read back the same way.</p>
       <text x="1100" y="176" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Neon</text>
       <text x="1100" y="196" fill="#24242e" font-size="12" text-anchor="middle">receipts · compensable</text>
     </svg></div>
-<p>The undo is refused whenever the system cannot prove what it would be undoing: the
-re-read did not complete, the cart changed for another reason, or the change being
-undone cannot be derived from what was recorded. Each refusal names which of those it
-was.</p>
+<p>У скасуванні відмовляють щоразу, коли система не може довести, що саме вона
+скасовує: повторне читання не завершилося, кошик змінився з іншої причини, або зміну
+неможливо вивести із записаного. Кожна відмова називає, що саме з цього сталося.</p>
 <div class="diagram"><svg viewBox="0 0 1200 1120" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g8-refuse-title g8-refuse-desc">
       <title id="g8-refuse-title">Compensation refused, one bounded retry</title>
       <desc id="g8-refuse-desc">Sequence diagram of a refused compensation write, drawn from the graph and guard code this stage added. The Write Guard loads the ORIGINAL write's own consent record by its action_id -- a second, separate lookup from the compensation's own consent, because by this point the checkpoint's candidates already hold the compensation proposal, not the original one. The cart is re-read and found to have moved since the write being compensated, which the guard's own C6 check refuses. Unlike the ordinary add path, whose refusal is permanently terminal, a refused compensation is not: the guard re-derives one fresh offer against the cart it just read and routes back to itself through a new self-loop edge, so the interrupt pauses again and the guest sees a new offer rather than a dead session. The bound is a session counter, not an unlimited loop -- a second refusal in a row aborts.</desc>
@@ -779,8 +779,8 @@ was.</p>
       <text x="62" y="1024" fill="#24242e" font-size="12" font-weight="700">The ordinary add path is unchanged</text>
       <text x="62" y="1046" fill="#24242e" font-size="12">its own refusal is still permanently terminal — this self-loop and retry exist only for kind=compensate.</text>
     </svg></div>
-<p>The complete route a session can take, with the undo shown as what it is: a second
-pass through the same approval point, never a shortcut around it.</p>
+<p>Повний маршрут, яким може піти сесія, зі скасуванням у його справжньому вигляді: це
+другий прохід через ту саму точку згоди, а не обхідний шлях повз неї.</p>
 <div class="diagram"><svg viewBox="0 0 980 780" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g8-topo-title g8-topo-desc">
       <title id="g8-topo-title">Write segment with compensation</title>
       <desc id="g8-topo-desc">State machine of the write segment of the recovery graph, from the code exported at tests/unit/fixtures/graph_topology.mermaid. Consent pauses at the Write Guard's own interrupt point. A refusal there ends the graph directly -- Write and Read-back is never entered. An authorized write always reaches Persist Receipt, which decides what happens next: end the graph if the blocker cleared or nothing more can be done, loop back to Diagnose for another add round if rounds remain, or, once no further round remains and the write was compensable, send the graph back to the Write Guard through a NEW edge carrying a compensation offer -- the guard's own interrupt is what pauses the graph for the guest's fresh consent, there is no separate offer-holding node. A refused compensation is the one refusal that is not permanently terminal: the guard re-derives one fresh offer and routes back to itself through a second new edge, a self-loop on the same node, bounded by a session counter so a second refusal in a row still ends the graph exactly like any other refusal.</desc>
@@ -891,9 +891,9 @@ pass through the same approval point, never a shortcut around it.</p>
       <text x="40" y="732" fill="#6b7280" font-size="12" font-style="italic">A "compensation offer" is not a separate node — it is Persist Receipt's own compensate edge back into Write Guard's interrupt.</text>
     </svg></div>
 
-<h2 id="rg">Regression net</h2>
+<h2 id="rg">Мережа перевірок на стійкість</h2>
 <table>
-<tr><th>Row</th><th>Rubric</th><th>Status</th></tr>
+<tr><th>Рядок</th><th>Що перевіряє</th><th>Стан</th></tr>
 
 <tr><td>RG-01</td><td>Context truncation: consent must never be reconstructed from an LLM summary of earlier dialogue.</td><td>pass</td></tr>
 
@@ -910,12 +910,12 @@ pass through the same approval point, never a shortcut around it.</p>
 <tr><td>RG-07</td><td>A crash between the write's own side effect and the read-back completing: the next resume reconciles instead of writing twice.</td><td>pass</td></tr>
 
 </table>
-<p>A row reads <code>pass</code> only on a recorded run artefact that git tracks;
-<code>blocked</code> names a structural reason (the budget loop's three dead
-dimensions), <code>not_applicable</code> is the one row the brief itself defers
-(RAG).</p>
-<div class="next"><a href="recovery.html">← Hero recovery</a>
+<p>Рядок читається як <code>pass</code> лише тоді, коли за ним стоїть збережений запис
+прогону, що є в репозиторії; <code>blocked</code> називає структурну причину (три
+неживі виміри обліку витрат), <code>not_applicable</code> — єдиний рядок, який саме
+завдання лишає поза цією версією.</p>
+<div class="next"><a href="recovery.html">← Головний сценарій</a>
 
-<a href="evidence.html">Measurements →</a></div>
-<p class="meta">Regenerated 2026-09-11T21:46:21+00:00. No external network resources.</p>
+<a href="evidence.html">Виміряні результати →</a></div>
+<p class="meta">Згенеровано 2026-09-11T21:46:21+00:00. Жодних зовнішніх ресурсів.</p>
 </main></div></body></html>

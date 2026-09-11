@@ -1,30 +1,93 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>Lantern — measured results</title>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lantern — Measurements</title>
 <style>
-body { font-family: system-ui, sans-serif; max-width: 900px; margin: 2rem auto;
-padding: 0 1rem; color: #1a1a1a; background: #fafafa; line-height: 1.5; }
-h1 { border-bottom: 2px solid #2a5; padding-bottom: .3rem; } h2 { margin-top: 2.5rem; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, sans-serif; color: #1a1a1a;
+background: #fafafa; line-height: 1.55; }
+.shell { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; height: 100vh; overflow-y: auto;
+padding: 1.4rem 1.2rem; border-right: 1px solid #e3e7f0; background: #fff; }
+.brand { display: block; font-weight: 700; font-size: 1.1rem; color: #1a1a1a;
+text-decoration: none; margin-bottom: 1rem; }
+.langs { display: flex; gap: .4rem; margin: 0 0 1.2rem; }
+.langs a, .langs span { font-size: .8rem; padding: .15rem .5rem; border-radius: 999px;
+border: 1px solid #e3e7f0; text-decoration: none; color: #1a1a1a; }
+.langs span { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+.nav-label { margin: 1rem 0 .3rem; font-size: .72rem; letter-spacing: .12em;
+text-transform: uppercase; color: #888; }
+.sidebar nav a { display: block; padding: .3rem .5rem; border-radius: 6px;
+color: #1a1a1a; text-decoration: none; font-size: .95rem; }
+.sidebar nav a[aria-current="page"] { background: #e8f1ff; color: #1d4ed8;
+font-weight: 600; }
+.sidebar nav a:hover { background: #f1f3f8; }
+main { max-width: none; width: 100%; padding: 2rem 3rem 3rem; }
+.eyebrow { font-size: .72rem; letter-spacing: .12em; text-transform: uppercase;
+color: #2a5; margin: 0 0 .4rem; }
+h1 { margin: 0 0 .6rem; font-size: 1.7rem; line-height: 1.25; }
+h2 { margin-top: 2.4rem; border-bottom: 1px solid #e3e7f0; padding-bottom: .25rem; }
+h3 { margin-top: 1.6rem; font-size: 1.05rem; }
 .lede { color: #444; font-size: 1.05rem; }
-.diagram { background: white; border: 1px solid #ddd; border-radius: 6px; padding: 1rem;
-margin: 1rem 0; overflow-x: auto; } .diagram svg { max-width: 100%; height: auto; }
+.notice { background: #fff8e6; border-left: 4px solid #f2b21e; padding: .6rem .9rem;
+margin: 1rem 0; }
+.onpage { background: #fff; border: 1px solid #e3e7f0; border-radius: 8px;
+padding: .6rem 1rem; margin: 1rem 0 1.6rem; font-size: .92rem; }
+.onpage a { margin-right: .9rem; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+gap: 1rem; }
+.card { background: #fff; border: 1px solid #e3e7f0; border-radius: 8px;
+padding: 1rem; } .card h3 { margin-top: 0; }
+.diagram { background: #fff; border: 1px solid #ddd; border-radius: 6px;
+padding: 1rem; margin: 1rem 0; overflow-x: auto; }
+.diagram svg { max-width: 100%; height: auto; }
 .example { background: #fff; border-left: 4px solid #6ca2ee; padding: .6rem .9rem;
 margin: .8rem 0; font-size: .95rem; } .example b { color: #2c5fc9; }
-table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .95rem; }
 th, td { border: 1px solid #ccc; padding: .5rem .7rem; text-align: left;
 vertical-align: top; }
-th { background: #eee; } code { background: #eee; padding: 0 .25rem; border-radius:
-3px; }
-.meta { color: #888; font-size: .85rem; } nav a { margin-right: 1rem; }
+th { background: #eee; } code { background: #eee; padding: 0 .25rem;
+border-radius: 3px; }
+.next { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid #e3e7f0;
+display: flex; justify-content: space-between; }
+.meta { color: #888; font-size: .82rem; }
+@media (max-width: 860px) { .shell { grid-template-columns: 1fr; }
+.sidebar { position: static; height: auto; border-right: 0;
+border-bottom: 1px solid #e3e7f0; } }
 </style></head>
-<body>
-<nav><a href="index.html">Full report</a> <a href="hero-run.html">Hero run</a>
-<a href="safety.html">Safety</a> <a href="metrics.html">Metrics</a>
-<a href="data-model.html">Data model</a></nav>
-<h1>Lantern — measured results</h1>
+<body><div class="shell">
+<aside class="sidebar">
+<a class="brand" href="index.html">Lantern docs</a>
+<p class="langs"><span>English</span><a href="uk/evidence.html"
+>Українська</a></p>
+<nav>
+<p class="nav-label">Overview</p>
+<a href="index.html">Start here</a>
+<a href="architecture.html">Architecture</a>
+<p class="nav-label">Evidence</p>
+<a href="recovery.html">Hero recovery</a>
+<a href="safety.html">Safety & consent</a>
+<a href="evidence.html"
+ aria-current="page">Measurements</a>
+<a href="data-model.html">Data model</a>
+
+</nav>
+</aside>
+<main>
+<p class="eyebrow">Evidence</p>
+<h1>Measurements</h1>
+<div class="onpage"><b>On this page:</b>
+<a href="#metrics">Metrics</a>
+<a href="#reading">How to read them</a>
+<a href="#cost">Cost</a>
+<a href="#economics">Unit economics</a>
+<a href="#unmeasured">Not measured</a>
+</div>
 
 <p class="lede">Eight numbers, each with the population it was measured over, its 95%
 interval and its caveat — never a bare percentage.</p>
 
+<h2 id="metrics">The metrics</h2>
 <table>
 <tr><th>Metric</th><th>Value</th><th>n</th><th>95% Wilson</th><th>Caveat</th></tr>
 
@@ -57,7 +120,8 @@ interval and its caveat — never a bare percentage.</p>
 recorded bundles, replayed through the same compiled graph the live path runs.
 Regenerate with <code>python -m scripts.compute_metrics --tracked</code>; a gate test asserts the committed file
 agrees with a fresh regeneration. Live repeats: 18 of 18 on 2026-09-09.</p>
-<div class="diagram"><svg xmlns="http://www.w3.org/2000/svg" width="1000" height="524" viewBox="0 0 1000 524">
+<div class="diagram"><svg xmlns="http://www.w3.org/2000/svg" width="1000" height="524" viewBox="0 0 1000 524" role="img" aria-labelledby="metrics-title metrics-desc">
+<title id="metrics-title">Measured results with 95% Wilson intervals</title><desc id="metrics-desc">Bar chart of the project metrics over the offline repeat population, each bar drawn with its 95% Wilson interval; FalseRecovery is a count and carries no interval.</desc>
 <defs><style>text{font-family:Arial,Helvetica,"Liberation Sans","DejaVu Sans",sans-serif;}</style></defs>
 <rect width="1000" height="524" fill="#FFFFFF"/>
 <text x="24" y="34" font-size="14" font-weight="700" fill="#24242E">G9 measurement results - seven metrics, 95% Wilson intervals</text>
@@ -140,25 +204,37 @@ agrees with a fresh regeneration. Live repeats: 18 of 18 on 2026-09-09.</p>
 <text x="24" y="494" font-size="12" fill="#6B7280">SearchPriceFidelity carries no gate: it measures how well the product search predicts the price the cart charges, which is Silpo policy (D68, D76), not this system.</text>
 </svg></div>
 
-<h2>How to read them</h2>
+<h2 id="reading">How to read them</h2>
 <p>The four 0.00/1.00 rows are unrefuted, not proven: at n = 33 a proportion of 1.00
 still has a lower bound of 0.90. FalseRecovery is a count. SearchPriceFidelity is not a
 success rate — it measures how often the search price equalled the price the cart
 charged, and it is low because the cart applies a loyalty discount the search does not
 see. DisclosureRate rests on one audited observation and is reported as one.</p>
 
-<h2>Cost</h2>
+<h2 id="cost">Cost</h2>
 <p>18 live runs on 2026-09-09 cost $0.13 in total at the pinned OpenRouter prices —
-about
-$0.007 per episode with both model calls; the console session of 2026-09-10 cost
+about $0.007 per episode with both model calls; the console session of 2026-09-10 cost
 $0.0042. Every usage figure comes from the provider's own usage block, never an
 estimate. Project ceiling $20; spend to date under $1.</p>
 
-<h2>Not measured</h2>
+<h2 id="economics">Unit economics</h2>
+<p>Stated as the plan's formula with variables, not a projection:
+<code>Vnet = B × (p₁ × M₁ − p₀ × M₀ − c) + ΔS × C − F</code>. B — recovery-eligible
+episodes; p₁/p₀ — completed purchases with and without the agent; M₁/M₀ — marginal
+contribution per purchase; c — the agent's variable cost per episode; ΔS — support
+contacts avoided; C — cost of one; F — fixed integration cost. Only c is measured. At
+c ≈ $0.01 the agent pays for itself if one recovered purchase in a hundred episodes
+carries more than one dollar of margin — provided p₁ − p₀ &gt; 0, which is what an A/B
+pilot over eligible episodes would establish.</p>
+
+<h2 id="unmeasured">Not measured</h2>
 <p>Before/after figures from moderated guest sessions (n = 0 — no access to
 participants; the protocol is written), and any conversion or revenue effect. Neither
 is substituted by a proxy. The evaluation judges are validated as structural-defect
 detectors, not as a measure of Ukrainian quality, so no judge score appears
 anywhere.</p>
-<p class="meta">Regenerated 2026-09-11T20:33:41+00:00. No external network resources.</p>
-</body></html>
+<div class="next"><a href="safety.html">← Safety & consent</a>
+
+<a href="data-model.html">Data model →</a></div>
+<p class="meta">Regenerated 2026-09-11T21:46:21+00:00. No external network resources.</p>
+</main></div></body></html>

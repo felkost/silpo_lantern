@@ -23,9 +23,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 # The tracked report pages (`docs/reports/*.html`, .gitignore's exception to
 # the docs/* rule) are the one kind of docs path a tracked file may name;
-# G10 split the single index page into five.
+# G10 split the single index page into six, in two languages.
 _GITIGNORED_PATH_PATTERN = re.compile(
-    r"\bdocs/(?!reports/[A-Za-z0-9_-]+\.html\b)[A-Za-z0-9_./-]+"
+    r"\bdocs/(?!reports/(?:uk/)?[A-Za-z0-9_-]+\.html\b)[A-Za-z0-9_./-]+"
 )
 _GITIGNORED_BARE_FILES = re.compile(r"\b(?:handoff|insights)\.md\b")
 

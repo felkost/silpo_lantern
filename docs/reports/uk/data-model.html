@@ -1,7 +1,7 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8">
+<html lang="uk"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Lantern — Data model</title>
+<title>Lantern — Що зберігається</title>
 <style>
 * { box-sizing: border-box; }
 body { margin: 0; font-family: system-ui, sans-serif; color: #1a1a1a;
@@ -57,32 +57,32 @@ border-bottom: 1px solid #e3e7f0; } }
 </style></head>
 <body><div class="shell">
 <aside class="sidebar">
-<a class="brand" href="index.html">Lantern docs</a>
-<p class="langs"><span>English</span><a href="uk/data-model.html"
->Українська</a></p>
+<a class="brand" href="index.html">Ліхтарик · документація</a>
+<p class="langs"><span>Українська</span><a href="../data-model.html"
+>English</a></p>
 <nav>
-<p class="nav-label">Overview</p>
-<a href="index.html">Start here</a>
-<a href="architecture.html">Architecture</a>
-<p class="nav-label">Evidence</p>
-<a href="recovery.html">Hero recovery</a>
-<a href="safety.html">Safety & consent</a>
-<a href="evidence.html">Measurements</a>
+<p class="nav-label">Загальне</p>
+<a href="index.html">Почніть звідси</a>
+<a href="architecture.html">Будова системи</a>
+<p class="nav-label">Докази</p>
+<a href="recovery.html">Головний сценарій</a>
+<a href="safety.html">Безпека і згода</a>
+<a href="evidence.html">Виміряні результати</a>
 <a href="data-model.html"
- aria-current="page">Data model</a>
+ aria-current="page">Що зберігається</a>
 
 </nav>
 </aside>
 <main>
-<p class="eyebrow">Evidence</p>
-<h1>Data model</h1>
-<div class="onpage"><b>On this page:</b>
-<a href="#tables">Tables</a>
-<a href="#choices">Two choices</a>
-<a href="#checkpointer">Checkpointer</a>
+<p class="eyebrow">Докази</p>
+<h1>Що зберігається</h1>
+<div class="onpage"><b>На цій сторінці:</b>
+<a href="#tables">Таблиці</a>
+<a href="#choices">Два рішення</a>
+<a href="#checkpointer">Збереження стану</a>
 </div>
 
-<p class="lede">Everything the service remembers, in six tables in Neon Postgres.</p>
+<p class="lede">Усе, що сервіс пам'ятає, — у шести таблицях бази даних.</p>
 <div class="diagram"><svg width="1160" height="970" viewBox="0 0 1160 970" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="er-title er-desc">
       <title id="er-title">Lantern Neon schema</title>
       <desc id="er-desc">Entity-relationship diagram of the six application tables in Neon Postgres (schema_version, sessions, consents, idempotency_keys, receipts, oauth_tokens) with their columns, keys and relationships, and the LangGraph checkpointer tables the library owns, linked to sessions by thread_id without a foreign key.</desc>
@@ -276,36 +276,39 @@ border-bottom: 1px solid #e3e7f0; } }
     </svg>
 </div>
 
-<h2 id="tables">The tables</h2>
+<h2 id="tables">Таблиці</h2>
 <table>
-<tr><th>Table</th><th>One row is</th><th>Why it exists</th></tr>
-<tr><td><code>sessions</code></td><td>one guest's visit</td><td>the thread the graph
-checkpoints under; the owner hash the guard checks on every write</td></tr>
-<tr><td><code>oauth_tokens</code></td><td>the one credential for that visit</td>
-<td>backend-only; logout deletes exactly this row; idle rows expire on read</td></tr>
-<tr><td><code>consents</code></td><td>one approved action</td><td>bound to the cart
-state by two hashes and an expiry; consumed once</td></tr>
-<tr><td><code>idempotency_keys</code></td><td>one claimed write</td><td>claimed
-immediately before the call so a retry can never write twice</td></tr>
-<tr><td><code>receipts</code></td><td>one write's outcome</td><td>before and after,
-expected and actual, verified or unverified — the audit trail a logout must not
-touch</td></tr>
-<tr><td><code>schema_version</code></td><td>the applied migration</td><td>an
-incompatible state version without a migration fails safe</td></tr>
+<tr><th>Таблиця</th><th>Один рядок — це</th><th>Навіщо вона</th></tr>
+<tr><td><code>sessions</code></td><td>один візит гостя</td><td>до неї прив'язано
+збережений стан роботи та захисний відбиток власника, який вартовий перевіряє при
+кожному записі</td></tr>
+<tr><td><code>oauth_tokens</code></td><td>єдиний доступ до Сільпо для цього візиту</td>
+<td>лише на боці сервера; вихід видаляє саме цей рядок; неактивний зникає при
+читанні</td></tr>
+<tr><td><code>consents</code></td><td>одна погоджена дія</td><td>прив'язана до стану
+кошика двома відбитками і терміном дії; використовується один раз</td></tr>
+<tr><td><code>idempotency_keys</code></td><td>одна заявка на запис</td><td>береться
+безпосередньо перед викликом, тож повтор запиту не може записати двічі</td></tr>
+<tr><td><code>receipts</code></td><td>результат одного запису</td><td>було і стало,
+очікуване й фактичне, підтверджено чи ні — слід, якого вихід із сесії не має
+стирати</td></tr>
+<tr><td><code>schema_version</code></td><td>застосована версія схеми</td><td>несумісна
+версія без оновлення зупиняє роботу, а не працює навмання</td></tr>
 </table>
 
-<h2 id="choices">Two choices visible in the shape</h2>
-<p>Consents and receipts reference a session <em>without</em> cascade, so a session row
-is never deleted and the audit trail survives a logout. Nothing stores the guest's
-address or coordinates as a column; the cart snapshots inside a receipt are reduced to
-amounts before anything reaches a browser.</p>
+<h2 id="choices">Два рішення, помітні за формою</h2>
+<p>Згоди й підсумки посилаються на сесію <em>без</em> каскадного видалення, тому рядок
+сесії ніколи не видаляють і слід зберігається навіть після виходу. Жодна таблиця не
+зберігає адресу чи координати гостя окремим полем; знімки кошика всередині підсумку
+зводяться до сум, перш ніж щось потрапить у браузер.</p>
 
-<h2 id="checkpointer">The checkpointer beside it</h2>
-<p>LangGraph keeps the in-flight graph state in its own four tables, in the same
-database, keyed by the session's thread id — no foreign key in either direction, because
-the library owns its migrations and the application owns its rows.</p>
-<div class="next"><a href="evidence.html">← Measurements</a>
+<h2 id="checkpointer">Збережений стан роботи поруч</h2>
+<p>Бібліотека робочого процесу тримає незавершений стан у власних чотирьох таблицях у
+тій самій базі, пов'язаних із сесією спільним ідентифікатором потоку — без зовнішніх
+ключів у жодному напрямку, бо бібліотека відповідає за свої таблиці, а застосунок — за
+свої.</p>
+<div class="next"><a href="evidence.html">← Виміряні результати</a>
 
 </div>
-<p class="meta">Regenerated 2026-09-11T21:46:21+00:00. No external network resources.</p>
+<p class="meta">Згенеровано 2026-09-11T21:46:21+00:00. Жодних зовнішніх ресурсів.</p>
 </main></div></body></html>

@@ -13,6 +13,9 @@ docs/*
 !docs/reports
 docs/reports/*
 !docs/reports/*.html
+!docs/reports/uk
+docs/reports/uk/*
+!docs/reports/uk/*.html
 AGENTS.md
 AI_USAGE.md
 BACKGROUND_MATERIALS.md
