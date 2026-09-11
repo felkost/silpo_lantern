@@ -279,7 +279,7 @@ border-bottom: 1px solid #e3e7f0; } }
 <h2 id="tables">The tables</h2>
 <table>
 <tr><th>Table</th><th>One row is</th><th>Why it exists</th></tr>
-<tr><td><code>sessions</code></td><td>one guest's visit</td><td>the thread the graph
+<tr><td><code>sessions</code></td><td>one Customer's visit</td><td>the thread the graph
 checkpoints under; the owner hash the guard checks on every write</td></tr>
 <tr><td><code>oauth_tokens</code></td><td>the one credential for that visit</td>
 <td>backend-only; logout deletes exactly this row; idle rows expire on read</td></tr>
@@ -296,7 +296,7 @@ incompatible state version without a migration fails safe</td></tr>
 
 <h2 id="choices">Two choices visible in the shape</h2>
 <p>Consents and receipts reference a session <em>without</em> cascade, so a session row
-is never deleted and the audit trail survives a logout. Nothing stores the guest's
+is never deleted and the audit trail survives a logout. Nothing stores the Customer's
 address or coordinates as a column; the cart snapshots inside a receipt are reduced to
 amounts before anything reaches a browser.</p>
 
@@ -307,5 +307,5 @@ the library owns its migrations and the application owns its rows.</p>
 <div class="next"><a href="evidence.html">← Measurements</a>
 
 </div>
-<p class="meta">Regenerated 2026-09-11T21:59:34+00:00. No external network resources.</p>
+<p class="meta">Regenerated 2026-09-11T22:09:16+00:00. No external network resources.</p>
 </main></div></body></html>

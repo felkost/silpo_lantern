@@ -98,13 +98,14 @@ refuse:</p>
 <table>
 <tr><th>It checks</th><th>And refuses when</th></tr>
 <tr><td>The tool</td><td>it is not on the allowlist for this kind of action, it is a
-guest-only action (checkout, payment, age confirmation), or it is quarantined</td></tr>
+Customer-only action (checkout, payment, age confirmation), or it is
+quarantined</td></tr>
 <tr><td>The tool's schema</td><td>the hash of the schema the server returns now differs
 from the reviewed one — the server changed its interface mid-session</td></tr>
 <tr><td>The consent</td><td>it expired, it was already used, or it belongs to a
 different action, owner or session</td></tr>
 <tr><td>The cart</td><td>the cart re-read a moment before the write no longer matches
-the one the guest agreed about — someone changed it in another tab</td></tr>
+the one the Customer agreed about — someone changed it in another tab</td></tr>
 <tr><td>The arguments</td><td>their fingerprint differs from the one recorded with the
 consent; neither fingerprint is ever accepted from the browser, both are recomputed on
 the server</td></tr>
@@ -402,7 +403,7 @@ to land.</p>
 </div>
 
 <h2 id="refusal">When the guard refuses</h2>
-<p>A refusal is terminal for the ordinary path, and the guest is told which of the
+<p>A refusal is terminal for the ordinary path, and the Customer is told which of the
 reasons above it was, in plain Ukrainian rather than in the wording of the code.</p>
 <div class="diagram"><svg viewBox="0 0 1200 1050" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g5-refuse-title g5-refuse-desc">
       <title id="g5-refuse-title">Write Guard refusal paths</title>
@@ -527,9 +528,10 @@ reasons above it was, in plain Ukrainian rather than in the wording of the code.
     </svg>
 </div>
 
-<h2 id="compensation">Undoing a change the guest did not want</h2>
+<h2 id="compensation">Undoing a change the Customer did not want</h2>
 <p>A verified write is not a recovered cart. When a write left an unwanted diff, the
-guest is offered a compensation — a second, separately allowlisted tool, re-authorised
+Customer is offered a compensation — a second, separately allowlisted tool,
+re-authorised
 by the same guard and read back the same way.</p>
 <div class="diagram"><svg viewBox="0 0 1200 1030" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g8-happy-title g8-happy-desc">
       <title id="g8-happy-title">Compensation offer, consented</title>
@@ -917,5 +919,5 @@ dimensions), <code>not_applicable</code> is the one row the brief itself defers
 <div class="next"><a href="recovery.html">← Hero recovery</a>
 
 <a href="evidence.html">Measurements →</a></div>
-<p class="meta">Regenerated 2026-09-11T21:59:34+00:00. No external network resources.</p>
+<p class="meta">Regenerated 2026-09-11T22:09:16+00:00. No external network resources.</p>
 </main></div></body></html>

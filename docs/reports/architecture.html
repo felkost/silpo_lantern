@@ -80,7 +80,7 @@ border-bottom: 1px solid #e3e7f0; } }
 <a href="#containers">Containers</a>
 <a href="#layers">Layers</a>
 <a href="#rules">The 13 domain rules</a>
-<a href="#graph">The graph</a>
+<a href="#graph">Processing one request</a>
 <a href="#deployment">Deployment</a>
 <a href="#mcp">MCP adapter</a>
 <a href="#domain">Domain core</a>
@@ -92,7 +92,7 @@ important rule is visible in the shape: there is one road to a cart change, and 
 through the Write Guard.</p>
 
 <h2 id="containers">Containers</h2>
-<p>The guest talks only to the web page. It starts the Recovery Agent, a LangGraph
+<p>The Customer talks only to the web page. It starts the Recovery Agent, a LangGraph
 graph. The agent uses the Domain Core to compute every number, and it must
 pass the <b>Write Guard</b> before any change to the cart: the single node in the whole
 system that is allowed to call a write tool, and which checks the consent, the cart and
@@ -100,11 +100,14 @@ the tool's own schema before it authorises one. It is described in full on the
 <a href="safety.html#guard">safety page</a>. Only the <b>MCP Adapter</b> — labelled
 that way on the diagram below — talks to Silpo: MCP is the open protocol through which
 Silpo exposes the cart to applications, and the adapter is this project's single module
-that speaks it. The guest's browser can never reach the Silpo server directly.</p>
-<div class="example"><b>Example.</b> A guest opens a blocked cart and starts a session.
-The agent reads the cart, the Domain Core computes that it is 93.38 ₴ below the minimum
-order sum, and nothing is changed yet — the write path stays closed until the guest
+that speaks it. The Customer's browser can never reach the Silpo server directly.</p>
+<div class="example"><b>Example.</b> A Customer opens a blocked cart and starts a
+session. The agent reads the cart, the Domain Core computes that it is 93.38 ₴ below
+the minimum
+order sum, and nothing is changed yet — the write path stays closed until the Customer
 agrees to one specific action.</div>
+<p class="meta">The diagrams label the person <code>Guest</code> — Silpo's own term for
+a signed-in shopper; these pages call them the Customer.</p>
 <div class="diagram"><svg viewBox="0 0 1400 620" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c4-container-title c4-container-desc">
       <title id="c4-container-title">Lantern system architecture</title>
       <desc id="c4-container-desc">Architecture diagram showing a guest reaching the interface layer, which drives the Recovery Agent orchestrator; the orchestrator computes through the Domain Core, authorizes writes through the Write Guard, and both the Write Guard and the orchestrator's read path go through the MCP Adapter to reach external services (Silpo MCP, Neon, OpenRouter, LangSmith).</desc>
@@ -253,8 +256,9 @@ repository and checkpointer, tracing with redaction</td><td>talks to the outside
 trusts nothing it receives</td></tr>
 <tr><td>Application</td><td>the LangGraph graph and prompts</td><td>the model plans and
 explains, never authorises</td></tr>
-<tr><td>Interface</td><td>FastAPI routes, the React guest card and the jury
-console</td><td>Ukrainian for the guest; English identifiers for the observer</td></tr>
+<tr><td>Interface</td><td>FastAPI routes, the React Customer card and the jury
+console</td><td>Ukrainian for the Customer; English identifiers for the
+observer</td></tr>
 </table>
 <p>Layer membership is enforced by a test that walks every import, not by directory
 nesting alone.</p>
@@ -264,52 +268,63 @@ nesting alone.</p>
 one exists as its own test file named after the rule
 (<code>tests/unit/test_dr_01…13</code>), so "does the rule hold" is a question the test
 suite answers rather than a claim in a document. None of them needs a network to
-run.</p>
+run. The five in <b>bold</b> are the product promise itself: the figure the client is
+shown, who may compute it, no offer without verified price and availability, proof by
+reading the cart back, and the boundary of what the agent never does.</p>
 <table>
 <tr><th>#</th><th>Rule</th><th>Why it is not obvious</th></tr>
-<tr><td>DR-01</td><td>Money is <code>Decimal</code>, coordinates are floats, quantity
+<tr><td>01</td><td>Money is <code>Decimal</code>, coordinates are floats, quantity
 keeps its fractional meaning</td><td>the cart returns coordinates as strings, which a
 sibling tool rejects if passed on unconverted</td></tr>
-<tr><td>DR-02</td><td>Time is UTC inside, Kyiv time on screen</td><td>a delivery slot
-of 06:30 UTC is 09:30 for the guest</td></tr>
-<tr><td>DR-03</td><td>The shortfall is <code>minOrderCost − productsTotal</code></td>
+<tr><td>02</td><td>Time is UTC inside, Kyiv time on screen</td><td>a delivery slot
+of 06:30 UTC is 09:30 for the Customer</td></tr>
+<tr><td>03</td><td><b>The shortfall is <code>minOrderCost − productsTotal</code></td>
 <td>comparing against the cart's grand total instead would invent a block on every
 cart that carries a delivery fee or bonuses</td></tr>
-<tr><td>DR-04</td><td>A surcharge is named "service fee" only where a confirmed one
+<tr><td>04</b></td><td>A surcharge is named "service fee" only where a confirmed one
 exists; otherwise it is called a difference</td><td>naming an unknown amount invents a
 fact</td></tr>
-<tr><td>DR-05</td><td><code>deliveryCost: null</code> means "not applicable", never
+<tr><td>05</td><td><code>deliveryCost: null</code> means "not applicable", never
 zero</td><td>zero would read as free delivery</td></tr>
-<tr><td>DR-06</td><td>An unregistered validation code is flagged, never treated as a
+<tr><td>06</td><td>An unregistered validation code is flagged, never treated as a
 similar known one</td><td>two live codes with no registry match were found in the very
 first field session</td></tr>
-<tr><td>DR-07</td><td>"Product no longer sold" outranks "not enough in stock" for the
-same product</td><td>otherwise the guest is told to reduce a quantity of something that
+<tr><td>07</td><td>"Product no longer sold" outranks "not enough in stock" for the
+same product</td><td>otherwise the Customer is told to reduce a quantity of something
+that
 cannot be bought at all</td></tr>
-<tr><td>DR-08</td><td>A price of 0 is not automatically free or unavailable</td><td>
+<tr><td>08</td><td>A price of 0 is not automatically free or unavailable</td><td>
 without proof of suitability such a line is not a candidate</td></tr>
-<tr><td>DR-09</td><td>Totals and the shortfall are computed, never supplied by the
-model</td><td>enforced by the functions' own signatures: there is no parameter through
+<tr><td>09</td><td><b>Totals and the shortfall are computed, never supplied by the
+model</b></td><td>enforced by the functions' own signatures: there is no parameter
+through
 which a total could arrive</td></tr>
-<tr><td>DR-10</td><td>An incomplete evidence tuple cannot be represented</td><td>
+<tr><td>10</td><td><b>An incomplete evidence tuple cannot be represented</b></td><td>
 product, price, availability, source tool and capture time are all required, so a
 candidate without a verified price cannot exist</td></tr>
-<tr><td>DR-11</td><td>The before/after difference is canonical and self-checking</td>
+<tr><td>11</td><td>The before/after difference is canonical and self-checking</td>
 <td>a difference that would understate the real change raises instead of reporting</td>
 </tr>
-<tr><td>DR-12</td><td>Re-read before the write, read back immediately after</td><td>
-the server's own write response carries no totals and no validations, so its
-<code>success</code> cannot answer whether the block cleared</td></tr>
-<tr><td>DR-13</td><td>Checkout, payment and age confirmation stay the guest's
-own</td><td>a list in code, not a sentence in a comment, so a test can check it</td>
+<tr><td>12</td><td>Re-read before the write, read back immediately after</td><td>
+Silpo's server answers a write with a success flag and the list of changed products —
+no totals, no validations. That answer therefore cannot say whether the block cleared;
+only a fresh read of the cart can</td></tr>
+<tr><td>13</td><td><b>Checkout, payment and age confirmation stay the Customer's
+own</b></td><td>a list in code, not a sentence in a comment, so a test can check it</td>
 </tr>
 </table>
 
-<h2 id="graph">The graph</h2>
-<p>Read → diagnose → compare channels → plan → collect and gate → rank → explain →
-<em>wait for consent</em> → write guard → write and read-back → persist receipt. The
-graph stops at consent and the state is saved to Neon; when the guest answers, it is
-loaded from the checkpoint and continues from the same point, in any process.</p>
+<h2 id="graph">How one request is processed</h2>
+<p>One customer request is processed as a sequence of steps, each next one chosen by
+the result of the last: read → diagnose → compare channels → plan → collect and gate →
+rank → explain →
+<em>wait for consent</em> → write guard → write and read-back → persist receipt.</p>
+<p>At the consent step processing stops — and nothing is left hanging in memory. The
+intermediate state (the cart as read, the diagnosis, the proposed options) is written to
+the database and the request that produced it ends: the service holds nothing and waits
+for nobody. When the Customer presses the consent button that is a new request: the
+service loads the saved state and continues from exactly the step it stopped at — even
+if it was restarted meanwhile, or the request landed on a different worker process.</p>
 <p>The diagram below is the standard shape of a LangGraph application, without project
 detail: a typed state feeds a builder that compiles to an executable graph, a
 conditional edge routes each step, and a checkpointer persists the state after every
@@ -1195,7 +1210,7 @@ the cart carries, including the ones the app's own screen never displays.</p>
 <p>After the diagnosis the planner proposes search terms — never a price or a product
 id, which are structurally absent from what it may return. Every candidate the search
 turns up is checked against the same call's own typed response before it can reach the
-guest; one with no verified price, or marked unavailable, is dropped. What survives
+Customer; one with no verified price, or marked unavailable, is dropped. What survives
 is ranked by the smallest top-up that clears the gap.</p>
 <div class="diagram"><svg viewBox="0 0 900 1120" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g4-activity-title g4-activity-desc">
       <title id="g4-activity-title">G4 planner-to-ranking activity diagram</title>
@@ -1456,5 +1471,5 @@ data.</p>
 <div class="next"><a href="index.html">← Start here</a>
 
 <a href="recovery.html">Hero recovery →</a></div>
-<p class="meta">Regenerated 2026-09-11T21:59:34+00:00. No external network resources.</p>
+<p class="meta">Regenerated 2026-09-11T22:09:16+00:00. No external network resources.</p>
 </main></div></body></html>
