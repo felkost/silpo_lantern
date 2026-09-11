@@ -4,7 +4,7 @@ citing `insights.md` by date, leads a fresh cloner nowhere. Scans every
 git-tracked file's text for a path matching the `docs/*` gitignore rule
 (excluding the public exception, the tracked report pages), or a bare
 mention of the other gitignored process files
-(`handoff.md`, `insights.md`).
+(`handoff.md`, `insights.md`, `CONTRIBUTING.md`).
 
 Historically this project treated a stable id (`D-G1-04`, `F7`, `D12`) as an
 acceptable citation from tracked code, since it names a decision rather than a
@@ -27,7 +27,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 _GITIGNORED_PATH_PATTERN = re.compile(
     r"\bdocs/(?!reports/(?:uk/)?[A-Za-z0-9_-]+\.html\b)[A-Za-z0-9_./-]+"
 )
-_GITIGNORED_BARE_FILES = re.compile(r"\b(?:handoff|insights)\.md\b")
+_GITIGNORED_BARE_FILES = re.compile(r"\b(?:handoff|insights|CONTRIBUTING)\.md\b")
 
 # This test file itself necessarily quotes the patterns it looks for, and
 # the .gitignore file is the rule's own source of truth, not a violation
