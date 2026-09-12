@@ -17,16 +17,20 @@ export function Help({ children }: Props) {
   );
 }
 
-/** One line per term: the term in italics, then a short sentence. Used for
- * every «Що це?» and «Доводить» block so they all read the same way. */
+/** A two-column table: the term on the left, one short sentence on the
+ * right, both columns aligned. Used for every «Що це?» and «Доводить»
+ * block so they all read the same way. */
 export function Terms({ items }: { items: Array<[string, string]> }) {
   return (
-    <div className="terms">
-      {items.map(([term, text]) => (
-        <p key={term}>
-          <i>{term}</i> — {text}
-        </p>
-      ))}
-    </div>
+    <table className="terms">
+      <tbody>
+        {items.map(([term, text]) => (
+          <tr key={term}>
+            <th scope="row">{term}</th>
+            <td>{text}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
