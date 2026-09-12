@@ -79,7 +79,7 @@ border-bottom: 1px solid #e3e7f0; } }
 <div class="onpage"><b>On this page:</b>
 <a href="#flow">The flow</a>
 <a href="#live">The live run</a>
-<a href="#states">State machine</a>
+<a href="#states">States of a request</a>
 <a href="#console">The console</a>
 <a href="#scenarios">Other scenarios</a>
 </div>
@@ -245,35 +245,93 @@ the cart back independently and shows a receipt of what actually changed.</p>
 <h2 id="live">The live run, 2026-09-10</h2>
 <table>
 <tr><th>Step</th><th>Observed</th></tr>
-<tr><td>Cart at the read</td><td>productsTotal 605.62 ₴ against a 699 ₴ minimum; two
-validations: <code>order.cost.min</code> (error) and
-<code>order.payment_types.disabled</code> (info) — the second one the app renders on no
-screen a Customer can reach</td></tr>
-<tr><td>Gap</td><td>93.38 ₴ — the subtraction 699 − 605.62, with the 699 taken from the
-validation's own context, not from the model</td></tr>
-<tr><td>Candidates</td><td>three products priced from the product search: 46.99 × 2,
-94.99 × 1, 31.99 × 3 — each with its consent hash shown before consent</td></tr>
-<tr><td>Consent</td><td>the third candidate; the recorded consent's
-<code>args_hash</code> equal to that candidate's, with a <code>state_hash</code> of the
-cart and a five-minute expiry</td></tr>
-<tr><td>Write and read-back</td><td>expected +95.97, read back +95.97, <b>verified,
-blocker cleared</b></td></tr>
-<tr><td>Spend</td><td>5,205 tokens, $0.0042 at the pinned prices, from the provider's
-own usage block</td></tr>
-<tr><td>Afterwards</td><td>the cart restored by script to 605.62 (the restore refuses
-if the cart moved since the receipt)</td></tr>
+<tr><td>Cart before the run</td><td>Products worth 605.62 ₴; the minimum order sum is
+699 ₴.</td></tr>
+<tr><td>What the server returned with the cart</td><td>Two validation results. The
+first, <code>order.cost.min</code>, is an error: the sum is below the minimum and
+checkout is blocked; the Silpo app shows it as a large button. The second,
+<code>order.payment_types.disabled</code>, is informational: paying in instalments is
+unavailable while the cart is under 1000 ₴; the app shows it nowhere, because a
+Customer with a blocked cart never reaches the payment screen.</td></tr>
+<tr><td>Shortfall</td><td>93.38 ₴ = 699 − 605.62. The 699 is taken from the
+validation's own data, the products total from the cart. The subtraction is done by
+ordinary code; the language model is not used at this step.</td></tr>
+<tr><td>Options</td><td>Three products from Silpo's product search, price and
+availability from that same search answer: 46.99 ₴ × 2, 94.99 ₴ × 1, 31.99 ₴ × 3.
+Beside each option its action checksum is visible at once — a short number computed
+from what will go to the server at the write: cart, product, quantity. Change any of
+those and the number changes.</td></tr>
+<tr><td>Consent</td><td>The Customer chose the third option. The server recorded the
+consent together with the checksum of exactly that action (the same one shown beside
+the option), the checksum of the cart state at the moment of consent (cart id, products
+total, the list of lines: product, quantity, price) and an expiry of five
+minutes.</td></tr>
+<tr><td>Write and read-back</td><td>One write: 31.99 ₴ × 3 added. The cart was read
+back separately: the products total rose by 95.97 ₴ — exactly what was expected.
+Outcome <b>verified; the minimum reached, the block cleared</b>.</td></tr>
+<tr><td>Spend</td><td>5,205 tokens, $0.0042 — from the usage data the model provider
+itself returned, at the prices pinned in the project.</td></tr>
+<tr><td>After the demonstration</td><td>The run was a demonstration on the project
+author's real cart, so afterwards the cart was put back to its starting state: the
+added product removed, the cart at 605.62 ₴ again. The project has a separate script
+for this, <code>scripts/g5_restore_after_write.py</code> — it exists only for
+demonstrations and is not part of the agent: the script finds the write by its
+receipt, removes exactly the line that write added, and refuses to act if the cart has
+moved since. The agent itself cannot remove products — no such tool is on its
+allowlist, and that is deliberate. It also means the demonstration can be repeated any
+number of times from the same cart state.</td></tr>
 </table>
-<div class="example"><b>What the price says.</b> On earlier live rounds the cart charged
-less than the search predicted (99.00 expected, 89.10 charged) because the cart applies
-a per-product loyalty discount the search does not carry. The receipt shows the number
-the cart returned, not the prediction — which is the whole reason for the
-read-back.</div>
+<div class="example"><b>What the price says.</b> On the live run of 7 September Silpo's
+search returned a price of 99.00 ₴ for a product, and after it was added the cart
+showed 89.10 ₴ for it: the cart applies a loyalty-programme discount to that product,
+while the search returns the catalogue price without it. So the receipt carries the
+sum from the cart, not from the search — which is why the cart is read back after the
+write instead of trusting the prediction.</div>
 
-<h2 id="states">The state machine behind it</h2>
-<p>Exactly one path ends with a receipt; every other path ends in an honest
-non-success. The agent stops at consent and waits; it re-reads the cart before writing
-and returns to planning if the cart changed; after the write it reaches
-<em>Receipt</em> only if the read-back matches, otherwise <em>Unverified</em>.</p>
+<h2 id="states">The states one request passes through</h2>
+<p>The diagram below shows the states of one Customer request — from the first read of
+the cart to the receipt — and the transitions between them. Each box is a state the
+request is in; each arrow is a transition, and the label on the arrow names the
+condition under which it happens. Solid arrows are the main path, dashed ones the
+exceptions.</p>
+<p>The main path is eight states in order: <code>Read &amp; Normalize</code> (the cart
+read and unpacked into fields) → <code>Diagnose</code> (the diagnosis) →
+<code>Plan</code> (the search for options) → <code>Consent</code> (processing stopped,
+waiting for the Customer) → <code>Re-read</code> (the cart re-read before the write) →
+<code>Write</code> (the single call of the write tool) → <code>Read-back</code> (an
+independent read after the write) → <code>Receipt</code> — the record of the write,
+"before → after". That is the one path that ends with a receipt. Three dashed
+transitions lead away from it: to an end without a write, back to planning, or to
+<code>Unverified</code>, which is never shown as a success.</p>
+<p>What each arrow label means:</p>
+<table>
+<tr><th>Label</th><th>From → to</th><th>Condition</th></tr>
+<tr><td>NORMALIZED</td><td>Read &amp; Normalize → Diagnose</td><td>the server's answer
+unpacked into the known fields without error: totals, products, validation
+results</td></tr>
+<tr><td>BLOCKER</td><td>Diagnose → Plan</td><td>among the validation results there is
+a blocker with a known rule — the shortfall is computed</td></tr>
+<tr><td>CANDIDATES</td><td>Plan → Consent</td><td>the search returned at least one
+product with a confirmed price and availability; the Customer is shown the
+options</td></tr>
+<tr><td>CONSENT OK</td><td>Consent → Re-read</td><td>the Customer agreed to one
+specific option; the consent is recorded</td></tr>
+<tr><td>EXPIRED / REFUSED</td><td>Consent → end</td><td>the consent expired (five
+minutes) or the guard refused — the cart untouched</td></tr>
+<tr><td>HASH OK</td><td>Re-read → Write</td><td>the checksum of the re-read cart
+matches the one recorded with the consent: the cart is the same</td></tr>
+<tr><td>STATE CHANGED</td><td>Re-read → Plan</td><td>the cart changed after consent
+(in another tab, say) — no write; the Customer gets a new offer for the new cart
+state</td></tr>
+<tr><td>CALLED</td><td>Write → Read-back</td><td>the write tool was called once; its
+"success" answer proves nothing yet</td></tr>
+<tr><td>DIFF MATCH</td><td>Read-back → Receipt</td><td>the "before → after"
+difference from the read-back matches the expected one — the receipt is
+verified</td></tr>
+<tr><td>DIFF MISMATCH</td><td>Read-back → Unverified</td><td>what was read after the
+write did not match what was expected, or the read-back failed — the outcome is
+"unverified"</td></tr>
+</table>
 <div class="diagram"><svg viewBox="0 0 980 1160" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="graph-state-title graph-state-desc">
       <title id="graph-state-title">Recovery graph node states</title>
       <desc id="graph-state-desc">State machine, laid out as a snake of three rows, showing the recovery graph moving through read-and-normalize, diagnose, plan, consent, re-read, write, and read-back, ending in a receipt on success or an unverified state when a write's read-back does not confirm it, with a re-plan loop when the cart state changes during consent.</desc>
@@ -454,28 +512,78 @@ and returns to planning if the cart changed; after the write it reaches
 </div>
 
 <h2 id="console">What the console shows during the run</h2>
-<p>Left: an append-only log of the graph nodes the stream reported — MCP, LLM, DB or
-pure — and the session's spend beside the project ceiling. Middle: the Customer card, in
-Ukrainian. Right: the cart as the server returned it, one state at the read and one per
-read-back, the added line marked. Four claims with their live evidence: the server
-returns more than the app shows; money is arithmetic, never a model's answer; nothing
-is written without item-bound consent; success is never asserted, only read back.</p>
+<p>The console has three columns. <b>In the middle</b> — the Customer card, the same
+one the Customer sees, in Ukrainian. <b>On the right</b> — the cart as Silpo's server
+returned it: one column with the state at the first read and one more after each
+read-back; the line the write added is highlighted, and the totals stand side by side
+so they can be compared.</p>
+<p><b>On the left</b> — two blocks for the observer. The first is a log of the steps
+the agent actually ran in this session, in execution order; beside each step, what it
+touched: Silpo's server, the language model, the database, or nothing (computation in
+code). Under the log, the session's spend on the language model: how many tokens were
+used and what they cost at the prices pinned in the project, from the model provider's
+own usage data. Beside it, the <b>project ceiling</b> — $20: the limit on language-model
+spend for the whole project, from the first test to today, set by the author and
+recorded in the settings file (<code>config/models.yaml</code>). It is shown so the
+session's spend has something to be compared with.</p>
+<p>The second block on the left is four claims about how the system works. They are
+the project's own claims, and under each one the console shows the data from the
+current session that proves it; the field names are deliberately the same as in the
+code, so they can be checked against it.</p>
+<table>
+<tr><th>Claim</th><th>What is shown under it in this session</th></tr>
+<tr><td>The server returns more than the app shows</td><td>every validation result the
+server returned with the cart, with its level. In the live run above there are two, and
+the Silpo app shows only one: the Customer never learns from the app that instalments
+are unavailable (<code>order.payment_types.disabled</code>)</td></tr>
+<tr><td>Money is computed by code, never by the model</td><td>the input numbers and the
+result: the products total from the cart (<code>products_total</code>), the
+minimum-order threshold from the validation's data, and the shortfall as their
+difference; for each option, its price and the search tool whose answer it came from.
+The model's sentence on the card only explains, it does not compute</td></tr>
+<tr><td>Nothing is written without item-bound consent</td><td>"written" — into the
+Customer's cart on Silpo's server. Under the claim, the action checksum of each option
+before consent, and after consent the consent record itself: the same action checksum,
+the cart-state checksum and the expiry. If the guard refused — its refusal, in its own
+words</td></tr>
+<tr><td>Success is never asserted, only read back</td><td>Silpo's server answers a
+write with only "success", no totals. So the system reads the cart again and shows here
+the expected change beside the one read back: equal — "verified"; not equal, or the
+read-back failed — "unverified"</td></tr>
+</table>
 
 <h2 id="scenarios">The other scenarios</h2>
 <table>
-<tr><th>Scenario</th><th>Cart state</th><th>What it shows</th></tr>
-<tr><td>Second round</td><td>the first write leaves a residual gap</td><td>a new
-diagnosis and offer for the remainder; both receipts stay on screen</td></tr>
-<tr><td>Compensation</td><td>a write produced an unwanted diff</td><td>an offer to undo
-exactly that write, re-authorised by the guard, read back the same way</td></tr>
-<tr><td>Safeguard</td><td>a lapsed delivery slot, out-of-stock lines</td><td>«причина
-невідома»: no known rule applies, so no action is proposed — the system declining to
-act blind</td></tr>
-<tr><td>Logout</td><td>any</td><td>the credential is deleted; a fresh session answers
-401 until the Customer logs in again</td></tr>
+<tr><th>Scenario</th><th>Cart state</th><th>What the Customer sees and what the system
+does</th></tr>
+<tr><td>Second round</td><td>after the first write a shortfall remains — for instance
+the cart applied a discount, and the added product cost less than the search
+showed</td><td>the system diagnoses again, on the new cart state, and offers options
+for the remaining shortfall; the Customer agrees again or declines. The first write's
+receipt stays on screen beside the second</td></tr>
+<tr><td>Compensation</td><td>the write happened and was verified, but produced not
+what the Customer wanted: a different quantity, say, or a new blocker appeared in the
+cart</td><td>the card shows a «Повернути як було» button — an offer to remove exactly
+the line this write added, in the same quantity. That is a second write to the cart,
+and it takes the same road as the first: the Customer consents to it separately, the
+guard checks the consent and the cart afresh (including that the cart has not moved
+since the first write), and after the undo the cart is read back again. The receipt
+shows a negative change, «Повернуто на …»</td></tr>
+<tr><td>Safeguard</td><td>none of the validation results is one the system knows —
+for instance a lapsed delivery slot or out-of-stock products, whose codes are not in
+the rule registry</td><td>the Customer sees «Причина: невідома» and the explanation:
+no validation result is a known rule, so the system does not propose an action blind
+— check the cart in the Silpo app. Below it, the full list of what the server
+returned, unrecognised codes marked «не розпізнано». The language model is not
+called, the cart is not changed, the session's spend is zero. The system does not
+hang: it says plainly that it knows no such rule and leaves the decision with the
+Customer</td></tr>
+<tr><td>Logout</td><td>any</td><td>the «Вийти» button deletes the Silpo credential on
+the server side; a fresh session sees no cart until the Customer logs in
+again</td></tr>
 </table>
 <div class="next"><a href="architecture.html">← Architecture</a>
 
 <a href="safety.html">Safety & consent →</a></div>
-<p class="meta">Regenerated 2026-09-11T22:55:09+00:00. No external network resources.</p>
+<p class="meta">Regenerated 2026-09-12T00:07:34+00:00. No external network resources.</p>
 </main></div></body></html>

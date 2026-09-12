@@ -247,8 +247,9 @@ a signed-in shopper; these pages call them the Customer.</p>
 <tr><td>Domain</td><td>cart, validation, diagnosis and receipt models; the 13 domain
 rules below; gap arithmetic; evidence gate; ranking</td><td>no I/O — testable without a
 network</td></tr>
-<tr><td>Safety</td><td>the Write Guard: allowlist, consent binding, hashes, per-tool
-schema hash, budget reserve, read-back gate</td><td>the only place a write tool is
+<tr><td>Safety</td><td>the Write Guard: allowlist, consent binding, checksums of the
+action, the cart state and the tool description, budget reserve, read-back gate</td>
+<td>the only place a write tool is
 called</td></tr>
 <tr><td>Infra (the MCP adapter)</td><td>MCP client and OAuth, dynamic tool registry
 with quarantine, Neon
@@ -268,7 +269,7 @@ nesting alone.</p>
 one exists as its own test file named after the rule
 (<code>tests/unit/test_dr_01…13</code>), so "does the rule hold" is a question the test
 suite answers rather than a claim in a document. None of them needs a network to
-run. The five in <b>bold</b> are the product promise itself: the figure the client is
+run. The five in <b>bold</b> are the product promise itself: the figure the Customer is
 shown, who may compute it, no offer without verified price and availability, proof by
 reading the cart back, and the boundary of what the agent never does.</p>
 <table>
@@ -278,10 +279,11 @@ keeps its fractional meaning</td><td>the cart returns coordinates as strings, wh
 sibling tool rejects if passed on unconverted</td></tr>
 <tr><td>02</td><td>Time is UTC inside, Kyiv time on screen</td><td>a delivery slot
 of 06:30 UTC is 09:30 for the Customer</td></tr>
-<tr><td>03</td><td><b>The shortfall is <code>minOrderCost − productsTotal</code></td>
+<tr><td>03</td><td><b>The shortfall is <code>minOrderCost −
+productsTotal</code></b></td>
 <td>comparing against the cart's grand total instead would invent a block on every
 cart that carries a delivery fee or bonuses</td></tr>
-<tr><td>04</b></td><td>A surcharge is named "service fee" only where a confirmed one
+<tr><td>04</td><td>A surcharge is named "service fee" only where a confirmed one
 exists; otherwise it is called a difference</td><td>naming an unknown amount invents a
 fact</td></tr>
 <tr><td>05</td><td><code>deliveryCost: null</code> means "not applicable", never
@@ -619,20 +621,33 @@ server provides the cart. No state is kept on the service disk.</p>
 <p>Silpo's server offers what it can do as a list of <i>tools</i>: read the cart, search
 products, change the cart. The list is fetched from the server live, through
 <code>tools/list</code>, and held only briefly, with an expiry.</p>
-<p>For each tool the system keeps <b>a checksum of its description</b> — a short
-signature computed from the parameters and their types, which changes the moment the
-server alters anything in it. Beside it, in the repository, sits the list of tools
-already reviewed together with their signatures; a developer refreshes that list with a
-separate command, once they have looked at a change and accepted it.</p>
-<p>If a tool appears for the first time, or its present signature does not match the
-reviewed one, the system puts it in <b>quarantine</b>. In practice that means the tool
-never enters the list the language model sees, and no step of the run calls it. The
-Customer's current request does not stop: reading the cart, the diagnosis and the
-product search carry on with the remaining, reviewed tools. What stops is only what is
-impossible without the quarantined tool: if it was the write tool that changed, the
-Write Guard refuses the write and says plainly that Silpo's service changed its
-interface. A tool does not leave quarantine on its own — a developer looks at what
-changed and, if it is acceptable, refreshes the reviewed list.</p>
+<p>For each tool the system keeps <b>a checksum of its description</b>. A checksum is
+a short number computed from data; change any detail of the data and the number
+changes, so two equal numbers mean the data is the same. Here the data is the list of
+the tool's parameters and their types, and the number changes the moment the server
+alters anything in that description. Beside it, in the repository, sits the list of
+tools already reviewed together with their checksums; a developer refreshes that list
+with a separate command, once they have looked at a change and accepted it. The same
+device — a checksum — is used further on for two more things: the action the Customer
+consents to, and the cart state (the Hero recovery and Safety pages).</p>
+<p>Two different checks hang off the checksum and the list of reviewed tools, and they
+fire in different places.</p>
+<p><b>Quarantine</b> is for a tool that is not on the reviewed list (it appeared on the
+server for the first time). Such a tool never enters the list the language model sees,
+and no step of the run calls it. The Customer's current request does not stop: reading
+the cart, the diagnosis and the product search carry on with the reviewed tools. Were
+the write tool itself quarantined, the guard would refuse the write and the Customer
+would see on the card: «Цю дію тимчасово призупинено на перевірку» ("this action is
+paused for review"). Quarantine has no time limit: a tool leaves it only when a
+developer reviews it and adds it to the reviewed list in the repository (the file
+<code>reviewed_tools.json</code>; a separate script recomputes the checksums in it).
+Until then the system carries on — simply without that tool.</p>
+<p><b>The checksum check</b> is for the write tool, and at the moment of the write: the
+guard compares the checksum of the description the server returns now with the reviewed
+one. If they differ there is no write, and the Customer sees: «Сервіс Сільпо змінив свій
+інтерфейс — спробуйте ще раз пізніше» ("Silpo's service changed its interface — try
+again later"). For the read tools a changed description blocks nothing: the cart is
+still read, and the difference is what a developer notices at review.</p>
 <p>And about the description texts. The server sends a description with each tool, and
 those descriptions are written for a general shopping assistant. The product-search
 tool, for instance, carries the instruction "if user mentions a budget, ALWAYS fill the
@@ -799,7 +814,7 @@ to spare — the largest answer Silpo's server has returned so far held 40 tools
 <p>If such an answer did arrive, the Customer's request ends with an error: the service
 says the tool list could not be read and does nothing further. The stale list is not
 used instead — working from a list that may already have changed would mean calling a
-tool with an unknown set of parameters, exactly what quarantine and the signature check
+tool with an unknown set of parameters, exactly what quarantine and the checksum check
 exist to prevent.</p>
 <div class="diagram"><svg viewBox="0 0 1140 1020" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="tools-list-sequence-title tools-list-sequence-desc">
       <title id="tools-list-sequence-title">Dynamic tools/list registry sequence</title>
@@ -1128,9 +1143,14 @@ fit — processing stops at once with a named error and the Customer is told the
 could not be read: better to say so than to compute a shortfall from data the system
 does not trust.</p>
 <p>If the answer unpacked cleanly, the system looks for the minimum-order threshold and
-subtracts the products total from it. It also happens that the threshold is in none of
-the known fields — then the Customer still gets a message, but one that says plainly
-that the amount could not be confirmed; an invented number never takes its place.</p>
+subtracts the products total from it.</p>
+<p>It also happens that the server reports a minimum-order block but the number itself
+is nowhere in its answer — neither in that validation's data nor in the description of
+the chosen delivery slot. That does <b>not</b> mean there is no minimum and the cart can
+be checked out: the block stays, only the size of the threshold is unknown. Then the
+system says exactly that — checkout is blocked, the exact amount could not be confirmed
+— and makes no offers in that state, because computing a top-up from an unknown
+threshold would mean inventing a number.</p>
 <p>Wherever the path leads, the message to the Customer lists <b>every</b> validation
 the cart carries, not only the one that caused the block. From the audit of 10
 September: the server returned two. The first is an error about the minimum order sum —
@@ -1278,7 +1298,8 @@ and it decides nothing.</p>
 for the same delivery slot as the cart. The search returns a structured answer: name,
 price, availability, identifiers. A candidate goes further only if its <b>price and
 availability come from that same answer</b>: one with no confirmed price, or marked
-unavailable, is dropped. The model has no part in those numbers.</p>
+unavailable, is dropped. Price and availability come from the search answer; the
+language model is not used at this step.</p>
 <p>For each survivor the system computes the smallest quantity that closes the
 shortfall: the shortfall divided by the price, rounded to the catalogue's selling step
 and capped by stock. It then orders the candidates <b>by one thing only — the top-up
@@ -1292,7 +1313,12 @@ cart are <b>not</b> taken into account: Silpo's server offers tools for those, a
 version does not use them. The reason is plain: every extra signal is one more place to
 be wrong in front of a Customer, and there was no measured way to validate relevance
 within this version. So relevance stays with the model and with the Customer, who picks
-one of two or three offers — or none.</p>
+one of two or three offers — or none. In the second case the cart stays exactly as it
+was: nothing added, nothing changed, the block still there. The next decision is the
+Customer's — add something themselves in the Silpo app, choose another delivery
+channel (its minimum may differ, or there may be none; Lantern shows that comparison
+beside the diagnosis) or simply postpone the order. They can come back to the check at
+any time: since nothing was written, a repeated look spoils nothing.</p>
 <div class="diagram"><svg viewBox="0 0 900 1120" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g4-activity-title g4-activity-desc">
       <title id="g4-activity-title">G4 planner-to-ranking activity diagram</title>
       <desc id="g4-activity-desc">Activity diagram from a completed diagnosis through the planner, the deterministic product search, the Evidence Gate, and ranking to the explainer, ending in awaiting_consent. The candidates-empty branch and a budget-exceeded condition both exit to an explicit Aborted state rather than a successful outcome.</desc>
@@ -1558,5 +1584,5 @@ tool descriptions, or the write tool.</p>
 <div class="next"><a href="index.html">← Start here</a>
 
 <a href="recovery.html">Hero recovery →</a></div>
-<p class="meta">Regenerated 2026-09-11T22:55:09+00:00. No external network resources.</p>
+<p class="meta">Regenerated 2026-09-12T00:07:34+00:00. No external network resources.</p>
 </main></div></body></html>

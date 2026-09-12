@@ -84,42 +84,78 @@ border-bottom: 1px solid #e3e7f0; } }
 <a href="#unmeasured">Not measured</a>
 </div>
 
-<p class="lede">Eight numbers, each with the population it was measured over, its 95%
-interval and its caveat — never a bare percentage.</p>
+<p class="lede">Eight indicators the project checks itself against. Each comes with the
+population it was measured over (<code>n</code>), its 95% confidence interval and a
+caveat about what it does not mean — no value appears on the page without those
+three.</p>
 
-<h2 id="metrics">The metrics</h2>
+<h2 id="metrics">The indicators</h2>
+<p>The first four check the safeguards: each must be exactly 0 or exactly 1, and any
+other value would mean a defect, not "slightly worse". The fifth explains a price
+discrepancy. The sixth and seventh — whether the system does what it exists for at all.
+The eighth — whether it shows what the app does not.</p>
+
 <table>
-<tr><th>Metric</th><th>Value</th><th>n</th><th>95% Wilson</th><th>Caveat</th></tr>
+<tr><th>Indicator</th><th>What it means</th><th>Value</th><th>n</th>
+<th>95% interval</th>
+</tr>
 
-<tr><td><code>UnauthorizedWriteRate</code></td><td>0.00</td><td>33</td>
-<td>[0.00, 0.10]</td><td>Gate 0.00 absolute. Denominator: idempotency claims.</td></tr>
+<tr><td><b>Writes without the guard's authorisation</b><br><code>UnauthorizedWriteRate</code></td>
+<td>the share of cart writes that happened without the guard's authorisation; the
+  denominator is every write claim. Must be 0: no write may bypass the guard.</td><td>0.00</td><td>33</td>
+<td>[0.00, 0.10]</td></tr>
 
-<tr><td><code>ReadbackCoverage</code></td><td>1.00</td><td>33</td>
-<td>[0.90, 1.00]</td><td>Gate 1.00. Every claimed write followed by an independent read-back.</td></tr>
+<tr><td><b>Read-back after the write</b><br><code>ReadbackCoverage</code></td>
+<td>the share of writes after which the cart was re-read in a separate call. Must be 1:
+  every write is checked, not taken on trust.</td><td>1.00</td><td>33</td>
+<td>[0.90, 1.00]</td></tr>
 
-<tr><td><code>ConsentBindingIntegrity</code></td><td>1.00</td><td>33</td>
-<td>[0.90, 1.00]</td><td>Gate 1.00. Consent hashes match what the guard authorised.</td></tr>
+<tr><td><b>Consent binding integrity</b><br><code>ConsentBindingIntegrity</code></td>
+<td>the share of writes in which the recorded consent's checksums matched what the guard
+  authorised. Must be 1.</td><td>1.00</td><td>33</td>
+<td>[0.90, 1.00]</td></tr>
 
-<tr><td><code>WriteDeltaFidelity</code></td><td>1.00</td><td>33</td>
-<td>[0.90, 1.00]</td><td>Gate 1.00 absolute. The recorded delta against the cart's own movement -- what this system controls (D82).</td></tr>
+<tr><td><b>Fidelity of the recorded change</b><br><code>WriteDeltaFidelity</code></td>
+<td>the share of writes in which the change recorded on the receipt matches how the cart
+  actually moved. Must be 1: the receipt does not invent.</td><td>1.00</td><td>33</td>
+<td>[0.90, 1.00]</td></tr>
 
-<tr><td><code>SearchPriceFidelity</code></td><td>0.27</td><td>33</td>
-<td>[0.15, 0.44]</td><td>No gate. NOT a success rate: how often the search price equalled the price the cart charged. Low because the cart applies a per-product loyalty discount the search does not carry (D68/D76/D82).</td></tr>
+<tr><td><b>Search price equals cart price</b><br><code>SearchPriceFidelity</code></td>
+<td>how often the price from the product search equalled the price the cart applied. Not
+  a success measure: it is low because the cart applies a loyalty discount the search
+  does not return — which is why the receipt takes the sum from the cart.</td><td>0.27</td><td>33</td>
+<td>[0.15, 0.44]</td></tr>
 
-<tr><td><code>RecoveryCompletionRate</code></td><td>1.00</td><td>18</td>
-<td>[0.82, 1.00]</td><td>Gate 0.85 on the core cases. Offline population.</td></tr>
+<tr><td><b>Blocks cleared</b><br><code>RecoveryCompletionRate</code></td>
+<td>the share of requests on the core test cases in which the block was cleared.
+  Threshold 0.85.</td><td>1.00</td><td>18</td>
+<td>[0.82, 1.00]</td></tr>
 
-<tr><td><code>FalseRecovery</code></td><td>0</td><td>33</td>
-<td>—</td><td>Gate 0 absolute. A count of false 'recovered' claims, not a rate.</td></tr>
+<tr><td><b>False “recovered” claims</b><br><code>FalseRecovery</code></td>
+<td>the number of cases in which the system claimed the block was cleared when it was
+  not. Must be 0. A count, not a rate.</td><td>0</td><td>33</td>
+<td>—</td></tr>
 
-<tr><td><code>DisclosureRate</code></td><td>1 of 1</td><td>1</td>
-<td>[0.21, 1.00]</td><td>One audited observation, not a rate (section 12.3): the app showed the blocking constraint and showed order.payment_types.disabled on no reachable surface.</td></tr>
+<tr><td><b>Shown what the app does not show</b><br><code>DisclosureRate</code></td>
+<td>whether the system showed the Customer a validation result the Silpo app shows
+  nowhere. One audited observation, reported as one.</td><td>1 of 1</td><td>1</td>
+<td>[0.21, 1.00]</td></tr>
 
 </table>
-<p>Population <code>offline</code>: the 18 offline repeats over the tracked
-recorded bundles, replayed through the same compiled graph the live path runs.
-Regenerate with <code>python -m scripts.compute_metrics --tracked</code>; a gate test asserts the committed file
-agrees with a fresh regeneration. Live repeats: 18 of 18 on 2026-09-09.</p>
+<p><b>Population.</b> The label <code>offline</code> means all eight indicators
+were measured not on live requests but on 18 repeats: recorded records of real runs are
+replayed through the same graph the live path runs, so the result can be recomputed
+from the repository at any time (<code>python -m scripts.compute_metrics --tracked</code>; a gate test asserts the
+committed file agrees with a fresh regeneration). <code>n</code> = 33 is the number of
+cart writes across those 18 repeats: some runs had more than one write. The same 18
+runs live on 2026-09-09 gave 18 of 18.</p>
+<p><b>What the chart shows.</b> The same eight indicators as horizontal bars on a 0-to-1
+scale. The bar's length is the measured value; the thin line with end caps on either
+side of it is the 95% confidence interval; under each indicator's name, its
+<code>n</code>; on the right, the threshold (<i>gate</i>) the project set for it and
+whether it is met (<i>gate met</i>). "False recovered claims" is shown not as a bar but
+as the label "0 of 33", because it is a count; "search price fidelity" has no gate — it
+is an observation, not a requirement.</p>
 <div class="diagram"><svg xmlns="http://www.w3.org/2000/svg" width="1000" height="524" viewBox="0 0 1000 524" role="img" aria-labelledby="metrics-title metrics-desc">
 <title id="metrics-title">Measured results with 95% Wilson intervals</title><desc id="metrics-desc">Bar chart of the project metrics over the offline repeat population, each bar drawn with its 95% Wilson interval; FalseRecovery is a count and carries no interval.</desc>
 <defs><style>text{font-family:Arial,Helvetica,"Liberation Sans","DejaVu Sans",sans-serif;}</style></defs>
@@ -204,37 +240,131 @@ agrees with a fresh regeneration. Live repeats: 18 of 18 on 2026-09-09.</p>
 <text x="24" y="494" font-size="12" fill="#6B7280">SearchPriceFidelity carries no gate: it measures how well the product search predicts the price the cart charges, which is Silpo policy (D68, D76), not this system.</text>
 </svg></div>
 
-<h2 id="reading">How to read them</h2>
-<p>The four 0.00/1.00 rows are unrefuted, not proven: at n = 33 a proportion of 1.00
-still has a lower bound of 0.90. FalseRecovery is a count. SearchPriceFidelity is not a
-success rate — it measures how often the search price equalled the price the cart
-charged, and it is low because the cart applies a loyalty discount the search does not
-see. DisclosureRate rests on one audited observation and is reported as one.</p>
+<h2 id="reading">How to read the intervals</h2>
+<p>Every indicator but one is a proportion: how many times out of <code>n</code>. But
+"33 of 33" does not mean "exactly 1.00 for good": on 33 observations the true proportion
+could be 0.90 — a rare failure simply has not happened yet. A confidence interval shows
+which true values are consistent with what was observed; 95% means the method, applied
+many times, covers the true value in about 95 cases out of 100.</p>
+<p>The intervals are computed with the <b>Wilson method</b>. Why that one: the simplest
+formula (Wald, "estimate ± 1.96 · standard error") gives a zero-width interval at the
+boundaries 0 and 1 — [1.00, 1.00] — and would claim that 33 observations settled the
+question; that is false. The "exact" Clopper–Pearson method works at the boundaries but
+is deliberately wider than needed (real coverage 97–99% instead of 95%). Wilson gives
+the
+coverage closest to the stated 95% on small samples and is correct at the boundaries. On
+this project's data: for 33 of 33 — [0.90, 1.00]; for 0 of 33 — [0.00, 0.10]; for 18 of
+18 — [0.82, 1.00]; Clopper–Pearson would give [0.89, 1.00], [0.00, 0.11] and
+[0.82, 1.00], Wald a point.</p>
+<p><b>What was obtained and what it means.</b> The four safeguard indicators gave 0
+violations in 33 (unauthorised writes, false "recovered" claims) and 33 of 33
+(read-back, consent binding, change fidelity). A lower bound of 0.90 means: on these 33
+observations one cannot rule out a true failure rate of up to one in ten; one can only
+say that in 33 trials none occurred. Blocks cleared — 18 of 18, lower bound 0.82: that
+is below the 0.85 threshold, so the statistic on 18 runs alone does not yet guarantee
+the threshold; the point value of 1.00 and the tests support it. "Search price fidelity"
+at 0.27 with an interval of [0.15, 0.44] is a wide spread: 33 observations are too few
+for a precise proportion, and none is needed here — the indicator only explains why the
+receipt takes the sum from the cart. For one observation (<code>n</code> = 1) the
+interval [0.21, 1.00] is almost the whole scale, and that is how it is reported.</p>
+<p><b>What would raise the precision, and why this is enough.</b> An interval narrows
+only with the number of observations: at 100 of 100 the lower bound would be 0.96, at
+300 of 300 — 0.99; for the lower bound of blocks cleared to pass the 0.85 threshold, 22
+clean runs of 22 would do. Each live run costs about $0.007 and one write to a real
+cart, so 300 repeats are a question not of money but of the author's time restoring the
+cart after each. For this project that precision is enough, because the four safeguard
+indicators are not probability estimates but a check of the construction: the single
+write site, the read-back after every write and the consent binding are enforced by
+code and by tests that run on every code change. The statistic on 33 observations
+answers a different question — whether the live runs refuted that construction — and
+"not once in 33" is a sufficient answer to it. The indicators with a 0.85 threshold or
+none are another matter: their precision really is limited by the sample, and that is
+why they are reported with an interval rather than as a promise.</p>
 
 <h2 id="cost">Cost</h2>
-<p>18 live runs on 2026-09-09 cost $0.13 in total at the pinned OpenRouter prices —
-about $0.007 per episode with both model calls; the console session of 2026-09-10 cost
-$0.0042. Every usage figure comes from the provider's own usage block, never an
-estimate. Project ceiling $20; spend to date under $1.</p>
+<p><b>What is counted.</b> Only the language model's work: the project has two paid
+model calls per request — the planner (search terms) and the explainer (one sentence per
+option). Silpo's server, the database and hosting cost the project nothing at this
+scale. <b>How it is counted.</b> Every call returns, together with its answer, the
+provider's own usage block — how many tokens went in and how many came out; the system
+multiplies those by the prices fixed in the project's settings file
+(<code>config/models.yaml</code>, dated against the provider's catalogue) and records
+the amount on the session. No figure is an estimate from text length.</p>
+<p><b>What was obtained.</b> The 18 live runs used for the measurements above — 114
+model calls in total — cost $0.13, that is about $0.007 per request with both calls.
+The hero run through the console cost $0.0042 (5,205 tokens). These figures describe
+one request, not the project: the runs recorded and tracked in the repository add up
+to about $1 against the $20 ceiling, and that total does not include the development
+runs and failed experiments made outside the recorded runs — those are visible only on
+the provider's account, and this page does not report them.</p>
 
 <h2 id="economics">Unit economics</h2>
-<p>Stated as the plan's formula with variables, not a projection:
-<code>Vnet = B × (p₁ × M₁ − p₀ × M₀ − c) + ΔS × C − F</code>. B — recovery-eligible
-episodes; p₁/p₀ — completed purchases with and without the agent; M₁/M₀ — marginal
-contribution per purchase; c — the agent's variable cost per episode; ΔS — support
-contacts avoided; C — cost of one; F — fixed integration cost. Only c is measured. At
-c ≈ $0.01 the agent pays for itself if one recovered purchase in a hundred episodes
-carries more than one dollar of margin — provided p₁ − p₀ &gt; 0, which is what an A/B
-pilot over eligible episodes would establish.</p>
+<p>The project brief gives a formula for the net benefit of the agent over a period:</p>
+<p><code>Vnet = B × (p₁ × M₁ − p₀ × M₀ − c) + ΔS × C − F</code></p>
+<p>The parameters:</p>
+<ul>
+<li><b>B</b> — the number of recovery-eligible requests in the period: carts blocked by
+the minimum order sum that the agent could work with.</li>
+<li><b>p₁</b> — the share of those requests that ended in a purchase with the agent
+working.</li>
+<li><b>p₀</b> — the same share without the agent: how many Customers complete the
+purchase anyway.</li>
+<li><b>M₁</b> — the marginal contribution of one purchase with the agent (revenue minus
+the variable costs of that purchase).</li>
+<li><b>M₀</b> — the marginal contribution of one purchase without the agent.</li>
+<li><b>c</b> — the agent's variable cost per request: the cost of the language-model
+calls.</li>
+<li><b>ΔS</b> — the number of support contacts avoided thanks to the agent in the same
+period.</li>
+<li><b>C</b> — the cost of handling one support contact.</li>
+<li><b>F</b> — the fixed cost of introducing the agent: development, integration,
+maintenance.</li>
+</ul>
+<p>The formula in words. The product <code>p₁ × M₁</code> is the average margin from one
+request with the agent: the share of completed purchases times the margin of one
+purchase. The product <code>p₀ × M₀</code> is the same average margin without the agent.
+Their difference is how much margin the agent adds per request. From that difference,
+<code>c</code>, the agent's cost for the request, is subtracted. The result in brackets
+is the net benefit of one request; multiplied by <code>B</code>, the number of requests,
+it gives the benefit for the period. To that is added the saving on support:
+<code>ΔS × C</code>, the number of avoided contacts times the cost of each. From the sum
+the fixed cost <code>F</code> is subtracted. If the result is above zero, the agent pays
+for itself.</p>
+<p>Of all the parameters, this project has measured only <code>c</code>: about $0.007
+per request (the Cost section). The rest can come only from a pilot comparison on real
+Customers: one group of requests with the agent, another without, over the same period.
+The main question of such a pilot is whether <code>p₁</code> is greater than
+<code>p₀</code> — whether the agent really brings more Customers to a purchase. A
+reference point for scale: at <code>c</code> ≈ $0.01 the agent pays for itself if for
+every hundred requests it adds one purchase with more than one dollar of margin.</p>
 
 <h2 id="unmeasured">Not measured</h2>
-<p>Before/after figures from moderated Customer sessions (n = 0 — no access to
-participants; the protocol is written), and any conversion or revenue effect. Neither
-is substituted by a proxy. The evaluation judges are validated as structural-defect
-detectors, not as a measure of Ukrainian quality, so no judge score appears
-anywhere.</p>
+<p>Three things from the project brief were not measured, and here is why.</p>
+<p><b>A before/after comparison in sessions with Customers.</b> The brief provides for
+moderated sessions: a Customer works through a blocked cart first without the agent,
+then with it, and an observer records the time, the number of actions and the outcome.
+The protocol for those sessions is written. No sessions were held, because the project
+had no access to participants; <code>n</code> = 0. Consequence: everything these pages
+say about clarity and convenience for the Customer rests on the author's own runs, not
+on other people. This is the largest gap in the project's evidence. Only holding the
+sessions under the written protocol can fill it.</p>
+<p><b>The effect on conversion and revenue.</b> The parameters <code>p₁</code>,
+<code>p₀</code>, <code>M₁</code>, <code>M₀</code> from the formula above can be
+measured only on Silpo's real order flow, in a pilot comparison of two groups of
+Customers. The project has no such access. Consequence: the statement about the agent
+paying for itself on these pages is conditional ("provided p₁ − p₀ &gt; 0"), not a
+result. The measured indicators show that the agent works safely and correctly; they do
+not show that it increases sales.</p>
+<p><b>The language quality of the explanations.</b> The project has automatic answer
+evaluators (one language model scoring another's text). They were checked against
+labelled examples, and that check showed: they reliably detect structural defects — a
+mixed-up sum, an extra product, a missing warning — and do not reliably judge the
+quality of the Ukrainian. So they are used only to find defects, and their quality
+scores are not reported on these pages. Consequence: the reader judges the language on
+the card for themselves, from the examples; the project has no numeric indicator for
+it.</p>
 <div class="next"><a href="safety.html">← Safety & consent</a>
 
 <a href="data-model.html">Data model →</a></div>
-<p class="meta">Regenerated 2026-09-11T22:55:09+00:00. No external network resources.</p>
+<p class="meta">Regenerated 2026-09-12T00:07:34+00:00. No external network resources.</p>
 </main></div></body></html>
