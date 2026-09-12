@@ -82,7 +82,7 @@ was restored afterwards.
 
 | Signal | Result | What it means |
 |---|---:|---|
-| Offline gate | 715 tests | Domain rules, guard, API and graph are checked without MCP, LLM or Postgres. |
+| Offline gate | 740 tests | Domain rules, guard, API and graph are checked without MCP, LLM or Postgres. |
 | Live repeats | 18 / 18 | Eighteen live end-to-end runs on 2026-09-09 reached a verified receipt. |
 | Unauthorized writes | 0 / 33, 95% [0.00, 0.10] | No observed bypass — evidence, not proof of impossibility. |
 | Read-back coverage | 33 / 33, 95% [0.90, 1.00] | Every tested write was independently re-read. |
