@@ -92,15 +92,17 @@ export function MeasuredEarlier({ evidence, onLoaded }: Props) {
           {/* The audited disclosure observation is the one measurement
               behind DisclosureRate, so it sits here with the other
               measured-earlier figures rather than beside the live cart. */}
-          <h3 className="measured-sub">Аудит: що показує застосунок — що повертає сервер</h3>
+          <h3 className="measured-sub">
+            Аудит {evidence.disclosure.observed_at}: що показує застосунок — що повертає
+            сервер
+          </h3>
           <Terms
             items={[
-              ["застосунок", "результат перевірки, який застосунок Сільпо показує на екрані."],
-              ["сервер", "результат, який сервер повертає разом із кошиком."],
               [
-                `Аудит ${evidence.disclosure.observed_at}`,
-                "перевірене спостереження того дня; коди ті самі, суми могли змінитися.",
+                "застосунок",
+                "те, що застосунок Сільпо показав на екрані того дня (суми могли змінитися).",
               ],
+              ["сервер", "результат перевірки, який сервер повернув разом із кошиком того дня."],
             ]}
           />
           <ul className="plain rows">

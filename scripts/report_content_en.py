@@ -551,10 +551,13 @@ write did not match what was expected, or the read-back failed — the outcome i
 
 <h2 id="console">What the console shows during the run</h2>
 <p>The console has three columns. <b>In the middle</b> — the Customer card, the same
-one the Customer sees, in Ukrainian. <b>On the right</b> — the cart as Silpo's server
-returned it: one column with the state at the first read and one more after each
-read-back; the line the write added is highlighted, and the totals stand side by side
-so they can be compared.</p>
+one the Customer sees, in Ukrainian; above it a slim strip of actions: «Вийти» (log
+out) and «Перевірити знову» (check again — the cart is re-read without a second login,
+see "The other scenarios"). <b>On the right</b> — the cart as Silpo's server returned
+it: one column with the state at the first read and one more after each read-back; the
+line the write added is highlighted, and the totals stand side by side so they can be
+compared. This is the cart's history in this session only — nothing measured earlier
+sits in the right column.</p>
 <p><b>On the left</b> — three blocks for the jury (the column is labelled so on the
 console: «Журі»). The first, <code>Observed nodes</code>, is a log of the steps
 the agent actually ran in this session, in execution order; beside each step, what it
@@ -594,9 +597,15 @@ read-back failed — "unverified"</td></tr>
 <p>The third block, <code>Measured earlier — not this session</code>, shows on request
 the eight indicators from the Measurements page — with <code>n</code>, interval,
 caveat, and the same Ukrainian name and meaning as on that page. The heading says
-deliberately that these were measured earlier, on recorded
-runs, and not in this session: so the jury does not confuse the project's indicators
-with what is happening on screen now.</p>
+deliberately that these were measured earlier, on recorded runs, and not in this
+session: so the jury does not confuse the project's indicators with what is happening
+on screen now. Under the indicators, in the same block, sits the <b>disclosure
+audit</b>: the author's recorded observation of 10 September, line by line — what the
+Silpo app showed on screen that day and which validation results the server returned
+with the cart; the server returned two, the app showed one. It is the observation behind
+the indicator "Shown what the app does not show", which is why it sits here and not in
+the right column: the right column is this session's cart, the audit is another
+day.</p>
 
 <h2 id="scenarios">The other scenarios</h2>
 <table>
@@ -624,6 +633,18 @@ returned, unrecognised codes marked «не розпізнано». The language 
 called, the cart is not changed, the session's spend is zero. The system does not
 hang: it says plainly that it knows no such rule and leaves the decision with the
 Customer</td></tr>
+<tr><td>Declining the options</td><td>options shown, the Customer wants none of
+them</td><td>the «Не додавати нічого» button ("add nothing"; on an undo offer,
+«Залишити як є», "leave as is"): nothing is sent to the server, processing stays paused
+at the guard with no consent, the offers expire on their own. The Customer sees the
+summary «Нічого не записано» ("nothing written") and the diagnosis as it was, with the
+hint: add something in the Silpo app and press «Перевірити знову», or log out</td></tr>
+<tr><td>Checking again</td><td>the cart was changed in the Silpo app, or the Customer
+declined the options</td><td>the «Перевірити знову» button. One check is one session
+(the saved processing state is keyed by the session), so the server creates a new
+session and moves the current Silpo login onto it in one transaction: no second phone
+login. The old session keeps its consents and receipts and loses only the credential,
+as on logout. The console clears, and the new check reads the cart afresh</td></tr>
 <tr><td>Logout</td><td>any</td><td>the «Вийти» button deletes the Silpo credential on
 the server side; a fresh session sees no cart until the Customer logs in
 again</td></tr>
