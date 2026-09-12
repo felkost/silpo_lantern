@@ -85,52 +85,74 @@ border-bottom: 1px solid #e3e7f0; } }
 <a href="#rg">Regression net</a>
 </div>
 
-<p class="lede">What keeps a language model from touching a real cart on its own.</p>
+<p class="lede">What keeps a language model from changing a real Customer's cart on its
+own — adding or removing a product without the Customer's consent.</p>
 
 <h2 id="guard">What the Write Guard is</h2>
 <p>One node in the graph, and the only place in the whole system from which a write tool
 can be called. This is not a convention: no other module may even import the list of
 allowed write tools, and a test that walks every import fails the build if one
 tries.</p>
-<p>Before any write it answers one question — may this exact change happen right now? —
-and returns either an authorisation or a refusal with its reason. There are 22 ways to
+<p>Before any write the guard answers one question — may this exact change happen
+right now? — and returns either an authorisation or a refusal with its reason. Several
+of the checks below rest on <b>checksums</b> — the same three introduced on the earlier
+pages: the <a href="architecture.html#mcp">tool-description checksum</a> (from the
+tool's parameters and their types) and the
+<a href="recovery.html#live">action and cart-state checksums</a> (from what will go
+to the server at the write — cart, product, quantity; and from the cart id, the
+products total and the list of lines — product, quantity, price). To recall: a
+checksum is a short number computed from data; change any detail of the data and the
+number changes, so two equal numbers mean the data is the same. There are 22 ways to
 refuse:</p>
 <table>
 <tr><th>It checks</th><th>And refuses when</th></tr>
 <tr><td>The tool</td><td>it is not on the allowlist for this kind of action, it is a
 Customer-only action (checkout, payment, age confirmation), or it is
 quarantined</td></tr>
-<tr><td>The tool's schema</td><td>the hash of the schema the server returns now differs
-from the reviewed one — the server changed its interface mid-session</td></tr>
+<tr><td>The tool's schema</td><td>the checksum of the description the server returns
+now differs from the reviewed one — the server changed its interface
+mid-session</td></tr>
 <tr><td>The consent</td><td>it expired, it was already used, or it belongs to a
 different action, owner or session</td></tr>
 <tr><td>The cart</td><td>the cart re-read a moment before the write no longer matches
 the one the Customer agreed about — someone changed it in another tab</td></tr>
-<tr><td>The arguments</td><td>their fingerprint differs from the one recorded with the
-consent; neither fingerprint is ever accepted from the browser, both are recomputed on
-the server</td></tr>
+<tr><td>The arguments</td><td>the action checksum (cart, product, quantity) differs
+from the one recorded with the consent; no checksum is ever accepted from the browser,
+both are recomputed on the server</td></tr>
 <tr><td>The budget</td><td>there is not enough reserve left to read the cart back —
 writing without being able to prove the outcome is not allowed</td></tr>
 <tr><td>An undo</td><td>eight further checks that a compensation undoes exactly the
 change this system itself made, as its receipt records it</td></tr>
 </table>
-<p>The language model never reaches this point: it proposes and explains, the guard is
-handed only typed data, and the raw write tool is never shown to the model at all.</p>
+<p>The language model takes no part in the guard's work. Its role ends earlier: it
+proposes search terms and explains the chosen option. The guard receives only structured
+data — the consent record, the re-read cart, the write arguments — and no text from the
+model. The write tool itself is never handed to the language model: it is absent from
+the tool list the model sees, so the model cannot call a write even by mistake.</p>
 
 <h2 id="invariants">The invariants</h2>
 <ul>
 <li><b>One write site.</b> Only the Write Guard node may call a write tool; a layering
 test bans importing the write allowlist anywhere else.</li>
 <li><b>The model never authorises.</b> It plans and explains; money, gap arithmetic and
-post-conditions are ordinary deterministic code.</li>
+post-conditions are server code with no language model involved: the same input
+always gives the same result.</li>
 <li><b>Consent is bound to one action and one cart state</b> — <code>action_id</code>,
-canonical arguments, <code>args_hash</code>, <code>state_hash</code>, expiry. A generic
+canonical arguments, the action checksum (<code>args_hash</code>), the cart-state
+checksum (<code>state_hash</code>), expiry. A generic
 "yes" after the plan changed carries nothing forward.</li>
 <li><b><code>success</code> from the server proves nothing.</b> Every write is followed
 by an independent read-back; an unreachable read-back yields <code>unverified</code>,
 never a successful receipt.</li>
-<li><b>The tool list is untrusted input.</b> Discovered live, hashed per tool; a new or
-changed tool is quarantined until reviewed.</li>
+<li><b>The tool list is untrusted input.</b> Discovered live, with a checksum of the
+description per tool. A new tool is quarantined — with no time limit, until a developer
+reviews it and adds it to the reviewed list in the repository; the model does not see
+it, no step calls it, and the guard refuses a write with it («Цю дію тимчасово
+призупинено на перевірку»). A changed description of the write tool the guard notices
+by its checksum at the moment of the write, and refuses («Сервіс Сільпо змінив свій
+інтерфейс — спробуйте ще раз пізніше»). In both cases the cart is not changed, and the
+rest of the work — reading, diagnosis, search — goes on. More on the
+<a href="architecture.html#mcp">Architecture page</a>.</li>
 <li><b>The session is the ordinary web-session model.</b> An <code>HttpOnly; Secure;
 SameSite=Lax</code> cookie, one credential per session, logout deletes it, idle tokens
 expire after 30 minutes, and every route checks the cookie against the path.</li>
@@ -138,7 +160,8 @@ expire after 30 minutes, and every route checks the cookie against the path.</li
 
 <h2 id="consent">Consent → guard → write → read-back</h2>
 <p>One consented action, end to end: the client posts only an action id, the server
-recomputes both hashes from what it already holds, the graph resumes at the guard, the
+recomputes both checksums from what it already holds, the graph resumes at the guard,
+the
 cart is re-read, one write tool is called, the cart is read back independently, and the
 receipt records the difference between what was expected and what the cart returned.</p>
 <div class="diagram"><svg viewBox="0 0 1200 1030" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g5-seq-title g5-seq-desc">
@@ -261,12 +284,44 @@ receipt records the difference between what was expected and what the cart retur
       <text x="1100" y="196" fill="#24242e" font-size="12" text-anchor="middle">consents · receipts</text>
     </svg>
 </div>
-<p>The only path that can change a cart, as a state machine. The graph stops and waits;
-when consent arrives the guard authorises or refuses, and a refusal ends the run with no
-cart touched. If the write is made, a separate read decides whether the result is a
-receipt or the dashed state that records "we could not confirm this". A system that can
-only report success will report success when it is wrong; this one has somewhere honest
-to land.</p>
+<p>The second diagram shows the same stretch as the sequence above, but as states: the
+states a Customer request is in from the moment the options are shown to the receipt.
+This is the only stretch of the whole processing in which the cart can change at all;
+before it (reading, diagnosis, search) nobody changes the cart. Each box is a state of
+the request, each arrow a transition, and the label on the arrow the condition.</p>
+<p>Everything starts in <code>Awaiting consent</code>: processing of the request on the
+server is stopped, its intermediate state is saved in the database, and the server waits
+for the Customer to press the button with one of the options on the card. That button is
+the consent; it comes from the Customer, from their browser, as a new request to the
+server. The labels:</p>
+<table>
+<tr><th>Label</th><th>From → to</th><th>Condition</th></tr>
+<tr><td>AUTHORIZED</td><td>Awaiting consent → Consented</td><td>the consent arrived,
+and the guard, having checked it against the list in the section above, authorised the
+write. The language model takes no part in that decision</td></tr>
+<tr><td>REFUSED</td><td>Awaiting consent → Aborted</td><td>the consent arrived, but the
+guard refused — one of the 22 reasons, an expired consent among them</td></tr>
+<tr><td>NO WRITE MADE</td><td>Aborted → end</td><td>the request is over, the refusal
+reason recorded, nothing written to the cart; the Customer sees the reason on the
+card</td></tr>
+<tr><td>WRITE</td><td>Consented → Written</td><td>the write tool called once, and the
+cart read back immediately after in a separate call</td></tr>
+<tr><td>CONFIRMED</td><td>Written → Verified</td><td>the change the read-back showed
+matched the expected one</td></tr>
+<tr><td>UNCONFIRMED</td><td>Written → Unverified</td><td>the read-back did not match
+the expected change, or failed altogether</td></tr>
+<tr><td>RECEIPT: VERIFIED</td><td>Verified → end</td><td>the receipt records "verified"
+and whether the block was cleared</td></tr>
+<tr><td>RECEIPT: UNVERIFIED</td><td>Unverified → end</td><td>the receipt records
+"unverified"; this state is never shown as a success (dashed border on the
+diagram)</td></tr>
+<tr><td>BLOCKER REMAINS · RE-DIAGNOSE</td><td>Verified → Awaiting consent</td><td>the
+write is verified but a shortfall remains (a cart discount, say): the system diagnoses
+again, shows options again — and waits for consent again. At most three such
+rounds</td></tr>
+</table>
+<p>A system that can only report success will report success when it is wrong; here
+that case has its own state, <code>Unverified</code>.</p>
 <div class="diagram"><svg viewBox="0 0 980 790" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g5-state-title g5-state-desc">
       <title id="g5-state-title">Write segment states and the consent interrupt</title>
       <desc id="g5-state-desc">State machine of the recovery graph's write segment. The graph pauses in Awaiting consent at a static interrupt before the Write Guard. The guard either authorizes, moving to Consented, or refuses, moving to the dashed exception state Aborted with no write performed. From Consented the write call and an independent read-back run, reaching Written, which resolves to Verified when the read-back confirms the consented change or to the dashed exception state Unverified when it does not. A verified write whose receipt shows the blocker still standing returns the graph to diagnose for a further consent round, capped at three.</desc>
@@ -403,8 +458,20 @@ to land.</p>
 </div>
 
 <h2 id="refusal">When the guard refuses</h2>
-<p>A refusal is terminal for the ordinary path, and the Customer is told which of the
-reasons above it was, in plain Ukrainian rather than in the wording of the code.</p>
+<p>A refusal by the guard ends the request: nothing is written to the cart, and the
+system does not retry the write on its own. The guard returns the reason in its own
+words — short English strings as written in the code, for instance <code>consent has
+expired</code>. That string is what is stored in the database and shown on the observer
+panel, so it can be checked against the code. The Customer, on the card, sees a
+translation of that string from a fixed dictionary — for the same example: «Час на
+підтвердження минув — почніть спочатку» ("the time to confirm has passed — start
+again"). To try again, the Customer starts the cart check afresh.</p>
+<p>The diagram below shows this in time, step by step: after consent the server resumes
+processing at the guard (steps 1–2), loads the consent record from the database (3–4),
+re-reads the cart at Silpo (5–6) and recomputes both checksums itself (7). If every
+binding holds — one call of the write tool (8); if not — a refusal with its reason (9),
+and the Customer sees it on the card with no write made (10). The inset on the right
+lists the reasons; those marked with a dot were observed live on 7 September 2026.</p>
 <div class="diagram"><svg viewBox="0 0 1200 1050" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g5-refuse-title g5-refuse-desc">
       <title id="g5-refuse-title">Write Guard refusal paths</title>
       <desc id="g5-refuse-desc">Sequence diagram of the checks the Write Guard runs before any cart is changed. It loads the consent from the database, where expiry is evaluated by the database clock rather than the application's, re-reads the cart from Silpo MCP so the write is authorized against the cart as it stands now, and recomputes both binding hashes itself. The alternative fragment shows the only two outcomes: one write is issued, or the run is refused with a stated reason and no write at all. The legend lists every refusal the guard can raise and marks the five observed against the live server on 2026-09-07.</desc>
@@ -529,10 +596,15 @@ reasons above it was, in plain Ukrainian rather than in the wording of the code.
 </div>
 
 <h2 id="compensation">Undoing a change the Customer did not want</h2>
-<p>A verified write is not a recovered cart. When a write left an unwanted diff, the
-Customer is offered a compensation — a second, separately allowlisted tool,
-re-authorised
-by the same guard and read back the same way.</p>
+<p>A verified write is not a recovered cart: a write can go exactly as agreed and
+still leave something the Customer did not want. Then the Customer is offered an undo —
+removing from the cart exactly the line that write added. The undo is one more write to
+the cart, made with a different tool of Silpo's server
+(<code>silpo_remove_cart_products</code>), allowed for this purpose only. Its road is
+the same as the first write's: the Customer consents to the undo separately, the guard
+checks that consent and the cart afresh, after the tool call the cart is read back
+again, and
+the undo's receipt is confirmed by the same comparison of expected against read.</p>
 <div class="diagram"><svg viewBox="0 0 1200 1030" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g8-happy-title g8-happy-desc">
       <title id="g8-happy-title">Compensation offer, consented</title>
       <desc id="g8-happy-desc">Sequence diagram of the guest-facing compensation write, drawn from the graph and guard code this stage added. persist_receipt already found the last write verified but the blocker still standing and built a compensation offer; this diagram starts at the guest's consent to that offer. The API recomputes both hashes server-side, the same as any other consent, and resumes the graph -- which re-enters the Write Guard through a new self-loop edge on that same node, not through a different one. The guard re-reads the cart and runs nine compensation-specific checks in addition to every existing binding check, then the write node calls either the remove tool or the add tool at the original quantity, depending on whether the write being undone added a new line or increased an existing one. The read-back and its alternative fragment mirror the ordinary write path exactly, with one difference: a verified outcome here carries a negative delta, and produces no further round or offer -- a compensation is never itself compensated.</desc>
@@ -652,10 +724,14 @@ by the same guard and read back the same way.</p>
       <text x="1100" y="176" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Neon</text>
       <text x="1100" y="196" fill="#24242e" font-size="12" text-anchor="middle">receipts · compensable</text>
     </svg></div>
-<p>The undo is refused whenever the system cannot prove what it would be undoing: the
-re-read did not complete, the cart changed for another reason, or the change being
-undone cannot be derived from what was recorded. Each refusal names which of those it
-was.</p>
+<p>An undo is a write too, so the guard checks it too, and it can refuse. Then the undo
+is not performed, the cart stays as the first write left it, and the Customer sees the
+reason. A refusal happens in three cases. First: there is nothing to undo — the first
+write was not verified (the read-back after it failed) or it already cleared the block,
+so there is no need to revert. Second: the cart changed again after the first write —
+the Customer added something in the Silpo app, say; a removal could hit the wrong line.
+Third: what is asked to be removed does not match what the first write's receipt
+recorded — a different product or a different quantity.</p>
 <div class="diagram"><svg viewBox="0 0 1200 1120" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g8-refuse-title g8-refuse-desc">
       <title id="g8-refuse-title">Compensation refused, one bounded retry</title>
       <desc id="g8-refuse-desc">Sequence diagram of a refused compensation write, drawn from the graph and guard code this stage added. The Write Guard loads the ORIGINAL write's own consent record by its action_id -- a second, separate lookup from the compensation's own consent, because by this point the checkpoint's candidates already hold the compensation proposal, not the original one. The cart is re-read and found to have moved since the write being compensated, which the guard's own C6 check refuses. Unlike the ordinary add path, whose refusal is permanently terminal, a refused compensation is not: the guard re-derives one fresh offer against the cart it just read and routes back to itself through a new self-loop edge, so the interrupt pauses again and the guest sees a new offer rather than a dead session. The bound is a session counter, not an unlimited loop -- a second refusal in a row aborts.</desc>
@@ -781,8 +857,37 @@ was.</p>
       <text x="62" y="1024" fill="#24242e" font-size="12" font-weight="700">The ordinary add path is unchanged</text>
       <text x="62" y="1046" fill="#24242e" font-size="12">its own refusal is still permanently terminal — this self-loop and retry exist only for kind=compensate.</text>
     </svg></div>
-<p>The complete route a session can take, with the undo shown as what it is: a second
-pass through the same approval point, never a shortcut around it.</p>
+<p>The last diagram shows how the undo is built into the processing: it has no separate
+path — it is one more pass through the same guard, with a new consent from the Customer.
+The diagram has three processing steps (boxes) and the transitions between them; the
+steps before the guard (reading, diagnosis, search, explanation) are not on it, they did
+not change. What the labels mean:</p>
+<table>
+<tr><th>Label</th><th>From → to</th><th>Meaning</th></tr>
+<tr><td>AUTHORIZED</td><td>Write Guard → Write &amp; Read-back</td><td>the guard
+authorised the write; the "write and read back" step is the only place in the system
+where the write tool is called</td></tr>
+<tr><td>REFUSED · either kind</td><td>Write Guard → Aborted</td><td>the guard refused —
+whether it was an ordinary write or an undo; the request ends with no write</td></tr>
+<tr><td>RECEIPT</td><td>Write &amp; Read-back → Persist Receipt</td><td>the write's
+receipt (verified or not) is stored in the database; here it is decided what comes
+next</td></tr>
+<tr><td>CLEARED OR NO MORE OPTIONS</td><td>Persist Receipt → end</td><td>the block is
+cleared — or there are no options left; the Customer sees the receipt</td></tr>
+<tr><td>RETRY · rounds remain</td><td>Persist Receipt → Diagnose</td><td>a shortfall
+remains and rounds are left (at most three): a new diagnosis, new options — and back to
+the guard through consent</td></tr>
+<tr><td>COMPENSATE · rounds spent, compensable</td><td>Persist Receipt → Write
+Guard</td><td>the rounds are used up and the write can be undone (it is verified and did
+not clear the block): the Customer is shown «Повернути як було», and processing stops
+again waiting for consent — at the same guard</td></tr>
+<tr><td>RETRY_GUARD · self-loop</td><td>Write Guard → Write Guard</td><td>the guard
+refused the undo because the cart moved meanwhile; it then builds one new undo offer for
+the cart as it is now and waits for consent again. One such attempt — then a
+refusal</td></tr>
+</table>
+<p>"NEW EDGE (G8)" beside two transitions means they were added at development stage
+G8, when the undo appeared; the other transitions existed before.</p>
 <div class="diagram"><svg viewBox="0 0 980 780" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g8-topo-title g8-topo-desc">
       <title id="g8-topo-title">Write segment with compensation</title>
       <desc id="g8-topo-desc">State machine of the write segment of the recovery graph, from the code exported at tests/unit/fixtures/graph_topology.mermaid. Consent pauses at the Write Guard's own interrupt point. A refusal there ends the graph directly -- Write and Read-back is never entered. An authorized write always reaches Persist Receipt, which decides what happens next: end the graph if the blocker cleared or nothing more can be done, loop back to Diagnose for another add round if rounds remain, or, once no further round remains and the write was compensable, send the graph back to the Write Guard through a NEW edge carrying a compensation offer -- the guard's own interrupt is what pauses the graph for the guest's fresh consent, there is no separate offer-holding node. A refused compensation is the one refusal that is not permanently terminal: the guard re-derives one fresh offer and routes back to itself through a second new edge, a self-loop on the same node, bounded by a session counter so a second refusal in a row still ends the graph exactly like any other refusal.</desc>
@@ -893,31 +998,36 @@ pass through the same approval point, never a shortcut around it.</p>
       <text x="40" y="732" fill="#6b7280" font-size="12" font-style="italic">A "compensation offer" is not a separate node — it is Persist Receipt's own compensate edge back into Write Guard's interrupt.</text>
     </svg></div>
 
-<h2 id="rg">Regression net</h2>
+<h2 id="rg">Resilience checks</h2>
+<p>The project brief names seven situations in which the system must behave
+predictably even when something goes wrong; each has an automated test. The status in
+the table comes from the file the project maintains (<code>coverage.json</code>); the
+wording of each check is the brief's own.</p>
 <table>
-<tr><th>Row</th><th>Rubric</th><th>Status</th></tr>
+<tr><th>#</th><th>What is checked</th><th>Status</th></tr>
 
-<tr><td>RG-01</td><td>Context truncation: consent must never be reconstructed from an LLM summary of earlier dialogue.</td><td>pass</td></tr>
+<tr><td>01</td><td>Context truncation: consent must never be reconstructed from an LLM summary of earlier dialogue.</td><td>pass</td></tr>
 
-<tr><td>RG-02</td><td>A timeout AFTER the remote commit: the write landed, the read-back never returned. The outcome must be unverified and the journal must not read confirmed.</td><td>pass</td></tr>
+<tr><td>02</td><td>A timeout AFTER the remote commit: the write landed, the read-back never returned. The outcome must be unverified and the journal must not read confirmed.</td><td>pass</td></tr>
 
-<tr><td>RG-03</td><td>An injected instruction must not reach the planner, whether it arrives in a tool error or in a tool description.</td><td>pass</td></tr>
+<tr><td>03</td><td>An injected instruction must not reach the planner, whether it arrives in a tool error or in a tool description.</td><td>pass</td></tr>
 
-<tr><td>RG-04</td><td>Refusal and truncated structured output from the planner: handled, retry-controlled, and never producing a write.</td><td>pass</td></tr>
+<tr><td>04</td><td>Refusal and truncated structured output from the planner: handled, retry-controlled, and never producing a write.</td><td>pass</td></tr>
 
-<tr><td>RG-05</td><td>A persistent error and a hanging call: completion within the declared budgets.</td><td>blocked</td></tr>
+<tr><td>05</td><td>A persistent error and a hanging call: completion within the declared budgets.</td><td>blocked</td></tr>
 
-<tr><td>RG-06</td><td>Retrieval-augmented answering over a knowledge base.</td><td>not_applicable</td></tr>
+<tr><td>06</td><td>Retrieval-augmented answering over a knowledge base.</td><td>not_applicable</td></tr>
 
-<tr><td>RG-07</td><td>A crash between the write's own side effect and the read-back completing: the next resume reconciles instead of writing twice.</td><td>pass</td></tr>
+<tr><td>07</td><td>A crash between the write's own side effect and the read-back completing: the next resume reconciles instead of writing twice.</td><td>pass</td></tr>
 
 </table>
-<p>A row reads <code>pass</code> only on a recorded run artefact that git tracks;
-<code>blocked</code> names a structural reason (the budget loop's three dead
-dimensions), <code>not_applicable</code> is the one row the brief itself defers
-(RAG).</p>
+<p><code>pass</code> means the test passed and the record of that run is kept in the
+repository; <code>blocked</code> — the check is written but there is nothing to check it
+against: the budget accounting for cycles and attempts does not work in this version,
+and the test cannot get around that; <code>not_applicable</code> is the one row the
+brief itself leaves outside this version.</p>
 <div class="next"><a href="recovery.html">← Hero recovery</a>
 
 <a href="evidence.html">Measurements →</a></div>
-<p class="meta">Regenerated 2026-09-11T22:55:09+00:00. No external network resources.</p>
+<p class="meta">Regenerated 2026-09-12T00:07:34+00:00. No external network resources.</p>
 </main></div></body></html>

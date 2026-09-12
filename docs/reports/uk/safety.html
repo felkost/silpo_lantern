@@ -69,7 +69,7 @@ border-bottom: 1px solid #e3e7f0; } }
 <a href="safety.html"
  aria-current="page">Безпека і згода</a>
 <a href="evidence.html">Виміряні результати</a>
-<a href="data-model.html">Що зберігається</a>
+<a href="data-model.html">Схема даних</a>
 
 </nav>
 </aside>
@@ -85,51 +85,73 @@ border-bottom: 1px solid #e3e7f0; } }
 <a href="#rg">Мережа перевірок</a>
 </div>
 
-<p class="lede">Що саме не дає мовній моделі самій торкнутися справжнього кошика.</p>
+<p class="lede">Що саме не дає мовній моделі самій змінити справжній кошик клієнта —
+додати чи прибрати товар без його згоди.</p>
 
 <h2 id="guard">Що таке вартовий запису</h2>
 <p>Це один вузол графа і єдине місце в усій системі, звідки можна викликати інструмент
 запису. Це не домовленість: жоден інший модуль не має права навіть згадати перелік
 дозволених інструментів запису, і тест, який обходить усі імпорти, зупиняє збірку, якщо
 хтось спробує.</p>
-<p>Перед кожним записом він відповідає на одне питання — чи можна саме цю зміну саме
-зараз? — і повертає або дозвіл, або відмову з причиною. Причин відмовити двадцять
-дві:</p>
+<p>Перед кожним записом вартовий відповідає на одне питання — чи можна саме цю зміну
+саме зараз? — і повертає або дозвіл, або відмову з причиною. Кілька перевірок нижче
+спираються на <b>контрольні суми</b> — ті самі три, що вже введені на попередніх
+сторінках: <a href="architecture.html#mcp">контрольна сума опису інструмента</a>
+(з переліку його параметрів та їхніх типів) і
+<a href="recovery.html#live">контрольні суми дії та стану кошика</a> (з того, що
+піде на сервер при записі — кошик, товар, кількість; і з id кошика, вартості товарів
+та переліку рядків — товар, кількість, ціна). Нагадаємо: контрольна сума — коротке
+число, обчислене з даних; зміниться будь-яка дрібниця в даних — зміниться й число,
+тож збіг двох чисел означає, що дані ті самі. Причин відмовити двадцять дві:</p>
 <table>
 <tr><th>Що перевіряє</th><th>І відмовляє, коли</th></tr>
 <tr><td>Інструмент</td><td>його немає в переліку дозволених для цього виду дії, це дія
 самого клієнта (оформлення, оплата, підтвердження повноліття) або він у карантині</td>
 </tr>
-<tr><td>Опис інструмента</td><td>відбиток опису, який сервер віддає зараз, не збігається
-з переглянутим — сервер змінив свій інтерфейс посеред сесії</td></tr>
+<tr><td>Опис інструмента</td><td>контрольна сума опису, який сервер віддає зараз, не
+збігається з переглянутою — сервер змінив свій інтерфейс посеред сесії</td></tr>
 <tr><td>Згоду</td><td>вона протермінована, вже використана або належить іншій дії,
 іншому власникові чи іншій сесії</td></tr>
 <tr><td>Кошик</td><td>кошик, перечитаний за мить до запису, більше не збігається з тим,
 щодо якого клієнт погодився — хтось змінив його в іншій вкладці</td></tr>
-<tr><td>Аргументи</td><td>їхній відбиток відрізняється від записаного разом зі згодою;
-жоден із відбитків ніколи не приймається з браузера — обидва рахує сервер</td></tr>
+<tr><td>Аргументи</td><td>контрольна сума дії (кошик, товар, кількість) відрізняється
+від записаної разом зі згодою; жодна контрольна сума ніколи не приймається з браузера —
+обидві рахує сервер</td></tr>
 <tr><td>Запас</td><td>не лишилося запасу на повторне читання: записувати, не маючи змоги
 довести результат, не дозволено</td></tr>
 <tr><td>Скасування</td><td>ще вісім перевірок, що скасування скасовує саме ту зміну, яку
 зробила ця система, і саме так, як записано в її підсумку</td></tr>
 </table>
-<p>Мовна модель сюди не дістає: вона пропонує і пояснює, вартовий отримує лише
-типізовані дані, а сам інструмент запису моделі не показують узагалі.</p>
+<p>Мовна модель у роботі вартового не бере участі. Її роль закінчується раніше: вона
+пропонує слова для пошуку і пояснює обраний варіант. Вартовий отримує на вхід лише
+структуровані дані — запис згоди, перечитаний кошик, аргументи запису — і жодного тексту
+від моделі. Сам інструмент запису мовній моделі не передають ніколи: у переліку
+інструментів, який модель бачить, його немає, тож вона не може викликати запис навіть
+помилково.</p>
 
 <h2 id="invariants">Непорушні правила</h2>
 <ul>
 <li><b>Єдине місце запису.</b> Лише вузол вартового може викликати інструмент запису;
 тест шарів забороняє згадувати перелік дозволених будь-де ще.</li>
 <li><b>Модель нічого не дозволяє.</b> Вона планує і пояснює; гроші, арифметика
-недостачі та перевірки після запису — звичайний передбачуваний код.</li>
+недостачі та перевірки після запису — код сервера без участі мовної моделі: один і той
+самий вхід завжди дає один і той самий результат.</li>
 <li><b>Згода прив'язана до однієї дії та одного стану кошика</b> — ідентифікатор дії,
-аргументи, їхній відбиток, відбиток кошика, термін дії. Загальне «так», сказане до
+аргументи, контрольна сума дії, контрольна сума стану кошика, термін дії. Загальне
+«так», сказане до
 того, як план змінився, далі не переноситься.</li>
 <li><b>Відповідь «успішно» нічого не доводить.</b> За кожним записом іде окреме
 повторне читання; якщо воно не вдалося, результат — «не підтверджено», а не вдалий
 підсумок.</li>
-<li><b>Перелік інструментів — недовірене джерело.</b> Отримується наживо, з окремим
-відбитком на інструмент; новий чи змінений потрапляє в карантин до перегляду.</li>
+<li><b>Перелік інструментів — недовірене джерело.</b> Отримується наживо, з окремою
+контрольною сумою опису на кожен інструмент. Новий інструмент потрапляє в карантин —
+без терміну, доки розробник не перегляне його й не додасть до переліку перевірених у
+репозиторії; модель його не бачить, кроки опрацювання його не викликають, а запис ним
+вартовий відмовляє («Цю дію тимчасово призупинено на перевірку»). Змінений опис
+інструмента запису вартовий помічає за контрольною сумою в момент запису і відмовляє
+(«Сервіс Сільпо змінив свій інтерфейс — спробуйте ще раз пізніше»). В обох випадках
+кошик не змінюється, а решта роботи — читання, діагноз, пошук — триває. Докладніше —
+на сторінці <a href="architecture.html#mcp">«Будова системи»</a>.</li>
 <li><b>Сесія працює як звичайна вебсесія.</b> Ідентифікатор сесії живе лише у файлі
 cookie, недоступному для сценаріїв сторінки і лише через захищене з'єднання; один
 доступ на сесію; вихід його видаляє; неактивний доступ зникає за 30 хвилин; кожен
@@ -138,7 +160,8 @@ cookie, недоступному для сценаріїв сторінки і �
 
 <h2 id="consent">Згода → вартовий → запис → повторне читання</h2>
 <p>Одна погоджена дія від початку до кінця: сторінка надсилає лише ідентифікатор дії,
-сервер сам перераховує обидва відбитки з того, що вже має, робота відновлюється на
+сервер сам перераховує обидві контрольні суми з того, що вже має, робота відновлюється
+на
 вартовому, кошик перечитується, викликається один інструмент запису, кошик читають ще
 раз окремо, і підсумок фіксує різницю між очікуваним і тим, що повернув кошик.</p>
 <div class="diagram"><svg viewBox="0 0 1200 1030" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g5-seq-title g5-seq-desc">
@@ -261,12 +284,44 @@ cookie, недоступному для сценаріїв сторінки і �
       <text x="1100" y="196" fill="#24242e" font-size="12" text-anchor="middle">consents · receipts</text>
     </svg>
 </div>
-<p>Єдиний шлях, яким кошик може змінитися, у вигляді станів. Робота зупиняється і чекає;
-коли надходить згода, вартовий дозволяє або відмовляє, і відмова завершує роботу, не
-торкнувшись кошика. Якщо запис відбувся, окреме читання вирішує, чим це буде: підсумком
-чи станом «підтвердити не вдалося», позначеним пунктиром. Система, яка вміє звітувати
-лише про успіх, звітуватиме про успіх і тоді, коли помиляється; цій є куди чесно
-приземлитися.</p>
+<p>Друга діаграма показує той самий відрізок, що й послідовність вище, але у вигляді
+станів: у яких станах перебуває звернення клієнта від моменту, коли йому показали
+варіанти, і до підсумку. Це єдиний відрізок усього опрацювання, на якому кошик узагалі
+може змінитися; до нього (читання, діагноз, пошук) кошика ніхто не змінює. Кожен
+прямокутник — стан звернення, кожна стрілка — перехід, підпис на стрілці — умова
+переходу.</p>
+<p>Починається все зі стану <code>Awaiting consent</code> («очікує згоди»):
+опрацювання звернення на сервері зупинене, його проміжний стан збережено в базі, і
+сервер чекає, поки клієнт натисне на картці кнопку з одним із варіантів. Ця кнопка й є
+згода; вона надходить від клієнта, з його браузера, як новий запит до сервера. Далі —
+таблиця підписів:</p>
+<table>
+<tr><th>Підпис</th><th>Звідки → куди</th><th>Умова переходу</th></tr>
+<tr><td>AUTHORIZED</td><td>Awaiting consent → Consented</td><td>згода надійшла, і
+вартовий, перевіривши її за переліком із розділу вище, дозволив запис. Мовна модель у
+цьому рішенні участі не бере</td></tr>
+<tr><td>REFUSED</td><td>Awaiting consent → Aborted</td><td>згода надійшла, але
+вартовий відмовив — одна з двадцяти двох причин, зокрема протермінована згода</td></tr>
+<tr><td>NO WRITE MADE</td><td>Aborted → кінець</td><td>звернення завершено, причину
+відмови записано, у кошик нічого не записано; клієнт бачить причину на картці</td></tr>
+<tr><td>WRITE</td><td>Consented → Written</td><td>інструмент запису викликано один раз,
+і одразу за ним кошик перечитано окремим викликом</td></tr>
+<tr><td>CONFIRMED</td><td>Written → Verified</td><td>зміна, яку показало перечитування,
+збіглася з очікуваною</td></tr>
+<tr><td>UNCONFIRMED</td><td>Written → Unverified</td><td>перечитування не збіглося з
+очікуваним або не вдалося зовсім</td></tr>
+<tr><td>RECEIPT: VERIFIED</td><td>Verified → кінець</td><td>у підсумку записано
+«підтверджено» і чи знято блокування</td></tr>
+<tr><td>RECEIPT: UNVERIFIED</td><td>Unverified → кінець</td><td>у підсумку записано «не
+підтверджено»; цей стан ніколи не показують як успіх (на діаграмі — пунктирна
+рамка)</td></tr>
+<tr><td>BLOCKER REMAINS · RE-DIAGNOSE</td><td>Verified → Awaiting consent</td><td>запис
+підтверджено, але недостача лишилася (наприклад, через знижку в кошику): система ставить
+діагноз заново і знову показує варіанти — і знову чекає на згоду. Таких раундів не
+більше трьох</td></tr>
+</table>
+<p>Система, яка вміє звітувати лише про успіх, звітуватиме про успіх і тоді, коли
+помиляється; тут для такого випадку є окремий стан <code>Unverified</code>.</p>
 <div class="diagram"><svg viewBox="0 0 980 790" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g5-state-title g5-state-desc">
       <title id="g5-state-title">Write segment states and the consent interrupt</title>
       <desc id="g5-state-desc">State machine of the recovery graph's write segment. The graph pauses in Awaiting consent at a static interrupt before the Write Guard. The guard either authorizes, moving to Consented, or refuses, moving to the dashed exception state Aborted with no write performed. From Consented the write call and an independent read-back run, reaching Written, which resolves to Verified when the read-back confirms the consented change or to the dashed exception state Unverified when it does not. A verified write whose receipt shows the blocker still standing returns the graph to diagnose for a further consent round, capped at three.</desc>
@@ -403,8 +458,20 @@ cookie, недоступному для сценаріїв сторінки і �
 </div>
 
 <h2 id="refusal">Коли вартовий відмовляє</h2>
-<p>Відмова остаточна для звичайного шляху, і клієнт дізнається, яка саме з наведених
-вище причин спрацювала, — звичайною українською, а не формулюванням із коду.</p>
+<p>Відмова вартового завершує звернення: у кошик нічого не записано, і система не
+пробує повторити запис сама. Причину відмови вартовий повертає своїми словами — це
+короткі англійські рядки, як вони записані в коді, наприклад <code>consent has
+expired</code>. Саме цей рядок зберігається в базі й показується на панелі
+спостерігача, щоб його можна було звірити з кодом. Клієнтові ж на картці показують
+переклад цього рядка з фіксованого словника — для того самого прикладу: «Час на
+підтвердження минув — почніть спочатку». Щоб спробувати ще раз, клієнт починає
+перевірку кошика заново.</p>
+<p>Діаграма нижче показує, як це відбувається в часі, крок за кроком: після згоди
+сервер відновлює опрацювання на вартовому (кроки 1–2), дістає запис згоди з бази
+(3–4), перечитує кошик у Сільпо (5–6) і сам перераховує обидві контрольні суми (7).
+Якщо всі прив'язки збіглися — один виклик інструмента запису (8); якщо ні — відмова з
+причиною (9), і клієнт бачить її на картці без жодного запису (10). У вставці праворуч
+— перелік причин; позначені кружком спостерігалися наживо 7 вересня 2026.</p>
 <div class="diagram"><svg viewBox="0 0 1200 1050" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g5-refuse-title g5-refuse-desc">
       <title id="g5-refuse-title">Write Guard refusal paths</title>
       <desc id="g5-refuse-desc">Sequence diagram of the checks the Write Guard runs before any cart is changed. It loads the consent from the database, where expiry is evaluated by the database clock rather than the application's, re-reads the cart from Silpo MCP so the write is authorized against the cart as it stands now, and recomputes both binding hashes itself. The alternative fragment shows the only two outcomes: one write is issued, or the run is refused with a stated reason and no write at all. The legend lists every refusal the guard can raise and marks the five observed against the live server on 2026-09-07.</desc>
@@ -529,10 +596,15 @@ cookie, недоступному для сценаріїв сторінки і �
 </div>
 
 <h2 id="compensation">Скасувати зміну, якої клієнт не хотів</h2>
-<p>Підтверджений запис — ще не відновлений кошик. Якщо запис дав небажаний результат,
-клієнту пропонують скасування: другий, окремо дозволений інструмент, знову перевірений
-тим
-самим вартовим і так само перечитаний.</p>
+<p>Підтверджений запис — ще не відновлений кошик: запис міг пройти точно так, як
+погодили, і все одно дати не те, чого клієнт хотів. Тоді клієнтові пропонують
+скасування — прибрати з кошика саме той рядок, який додав цей запис. Скасування — це
+ще один запис у кошик, і робиться воно іншим інструментом сервера Сільпо
+(<code>silpo_remove_cart_products</code>), який дозволено лише для цієї мети. Шлях у
+нього такий самий, як у першого запису: клієнт окремо погоджується на скасування,
+вартовий перевіряє цю згоду і кошик заново, після виклику інструмента кошик знову
+перечитують, і підсумок скасування підтверджують тим самим порівнянням очікуваного з
+прочитаним.</p>
 <div class="diagram"><svg viewBox="0 0 1200 1030" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g8-happy-title g8-happy-desc">
       <title id="g8-happy-title">Compensation offer, consented</title>
       <desc id="g8-happy-desc">Sequence diagram of the guest-facing compensation write, drawn from the graph and guard code this stage added. persist_receipt already found the last write verified but the blocker still standing and built a compensation offer; this diagram starts at the guest's consent to that offer. The API recomputes both hashes server-side, the same as any other consent, and resumes the graph -- which re-enters the Write Guard through a new self-loop edge on that same node, not through a different one. The guard re-reads the cart and runs nine compensation-specific checks in addition to every existing binding check, then the write node calls either the remove tool or the add tool at the original quantity, depending on whether the write being undone added a new line or increased an existing one. The read-back and its alternative fragment mirror the ordinary write path exactly, with one difference: a verified outcome here carries a negative delta, and produces no further round or offer -- a compensation is never itself compensated.</desc>
@@ -652,9 +724,14 @@ cookie, недоступному для сценаріїв сторінки і �
       <text x="1100" y="176" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Neon</text>
       <text x="1100" y="196" fill="#24242e" font-size="12" text-anchor="middle">receipts · compensable</text>
     </svg></div>
-<p>У скасуванні відмовляють щоразу, коли система не може довести, що саме вона
-скасовує: повторне читання не завершилося, кошик змінився з іншої причини, або зміну
-неможливо вивести із записаного. Кожна відмова називає, що саме з цього сталося.</p>
+<p>Скасування — це теж запис, тож його теж перевіряє вартовий, і він може відмовити.
+Тоді скасування не виконується, кошик лишається таким, яким став після першого запису,
+а клієнт бачить причину. Відмова буває у трьох випадках. Перший: нема чого скасовувати
+— перший запис не підтверджено (перечитування після нього не вдалося) або він уже зняв
+блокування, і повертати немає потреби. Другий: після першого запису кошик змінився ще
+раз — наприклад, клієнт щось додав у застосунку Сільпо; видалення могло б зачепити не
+той рядок. Третій: те, що просять прибрати, не збігається з тим, що записано в підсумку
+першого запису, — інший товар чи інша кількість.</p>
 <div class="diagram"><svg viewBox="0 0 1200 1120" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g8-refuse-title g8-refuse-desc">
       <title id="g8-refuse-title">Compensation refused, one bounded retry</title>
       <desc id="g8-refuse-desc">Sequence diagram of a refused compensation write, drawn from the graph and guard code this stage added. The Write Guard loads the ORIGINAL write's own consent record by its action_id -- a second, separate lookup from the compensation's own consent, because by this point the checkpoint's candidates already hold the compensation proposal, not the original one. The cart is re-read and found to have moved since the write being compensated, which the guard's own C6 check refuses. Unlike the ordinary add path, whose refusal is permanently terminal, a refused compensation is not: the guard re-derives one fresh offer against the cart it just read and routes back to itself through a new self-loop edge, so the interrupt pauses again and the guest sees a new offer rather than a dead session. The bound is a session counter, not an unlimited loop -- a second refusal in a row aborts.</desc>
@@ -780,8 +857,37 @@ cookie, недоступному для сценаріїв сторінки і �
       <text x="62" y="1024" fill="#24242e" font-size="12" font-weight="700">The ordinary add path is unchanged</text>
       <text x="62" y="1046" fill="#24242e" font-size="12">its own refusal is still permanently terminal — this self-loop and retry exist only for kind=compensate.</text>
     </svg></div>
-<p>Повний маршрут, яким може піти сесія, зі скасуванням у його справжньому вигляді: це
-другий прохід через ту саму точку згоди, а не обхідний шлях повз неї.</p>
+<p>Остання схема показує, як скасування вбудоване в опрацювання: для нього немає
+окремого шляху — це ще один прохід через того самого вартового, з новою згодою клієнта.
+На схемі три кроки опрацювання (прямокутники) і переходи між ними; кроки до вартового
+(читання, діагноз, пошук, пояснення) на неї не потрапили, вони не змінилися. Що
+означають позначки:</p>
+<table>
+<tr><th>Позначка</th><th>Звідки → куди</th><th>Що означає</th></tr>
+<tr><td>AUTHORIZED</td><td>Write Guard → Write &amp; Read-back</td><td>вартовий
+дозволив запис; крок «записати й перечитати» — єдине місце в системі, де викликається
+інструмент запису</td></tr>
+<tr><td>REFUSED · either kind</td><td>Write Guard → Aborted</td><td>вартовий відмовив —
+однаково, чи то був звичайний запис, чи скасування; звернення завершене без
+запису</td></tr>
+<tr><td>RECEIPT</td><td>Write &amp; Read-back → Persist Receipt</td><td>підсумок запису
+(підтверджений чи ні) зберігається в базі; тут вирішується, що далі</td></tr>
+<tr><td>CLEARED OR NO MORE OPTIONS</td><td>Persist Receipt → кінець</td><td>блокування
+знято — або варіантів більше немає; клієнт бачить підсумок</td></tr>
+<tr><td>RETRY · rounds remain</td><td>Persist Receipt → Diagnose</td><td>недостача
+лишилася, і раунди ще є (не більше трьох): новий діагноз, нові варіанти — і знову до
+вартового через згоду</td></tr>
+<tr><td>COMPENSATE · rounds spent, compensable</td><td>Persist Receipt → Write
+Guard</td><td>раунди вичерпано, а запис можна скасувати (він підтверджений і
+блокування не зняв): клієнтові показують пропозицію «Повернути як було», і опрацювання
+знову зупиняється в очікуванні згоди — на того самого вартового</td></tr>
+<tr><td>RETRY_GUARD · self-loop</td><td>Write Guard → Write Guard</td><td>вартовий
+відмовив у скасуванні, бо кошик тим часом змінився; тоді він один раз складає нову
+пропозицію скасування вже для теперішнього кошика і знову чекає на згоду. Одна така
+спроба — далі відмова</td></tr>
+</table>
+<p>Позначка «NEW EDGE (G8)» біля двох переходів означає, що їх додано на етапі
+розробки G8, коли з'явилося скасування; решта переходів існували раніше.</p>
 <div class="diagram"><svg viewBox="0 0 980 780" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g8-topo-title g8-topo-desc">
       <title id="g8-topo-title">Write segment with compensation</title>
       <desc id="g8-topo-desc">State machine of the write segment of the recovery graph, from the code exported at tests/unit/fixtures/graph_topology.mermaid. Consent pauses at the Write Guard's own interrupt point. A refusal there ends the graph directly -- Write and Read-back is never entered. An authorized write always reaches Persist Receipt, which decides what happens next: end the graph if the blocker cleared or nothing more can be done, loop back to Diagnose for another add round if rounds remain, or, once no further round remains and the write was compensable, send the graph back to the Write Guard through a NEW edge carrying a compensation offer -- the guard's own interrupt is what pauses the graph for the guest's fresh consent, there is no separate offer-holding node. A refused compensation is the one refusal that is not permanently terminal: the guard re-derives one fresh offer and routes back to itself through a second new edge, a self-loop on the same node, bounded by a session counter so a second refusal in a row still ends the graph exactly like any other refusal.</desc>
@@ -892,31 +998,44 @@ cookie, недоступному для сценаріїв сторінки і �
       <text x="40" y="732" fill="#6b7280" font-size="12" font-style="italic">A "compensation offer" is not a separate node — it is Persist Receipt's own compensate edge back into Write Guard's interrupt.</text>
     </svg></div>
 
-<h2 id="rg">Мережа перевірок на стійкість</h2>
+<h2 id="rg">Перевірки на стійкість</h2>
+<p>Завдання проєкту називає сім ситуацій, у яких система має поводитися передбачувано
+навіть тоді, коли щось іде не так; на кожну є автоматичний тест. Стан у таблиці береться
+з файла, який веде проєкт (<code>coverage.json</code>); текст перевірки подано
+українською, оригінальне формулювання — в англійській версії сторінки.</p>
+
 <table>
-<tr><th>Рядок</th><th>Що перевіряє</th><th>Стан</th></tr>
+<tr><th>№</th><th>Що перевіряється</th><th>Стан</th></tr>
 
-<tr><td>RG-01</td><td>Context truncation: consent must never be reconstructed from an LLM summary of earlier dialogue.</td><td>pass</td></tr>
+<tr><td>01</td><td>Обрізання контексту: згоду ніколи не можна відновити з переказу
+ попередньої розмови, який зробила мовна модель.</td><td>pass</td></tr>
 
-<tr><td>RG-02</td><td>A timeout AFTER the remote commit: the write landed, the read-back never returned. The outcome must be unverified and the journal must not read confirmed.</td><td>pass</td></tr>
+<tr><td>02</td><td>Тайм-аут ПІСЛЯ того, як сервер уже застосував запис: запис відбувся, а
+ перечитування не повернулося. Результат має бути «не підтверджено», і в журналі не
+ може стояти «підтверджено».</td><td>pass</td></tr>
 
-<tr><td>RG-03</td><td>An injected instruction must not reach the planner, whether it arrives in a tool error or in a tool description.</td><td>pass</td></tr>
+<tr><td>03</td><td>Підкинута вказівка не має дійти до планувальника — ані через текст помилки
+ інструмента, ані через опис інструмента.</td><td>pass</td></tr>
 
-<tr><td>RG-04</td><td>Refusal and truncated structured output from the planner: handled, retry-controlled, and never producing a write.</td><td>pass</td></tr>
+<tr><td>04</td><td>Відмова моделі або обрізана структурована відповідь планувальника:
+ опрацьовано, повтори обмежені, запису не спричиняє.</td><td>pass</td></tr>
 
-<tr><td>RG-05</td><td>A persistent error and a hanging call: completion within the declared budgets.</td><td>blocked</td></tr>
+<tr><td>05</td><td>Постійна помилка і виклик, що завис: завершення в межах оголошених
+ бюджетів.</td><td>blocked</td></tr>
 
-<tr><td>RG-06</td><td>Retrieval-augmented answering over a knowledge base.</td><td>not_applicable</td></tr>
+<tr><td>06</td><td>Відповіді з пошуком по базі знань (RAG).</td><td>not_applicable</td></tr>
 
-<tr><td>RG-07</td><td>A crash between the write's own side effect and the read-back completing: the next resume reconciles instead of writing twice.</td><td>pass</td></tr>
+<tr><td>07</td><td>Збій між самим записом і завершенням перечитування: наступне відновлення
+ звіряє стан, а не записує вдруге.</td><td>pass</td></tr>
 
 </table>
-<p>Рядок читається як <code>pass</code> лише тоді, коли за ним стоїть збережений запис
-прогону, що є в репозиторії; <code>blocked</code> називає структурну причину (три
-неживі виміри обліку витрат), <code>not_applicable</code> — єдиний рядок, який саме
-завдання лишає поза цією версією.</p>
+<p>Стан <code>pass</code> означає, що тест пройшов і запис цього прогону збережено в
+репозиторії; <code>blocked</code> — перевірка написана, але перевірити її нема чим:
+облік бюджету на цикли й спроби в цій версії не працює, і тест не може цього обійти;
+<code>not_applicable</code> — єдиний рядок, який саме завдання лишає поза цією
+версією.</p>
 <div class="next"><a href="recovery.html">← Головний сценарій</a>
 
 <a href="evidence.html">Виміряні результати →</a></div>
-<p class="meta">Згенеровано 2026-09-11T22:55:09+00:00. Жодних зовнішніх ресурсів.</p>
+<p class="meta">Згенеровано 2026-09-12T00:07:34+00:00. Жодних зовнішніх ресурсів.</p>
 </main></div></body></html>

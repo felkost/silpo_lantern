@@ -82,7 +82,10 @@ border-bottom: 1px solid #e3e7f0; } }
 <a href="#checkpointer">Checkpointer</a>
 </div>
 
-<p class="lede">Everything the service remembers, in six tables in Neon Postgres.</p>
+<p class="lede">The service's database consists of six application tables and four
+tables of the library that stores the processing state. The diagram below shows them
+all: for each table, its fields with types, primary (<code>PK</code>) and foreign
+(<code>FK</code>) keys; the arrows between tables are the key relationships.</p>
 <div class="diagram"><svg width="1160" height="970" viewBox="0 0 1160 970" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="er-title er-desc">
       <title id="er-title">Lantern Neon schema</title>
       <desc id="er-desc">Entity-relationship diagram of the six application tables in Neon Postgres (schema_version, sessions, consents, idempotency_keys, receipts, oauth_tokens) with their columns, keys and relationships, and the LangGraph checkpointer tables the library owns, linked to sessions by thread_id without a foreign key.</desc>
@@ -276,36 +279,87 @@ border-bottom: 1px solid #e3e7f0; } }
     </svg>
 </div>
 
-<h2 id="tables">The tables</h2>
+<h2 id="tables">The application tables</h2>
 <table>
-<tr><th>Table</th><th>One row is</th><th>Why it exists</th></tr>
-<tr><td><code>sessions</code></td><td>one Customer's visit</td><td>the thread the graph
-checkpoints under; the owner hash the guard checks on every write</td></tr>
-<tr><td><code>oauth_tokens</code></td><td>the one credential for that visit</td>
-<td>backend-only; logout deletes exactly this row; idle rows expire on read</td></tr>
-<tr><td><code>consents</code></td><td>one approved action</td><td>bound to the cart
-state by two hashes and an expiry; consumed once</td></tr>
-<tr><td><code>idempotency_keys</code></td><td>one claimed write</td><td>claimed
-immediately before the call so a retry can never write twice</td></tr>
-<tr><td><code>receipts</code></td><td>one write's outcome</td><td>before and after,
-expected and actual, verified or unverified — the audit trail a logout must not
-touch</td></tr>
-<tr><td><code>schema_version</code></td><td>the applied migration</td><td>an
-incompatible state version without a migration fails safe</td></tr>
+<tr><th>Table</th><th>One record is</th><th>What it holds and what it is used for</th>
+</tr>
+<tr><td><code>sessions</code></td><td>one Customer's visit to the service, from login to
+logout</td><td>the session id (<code>session_id</code>); the thread id
+(<code>thread_id</code>) under which the library tables hold the saved processing
+state; the owner code (<code>owner</code>) — a checksum of the session id and a
+server-side secret, which the guard checks against every consent; creation and
+last-activity times</td></tr>
+<tr><td><code>oauth_tokens</code></td><td>the Silpo credential issued for this
+visit</td><td>the access token for Silpo's server obtained after the phone login
+(<code>token</code>) and its last-use time. Kept on the server only. Deleted when the
+Customer logs out or after 30 minutes without activity. The only table whose record is
+deleted together with the session</td></tr>
+<tr><td><code>consents</code></td><td>one Customer consent to one specific
+action</td><td>the action id (<code>action_id</code>), the write arguments
+(<code>canonical_args</code>), the action and cart-state checksums
+(<code>args_hash</code>, <code>state_hash</code>), the expiry (<code>expires_at</code>)
+and the time of use (<code>consumed_at</code>). The guard reads this record before the
+cart write and marks it used, so one consent yields at most one write</td></tr>
+<tr><td><code>idempotency_keys</code></td><td>one claim to write to the cart</td><td>the
+owner, the cart, the action and the arguments checksum; the claim's state
+(<code>state</code>, five values) and the call's result (<code>result</code>). A claim
+is created immediately before the write tool is called; the uniqueness of the triple
+(owner, cart, action) stops a repeated request — after a dropped connection, say — from
+making the same write twice</td></tr>
+<tr><td><code>receipts</code></td><td>the receipt of one write to the cart</td><td>the
+cart state before and after the write (<code>before_state</code>,
+<code>after_state</code>), the expected and actual change of the sum
+(<code>expected_delta</code>, <code>actual_delta</code>), the read-back outcome
+(<code>verified</code>, <code>status</code>), whether the block was cleared
+(<code>blocker_cleared</code>) and the remaining shortfall, the kind of write
+(<code>kind</code>: add or compensate). This is the log of every cart change the system
+made; it is kept after the Customer logs out</td></tr>
+<tr><td><code>schema_version</code></td><td>one applied schema migration</td><td>the
+version number and the time it was applied. On start-up the service compares the
+database version with the code's; on a mismatch without a matching migration it does
+not start</td></tr>
 </table>
 
-<h2 id="choices">Two choices visible in the shape</h2>
-<p>Consents and receipts reference a session <em>without</em> cascade, so a session row
-is never deleted and the audit trail survives a logout. Nothing stores the Customer's
-address or coordinates as a column; the cart snapshots inside a receipt are reduced to
-amounts before anything reaches a browser.</p>
+<h2 id="choices">Two decisions about storage</h2>
+<p><b>What is deleted at logout, and what is not.</b> When the Customer logs out, only
+the record in <code>oauth_tokens</code> — the Silpo credential — is deleted. The records
+in <code>sessions</code>, <code>consents</code> and <code>receipts</code> remain. That
+is
+deliberate: consents and receipts are the log of what the system changed in the cart and
+with whose consent, and it is needed after the session — for checking, for an undo, for
+a report. Technically this is visible on the diagram: the foreign key from
+<code>oauth_tokens</code> to <code>sessions</code> cascades on delete (migration 0007),
+while the keys from <code>consents</code> and <code>receipts</code> do not (migrations
+0003 and 0005). Because of that a session record cannot be deleted while consents or
+receipts reference it, and the service never deletes one.</p>
+<p><b>Where the Customer's data lives.</b> No table has a separate field for the
+Customer's address, phone or coordinates. However, in <code>receipts</code> the fields
+<code>before_state</code> and <code>after_state</code> store the cart as Silpo's server
+returned it — with all its fields, delivery coordinates included; and in
+<code>oauth_tokens</code> the access token is stored unencrypted. The protection of that
+data is access to the database itself (Neon); encryption at rest is deferred in this
+version. The Customer's browser and the observer panel never receive the whole cart:
+the service sends only the delivery type, the slot, the products total and the lines
+(name, quantity, price).</p>
 
-<h2 id="checkpointer">The checkpointer beside it</h2>
-<p>LangGraph keeps the in-flight graph state in its own four tables, in the same
-database, keyed by the session's thread id — no foreign key in either direction, because
-the library owns its migrations and the application owns its rows.</p>
+<h2 id="checkpointer">The tables of saved processing state</h2>
+<p>Processing of a request is not one continuous call: at the consent step it stops and
+waits for the Customer, and the request that started it ends. To continue later from the
+same place, the processing state at the moment of the stop — the cart as read, the
+diagnosis, the proposed options, the step number — is written to the database. When the
+consent arrives the server reads that record and continues from the next step; in the
+same way a request survives a restart of the service. After the receipt the record
+stays in the database as the history of that request's steps.</p>
+<p>These records are kept by the workflow library (LangGraph) in its own four tables
+(<code>checkpoints</code>, <code>checkpoint_blobs</code>,
+<code>checkpoint_writes</code>,
+<code>checkpoint_migrations</code>) in the same database. The link to the session is by
+the value of <code>thread_id</code>, with no foreign key: the library creates and
+changes
+its tables itself, the application its own, and neither depends on the other's
+migrations.</p>
 <div class="next"><a href="evidence.html">← Measurements</a>
 
 </div>
-<p class="meta">Regenerated 2026-09-11T22:55:09+00:00. No external network resources.</p>
+<p class="meta">Regenerated 2026-09-12T00:07:34+00:00. No external network resources.</p>
 </main></div></body></html>

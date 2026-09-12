@@ -102,21 +102,24 @@ service with the React console, the LangGraph workflow, the MCP adapter, Neon Po
 what happened when it ran live through the browser: diagnosis, options, consent,
 guarded write, receipt.</p><a href="recovery.html">Follow the run →</a></article>
 <article class="card"><h3>3. Safety &amp; consent</h3><p>The invariants: one write
-site, a model that never authorises, binding hashes, expiry, independent verification,
+site, a model that never authorises, consent bound by checksums and expiry, independent
+verification,
 quarantine of tool drift.</p><a href="safety.html">Review the safeguards →</a></article>
 <article class="card"><h3>4. Measurements</h3><p>Eight metrics with their populations,
 95% intervals and caveats; the cost of an episode; what was deliberately not
 measured.</p><a href="evidence.html">Inspect the evidence →</a></article>
-<article class="card"><h3>5. Data model</h3><p>The six persisted tables — sessions,
-consent, idempotency, receipts, tokens — and the checkpointer beside them.</p>
-<a href="data-model.html">Inspect the storage →</a></article>
+<article class="card"><h3>5. Data model</h3><p>The six application tables — sessions,
+tokens, consents, write claims, receipts, schema version — and their links; beside
+them, the tables holding the saved processing state.</p>
+<a href="data-model.html">Inspect the schema →</a></article>
 </div>
 
 <h2 id="claim">The design claim</h2>
 <p>A tool's <code>success</code> flag is not proof. The system distinguishes <em>"the
 agreed write occurred"</em> from <em>"the cart is now eligible for checkout"</em>, and
 both require evidence from a fresh read of the cart. Everything else on these pages —
-the single write site, the hash-bound consent, the quarantine of tool drift, the metrics
+the single write site, the consent bound to one specific action, the quarantine of tool
+drift, the metrics
 with their intervals — exists to make that claim checkable rather than believable.</p>
 
 <h2 id="how">How the recovery works, in one line</h2>
@@ -124,5 +127,5 @@ with their intervals — exists to make that claim checkable rather than believa
 read-back receipt</code></p>
 <div class="next"><span></span>
 <a href="architecture.html">Architecture →</a></div>
-<p class="meta">Regenerated 2026-09-11T22:55:09+00:00. No external network resources.</p>
+<p class="meta">Regenerated 2026-09-12T00:07:34+00:00. No external network resources.</p>
 </main></div></body></html>
