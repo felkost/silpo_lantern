@@ -592,8 +592,9 @@ the expected change beside the one read back: equal — "verified"; not equal, o
 read-back failed — "unverified"</td></tr>
 </table>
 <p>The third block, <code>Measured earlier — not this session</code>, shows on request
-the eight indicators from the Measurements page — with <code>n</code>, interval and
-caveat. The heading says deliberately that these were measured earlier, on recorded
+the eight indicators from the Measurements page — with <code>n</code>, interval,
+caveat, and the same Ukrainian name and meaning as on that page. The heading says
+deliberately that these were measured earlier, on recorded
 runs, and not in this session: so the jury does not confuse the project's indicators
 with what is happening on screen now.</p>
 
@@ -816,8 +817,8 @@ refused the undo because the cart moved meanwhile; it then builds one new undo o
 the cart as it is now and waits for consent again. One such attempt — then a
 refusal</td></tr>
 </table>
-<p>"NEW EDGE (G8)" beside two transitions means they were added at development stage
-G8, when the undo appeared; the other transitions existed before.</p>
+<p>"ADDED FOR THE UNDO" beside two transitions means they were added together with
+the undo; the other transitions existed before.</p>
 <div class="diagram">{{ g8_topology_svg }}</div>
 
 <h2 id="rg">Resilience checks</h2>

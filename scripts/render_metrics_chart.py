@@ -1,6 +1,6 @@
-"""G9 (G9.9): the stage's one declared diagram -- a results chart of the
-seven metrics with 95% Wilson intervals, generated from the metrics
-report `compute_metrics.py` writes rather than drawn by hand.
+"""The results chart -- one row per metric with its 95% Wilson interval,
+generated from the metrics report `compute_metrics.py` writes rather than
+drawn by hand.
 
 Generated, not authored, because the numbers move every time the evidence
 is recomputed and a hand-drawn chart silently goes stale. A metric with
@@ -90,12 +90,13 @@ def build_svg(metrics: List[dict]) -> str:
     parts.append('<rect width="%d" height="%d" fill="#FFFFFF"/>' % (width, height))
     parts.append(
         '<text x="24" y="34" font-size="14" font-weight="700" fill="%s">'
-        "G9 measurement results - seven metrics, 95%% Wilson intervals</text>" % INK
+        "Measurement results - %d metrics, 95%% Wilson intervals</text>"
+        % (INK, len(metrics))
     )
     parts.append(
         '<text x="24" y="58" font-size="12" fill="%s">Computed by '
         "scripts/compute_metrics.py from the offline repeats own emitted run "
-        "records (D61: reproducible from the repository, which a live LLM run "
+        "records (reproducible from the repository, which a live LLM run "
         "is not).</text>" % MUTED
     )
     parts.append(
@@ -130,7 +131,7 @@ def build_svg(metrics: List[dict]) -> str:
         )
         parts.append(
             '<text x="%d" y="%d" font-size="12" fill="%s" text-anchor="end">'
-            "n = %d</text>" % (LEFT - 50, centre, MUTED, n)
+            "n = %d</text>" % (LEFT - 10, centre, MUTED, n)
         )
 
         if value is None:
@@ -192,7 +193,7 @@ def build_svg(metrics: List[dict]) -> str:
     parts.append(
         '<text x="24" y="%d" font-size="12" fill="%s">SearchPriceFidelity carries no '
         "gate: it measures how well the product search predicts the price the "
-        "cart charges, which is Silpo policy (D68, D76), not this system.</text>"
+        "cart charges, which is Silpo policy, not this system.</text>"
         % (legend_y + 24, MUTED)
     )
     parts.append("</svg>")

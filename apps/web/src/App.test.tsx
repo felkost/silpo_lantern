@@ -898,6 +898,8 @@ describe("claim panel", () => {
     expect(block).toHaveTextContent("[0.90, 1.00]");
     expect(block).toHaveTextContent("python -m scripts.compute_metrics --tracked");
     expect(block).toHaveTextContent("2026-09-10");
+    // The site's Ukrainian name and meaning sit under the English identifier.
+    expect(block).toHaveTextContent("Перечитування після запису");
     expect(block).toHaveTextContent("offline");
     // claim 1's audited check: which code the app rendered, and which it did not
     expect(screen.getByTestId("claim-disclosure")).toHaveTextContent("order.payment_types.disabled");
