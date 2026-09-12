@@ -212,8 +212,8 @@ a signed-in shopper; these pages call them the Customer.</p>
       <rect x="1112" y="372" width="36" height="16" rx="2" fill="transparent" stroke="#c9ba5e" stroke-width="0.8"/>
       <text x="1130" y="384" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">EXT</text>
       <text x="1215" y="404" fill="#24242e" font-size="14" font-weight="700" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">External Services</text>
-      <text x="1215" y="422" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">Silpo · Neon · OpenRouter</text>
-      <text x="1215" y="438" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">LangSmith</text>
+      <text x="1215" y="422" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">Silpo MCP · Neon · LangSmith</text>
+      <text x="1215" y="438" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">OpenRouter · Gemini 3.8 / 3.5 flash</text>
 
       <!-- ============ LEGEND ============ -->
       <line x1="40" y1="500" x2="1340" y2="500" stroke="#d1d5db" stroke-width="0.8"/>
@@ -589,11 +589,13 @@ server provides the cart. No state is kept on the service disk.</p>
       <text x="420" y="511" fill="#24242e" font-size="12" text-anchor="middle">traces · spans</text>
 
       <!-- OpenRouter -->
-      <rect x="600" y="420" width="200" height="110" rx="6" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
-      <rect x="612" y="432" width="40" height="16" rx="2" fill="transparent" stroke="#c9ba5e" stroke-width="0.8"/>
-      <text x="632" y="444" fill="#24242e" font-size="12" text-anchor="middle">EXT</text>
-      <text x="700" y="473" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">OpenRouter</text>
-      <text x="700" y="493" fill="#24242e" font-size="12" text-anchor="middle">planner · explainer</text>
+      <rect x="580" y="420" width="240" height="110" rx="6" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
+      <rect x="592" y="432" width="40" height="16" rx="2" fill="transparent" stroke="#c9ba5e" stroke-width="0.8"/>
+      <text x="612" y="444" fill="#24242e" font-size="12" text-anchor="middle">EXT</text>
+      <text x="700" y="462" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">OpenRouter</text>
+      <text x="700" y="481" fill="#24242e" font-size="12" text-anchor="middle">planner · gemini-3.8-flash</text>
+      <text x="700" y="498" fill="#24242e" font-size="12" text-anchor="middle">explainer · gemini-3.5-flash-lite</text>
+      <text x="700" y="515" fill="#24242e" font-size="12" text-anchor="middle">eval judge · gpt-5.6-luna (tests only)</text>
 
       <!-- Silpo MCP -->
       <rect x="880" y="420" width="200" height="110" rx="6" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
@@ -1292,36 +1294,76 @@ sees is what Lantern exists to show.</p>
 </div>
 
 <h2 id="planner">Planner, evidence gate, ranking</h2>
-<p>After the diagnosis the language model sees what is already in the cart and how much
-is missing, and proposes <b>search terms</b> — product or category names such as "milk",
-"bread", "coffee". That is all it can return: there is no field for a price or a product
-id in the shape it answers with. Its answer is a guess about <i>what to look for</i>,
-and it decides nothing.</p>
-<p>With those words the system queries Silpo's product search — in the same branch and
-for the same delivery slot as the cart. The search returns a structured answer: name,
-price, availability, identifiers. A candidate goes further only if its <b>price and
-availability come from that same answer</b>: one with no confirmed price, or marked
-unavailable, is dropped. Price and availability come from the search answer; the
-language model is not used at this step.</p>
-<p>For each survivor the system computes the smallest quantity that closes the
-shortfall: the shortfall divided by the price, rounded to the catalogue's selling step
-and capped by stock. It then orders the candidates <b>by one thing only — the top-up
-amount, smallest first</b> — and shows the Customer the top two or three.</p>
-<p>It is worth saying plainly what is <b>not</b> used to choose. The search is confined
-to the same branch, delivery type and slot as the cart — otherwise the product found
-could not be ordered at all. After that only the evidence gate filters: a confirmed
-price and availability pass, anything else does not. Customer preferences, food
-restrictions, favourites, promotions or semantic closeness to what is already in the
-cart are <b>not</b> taken into account: Silpo's server offers tools for those, and this
-version does not use them. The reason is plain: every extra signal is one more place to
-be wrong in front of a Customer, and there was no measured way to validate relevance
-within this version. So relevance stays with the model and with the Customer, who picks
-one of two or three offers — or none. In the second case the cart stays exactly as it
-was: nothing added, nothing changed, the block still there. The next decision is the
-Customer's — add something themselves in the Silpo app, choose another delivery
-channel (its minimum may differ, or there may be none; Lantern shows that comparison
-beside the diagnosis) or simply postpone the order. They can come back to the check at
-any time: since nothing was written, a repeated look spoils nothing.</p>
+<p>After the diagnosis, processing takes five steps — exactly the ones on the diagram
+below. Two of them are done by a language model (blue boxes, "Application"), two by the
+core's plain code (purple, "Domain"), one by Silpo's server. On this path the language
+model gets a say twice and the right to decide never.</p>
+<table>
+<tr><th>Step</th><th>Who does it</th><th>Input</th><th>Output</th></tr>
+<tr><td><b>1. Plan</b> — the planner</td><td>language model
+<code>google/gemini-3.8-flash</code>, one call per request</td><td>the diagnosis (what is
+in the cart, how much is missing), the delivery-channel comparison and the list of
+search tools — names and parameters only, no descriptions</td><td>a structured
+<code>SearchIntent</code>: search terms such as "milk", "bread", "coffee". That shape
+has no field for a price or a product id, so the model physically cannot "make them
+up". Its answer is only a guess about <i>what to look for</i></td></tr>
+<tr><td><b>2. Collect options</b></td><td>Silpo's server, the
+<code>find_products_batch</code> tool</td><td>the search terms from step 1; the search
+is confined to the same branch, delivery type and slot as the cart — otherwise the
+product found could not be ordered</td><td>a structured answer per term: name, price,
+availability, identifiers</td></tr>
+<tr><td><b>3. Evidence Gate</b></td><td>core code (<code>gate_candidates</code>, rule
+10)</td><td>the search answer</td><td>only the candidates whose price and availability
+come from that same answer; one with no confirmed price, or marked unavailable, is
+dropped. For each survivor the code computes the smallest quantity that closes the
+shortfall: shortfall ÷ price, rounded to the catalogue's selling step, capped by
+stock</td></tr>
+<tr><td><i>Decision</i> "did anyone survive?"</td><td>code</td><td>the result of step
+3</td><td><b>0 candidates</b> — state <code>Aborted</code>: the Customer is told plainly
+there is nothing to offer (likewise when the call budget is exhausted). <b>1–3
+candidates</b> — onward</td></tr>
+<tr><td><b>4. Rank</b></td><td>core code (<code>rank_candidates</code>)</td><td>the
+candidates with their quantities</td><td>the same candidates ordered <b>by one thing
+only — the top-up amount, smallest first</b>; the top two or three go to the
+Customer</td></tr>
+<tr><td><b>5. Explain</b> — the explainer</td><td>language model
+<code>google/gemini-3.5-flash-lite</code>, one short call per candidate</td><td>one candidate:
+the product name (passed as data, inside a fenced quote, so text in the name cannot
+become an instruction), the quantity, the top-up amount. It sees neither the other
+candidates, nor the diagnosis, nor the tools</td><td>one Ukrainian sentence for the
+Customer's card (<code>guest_text_uk</code>). The sentence only explains — no number is
+taken from it</td></tr>
+</table>
+<p>The end of the path is the state <code>awaiting_consent</code>: 1–3 proposals, each
+with a confirmed price, availability and an explanation, and a stop until the Customer
+consents.</p>
+<p><b>Why two different models.</b> The planner and the explainer solve different
+problems, and the selection criteria differ. The planner is called once but with a
+large context — about 30 thousand tokens in (diagnosis, comparison, tool list) — and
+must return strict JSON; so a model with a window of at least 64 thousand tokens and
+reliable structured output was chosen, and the language of its answer is invisible to
+the Customer. The explainer is called two or three times per request with a short input
+(about 6 thousand tokens), and the only thing that matters in it is the quality of the
+Ukrainian, because the Customer reads that sentence. It was chosen by a comparison of
+four candidates on 28 test prompts: the only model with no critical language errors
+(Russianisms, surzhyk); two others scored higher on average but with such errors. The
+split buys two more things: the model that writes for the Customer never sees the tool
+list, and either model can be replaced without touching the other. Ids and prices of
+both are in the "Language models" table below.</p>
+<p><b>What is not used to choose.</b> Customer preferences, food restrictions,
+favourites, promotions or semantic closeness to what is already in the cart are
+<b>not</b> taken into account: Silpo's server offers tools for those, and this version
+does not use them. The reason is plain: every extra signal is one more place to be
+wrong in front of a Customer, and there was no measured way to validate relevance within
+this version. So relevance stays with the model and with the Customer, who picks one of
+two or three offers — or none.</p>
+<p><b>If the Customer picks none</b> — the «Не додавати нічого» button — the cart
+stays exactly as it was: nothing added, nothing changed, the block still there. The next
+decision is the Customer's: add something themselves in the Silpo app, choose another
+delivery channel (its minimum may differ, or there may be none; Lantern shows that
+comparison beside the diagnosis) or simply postpone the order. They can come back to
+the check at any time with «Перевірити знову»: since nothing was written, a repeated
+look spoils nothing.</p>
 <div class="diagram"><svg viewBox="0 0 900 1120" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g4-activity-title g4-activity-desc">
       <title id="g4-activity-title">Planner-to-ranking activity diagram</title>
       <desc id="g4-activity-desc">Activity diagram from a completed diagnosis through the planner, the deterministic product search, the Evidence Gate, and ranking to the explainer, ending in awaiting_consent. The candidates-empty branch and a budget-exceeded condition both exit to an explicit Aborted state rather than a successful outcome.</desc>
@@ -1374,8 +1416,9 @@ any time: since nothing was written, a repeated look spoils nothing.</p>
 
       <!-- Plan (LLM node, application layer) -->
       <rect x="370" y="140" width="220" height="80" rx="14" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1"/>
-      <text x="480" y="174" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Plan</text>
-      <text x="480" y="194" fill="#24242e" font-size="12" text-anchor="middle">LLM &middot; structured SearchIntent</text>
+      <text x="480" y="166" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Plan</text>
+      <text x="480" y="185" fill="#24242e" font-size="12" text-anchor="middle">LLM &middot; gemini-3.8-flash</text>
+      <text x="480" y="202" fill="#24242e" font-size="12" text-anchor="middle">structured SearchIntent</text>
 
       <!-- Collect options (deterministic, application layer) -->
       <rect x="370" y="268" width="220" height="80" rx="14" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1"/>
@@ -1405,8 +1448,9 @@ any time: since nothing was written, a repeated look spoils nothing.</p>
 
       <!-- Explain (LLM node, application layer) -->
       <rect x="370" y="756" width="220" height="80" rx="14" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1"/>
-      <text x="480" y="790" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Explain</text>
-      <text x="480" y="810" fill="#24242e" font-size="12" text-anchor="middle">LLM &middot; sets guest_text_uk</text>
+      <text x="480" y="782" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Explain</text>
+      <text x="480" y="801" fill="#24242e" font-size="12" text-anchor="middle">LLM &middot; gemini-3.5-flash-lite</text>
+      <text x="480" y="818" fill="#24242e" font-size="12" text-anchor="middle">sets guest_text_uk</text>
 
       <!-- Final pseudostate -->
       <circle cx="480" cy="888" r="16" fill="none" stroke="#24242e" stroke-width="1.5"/>
@@ -1550,11 +1594,12 @@ tool descriptions, or the write tool.</p>
       <text x="460" y="183" fill="#24242e" font-size="12" text-anchor="middle">diagnose · gate · rank</text>
 
       <!-- LLM (external, OpenRouter) -->
-      <rect x="670" y="110" width="200" height="90" rx="6" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
-      <rect x="682" y="122" width="40" height="16" rx="2" fill="transparent" stroke="#c9ba5e" stroke-width="0.8"/>
-      <text x="702" y="134" fill="#24242e" font-size="12" text-anchor="middle">EXT</text>
-      <text x="770" y="163" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">LLM</text>
-      <text x="770" y="183" fill="#24242e" font-size="12" text-anchor="middle">OpenRouter · planner/explainer</text>
+      <rect x="660" y="110" width="220" height="90" rx="6" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
+      <rect x="672" y="122" width="40" height="16" rx="2" fill="transparent" stroke="#c9ba5e" stroke-width="0.8"/>
+      <text x="692" y="134" fill="#24242e" font-size="12" text-anchor="middle">EXT</text>
+      <text x="770" y="152" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">LLM · OpenRouter</text>
+      <text x="770" y="171" fill="#24242e" font-size="12" text-anchor="middle">planner · gemini-3.8-flash</text>
+      <text x="770" y="188" fill="#24242e" font-size="12" text-anchor="middle">explainer · gemini-3.5-flash-lite</text>
 
       <!-- Silpo MCP (external) -->
       <rect x="940" y="110" width="200" height="90" rx="6" fill="#fdf9db" stroke="#c9ba5e" stroke-width="1"/>
@@ -1624,5 +1669,5 @@ calls is $20 for the whole project, from the same settings file.</p>
 <div class="next"><a href="index.html">← Start here</a>
 
 <a href="recovery.html">Hero recovery →</a></div>
-<p class="meta">Regenerated 2026-09-12T01:36:42+00:00. No external network resources.</p>
+<p class="meta">Regenerated 2026-09-12T02:09:12+00:00. No external network resources.</p>
 </main></div></body></html>

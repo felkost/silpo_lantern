@@ -180,6 +180,83 @@ code,
   color: var(--accent);
 }
 
+/* the loader beside the column label: a small ring with a rotating gap,
+   and a lowercase word about what is running */
+.loader {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: 12px;
+  padding: 2px 8px 2px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--hairline);
+  background: color-mix(in srgb, var(--card) 60%, transparent);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-2);
+  vertical-align: middle;
+}
+
+.hourglass {
+  flex: none;
+  transform-origin: 50% 50%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hourglass {
+    animation: turn-over 1.8s ease-in-out infinite;
+  }
+
+  /* the sand runs from the top bulb into the bottom one, then the glass
+     turns over about its centre and the run starts again */
+  @keyframes turn-over {
+    0%,
+    62% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(180deg);
+    }
+  }
+
+  .sand-top,
+  .sand-bottom {
+    transform-box: fill-box;
+  }
+
+  .sand-top {
+    transform-origin: top center;
+    animation: drain 1.8s ease-in infinite;
+  }
+
+  .sand-bottom {
+    transform-origin: bottom center;
+    animation: fill 1.8s ease-out infinite;
+  }
+
+  @keyframes drain {
+    0% {
+      transform: scaleY(1);
+    }
+    62%,
+    100% {
+      transform: scaleY(0);
+    }
+  }
+
+  @keyframes fill {
+    0% {
+      transform: scaleY(0);
+    }
+    62%,
+    100% {
+      transform: scaleY(1);
+    }
+  }
+}
+
 .guest > .eyebrow {
   align-self: stretch;
 }

@@ -1308,3 +1308,50 @@ describe("decline all options", () => {
     expect(calls.length).toBe(before);
   });
 });
+
+// The loader (the author, live): with the stream open and nothing on the
+// card yet, the console looked hung. A spinner beside «Клієнт» names the
+// kind of work in flight and disappears when the stream closes.
+describe("loader", () => {
+  it("spins while the stream is open and names the work, then goes away", async () => {
+    sessionStorage.setItem("lantern_session_id", "s1");
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        await gate;
+        return new Response(
+          sseStream([
+            frame("stage", { ...ENVELOPE, node: "read", io: "mcp" }),
+            frame("diagnosis", {
+              ...ENVELOPE,
+              primary_code: "order.cost.min",
+              gap: "93.38",
+              gap_is_borderline: false,
+              products_total: "605.62",
+              threshold_source: "validation_context",
+              validations: [{ code: "order.cost.min", level: "error", type: "cost", is_known: true }],
+              channels: [],
+            }),
+            frame("consent_required", ENVELOPE),
+          ]),
+          { status: 200 },
+        );
+      }),
+    );
+
+    render(<App />);
+    expect(screen.getByTestId("loader")).toHaveTextContent("з'єднуємось");
+
+    await act(async () => {
+      release();
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("gap")).toHaveTextContent("93.38");
+    });
+    expect(screen.queryByTestId("loader")).toBeNull();
+  });
+});
