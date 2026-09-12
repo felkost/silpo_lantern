@@ -975,8 +975,8 @@ describe("explanations", () => {
     // Three blocks on the jury panel (observed nodes, claims, measured earlier)
     // and the cart column's own block.
     expect(helps.length).toBe(4);
-    // The term sits in its own <i>, so match on the whole line's text.
-    expect(screen.getByText((_, el) => el?.tagName === "P" && /^MCP — читання/.test(el.textContent ?? ""))).toBeInTheDocument();
+    // The term is a row header and the sentence its cell: match on the row.
+    expect(screen.getByText((_, el) => el?.tagName === "TR" && /^MCPчитання/.test(el.textContent ?? ""))).toBeInTheDocument();
   });
 
   it("groups identical validation lines with a count and explains an unknown reason", async () => {

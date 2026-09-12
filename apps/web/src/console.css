@@ -399,15 +399,40 @@ code,
 }
 
 .help-body,
-.help-body p,
-.terms p {
+.help-body p {
   margin: 4px 0 0;
   color: var(--ink-2);
 }
 
-.terms p i {
+/* the term table: term left, sentence right, both columns aligned */
+.terms {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.terms th,
+.terms td {
+  padding: 3px 0;
+  vertical-align: top;
+  text-align: left;
+  border-top: 1px solid var(--hairline);
+}
+
+.terms tr:first-child th,
+.terms tr:first-child td {
+  border-top: 0;
+}
+
+.terms th {
+  width: 34%;
+  padding-right: 10px;
+  font-weight: 400;
   font-style: italic;
   color: var(--ink);
+  white-space: normal;
 }
 
 .panel .uk {
