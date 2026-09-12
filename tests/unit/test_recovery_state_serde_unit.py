@@ -88,8 +88,8 @@ def test_a_state_with_populated_domain_models_round_trips_without_warning(
 
 
 def _compensation_proposal() -> ActionProposal:
-    """T22 (G8 stage spec): the production serializer must round-trip the
-    two fields D51 added (`kind`, `compensates_action_id`) and a NEGATIVE
+    """T22: the production serializer must round-trip the
+    two fields the undo added (`kind`, `compensates_action_id`) and a NEGATIVE
     `Decimal` quantity/delta cleanly -- probed once in the session that
     produced the stage spec (M3); pinned here as a repeatable test rather
     than left as a claim only that session could re-derive.

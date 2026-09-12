@@ -1,6 +1,6 @@
 """The sync repository pool must survive a connection the SERVER dropped
 while the client still thinks it is open -- Neon's idle-suspend, or a
-Render service waking after sleep. Seen live at G10 delivery C: the first
+Render service waking after sleep. Seen live at the first
 `/events` after ~20 idle minutes answered 500 with `SSL connection has
 been closed unexpectedly`. The checkpointer's own recovery test closes the
 socket client-side, which the pool detects by `conn.closed`; this one kills

@@ -1,7 +1,7 @@
-"""G9 follow-up (T20): builds the human-labelling set for judge
+"""builds the human-labelling set for judge
 calibration, and the sheet the author labels it on.
 
-**Why the pairs are built rather than picked.** D-G9-09 refuses a judge
+**Why the pairs are built rather than picked.** an earlier decision refuses a judge
 whose prompt and whose calibration set are authored by the same person:
 that is a self-graded oracle, and it reports agreement with itself. So
 nothing here is chosen for how it will score.
@@ -10,7 +10,7 @@ Three properties this script exists to guarantee:
 
 * **The texts are real.** Every member of every pair is an output some
   model actually produced -- either a live `guest_text_uk` from a tracked
-  replay bundle, or a UA-Eval generation from G4. Nothing is written by
+  replay bundle, or a UA-Eval generation. Nothing is written by
   whoever prepares the set.
 * **Most pairs are naturally uncertain.** Two thirds are two DIFFERENT
   models answering the SAME UA-Eval prompt, so neither member is

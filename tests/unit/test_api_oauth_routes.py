@@ -71,7 +71,7 @@ class _FakeStorage:
 
 
 def _client(app: FastAPI, session_id: str = _SESSION_ID) -> TestClient:
-    """G10 (A-G10-04): `/auth/start` reads the session from the cookie
+    """`/auth/start` reads the session from the cookie
     `POST /session` set, never from the URL."""
     client = TestClient(app)
     client.cookies.set(SESSION_COOKIE, session_id)
@@ -176,9 +176,9 @@ def test_auth_callback_exchanges_the_code_and_stores_the_token(
         f"/auth/callback?code=the-code&state={state}", follow_redirects=False
     )
 
-    # G10 (D87): the guest lands back on the app, not on a JSON page with
+    # the guest lands back on the app, not on a JSON page with
     # no way forward -- and on a BARE `/`: the session id never rides in
-    # a redirect target (G10-5).
+    # a redirect target.
     assert response.status_code == 303
     assert response.headers["location"] == "/"
     assert storage.stored_token is not None
@@ -386,7 +386,7 @@ def test_callback_stores_against_the_session_that_started_the_flow(
 
 
 def test_auth_start_without_a_cookie_is_401(monkeypatch: pytest.MonkeyPatch) -> None:
-    """G10 (A-G10-04): a `session_id` query parameter is no longer read at
+    """a `session_id` query parameter is no longer read at
     all -- the id must not be placeable in a URL."""
     app = _make_app(monkeypatch, _FakeStorage(_client_info()))
     client = TestClient(app)

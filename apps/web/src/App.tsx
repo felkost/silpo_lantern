@@ -14,6 +14,7 @@ import {
   SessionUnauthorizedError,
   createSession,
   deleteSession,
+  restartSession,
   streamSessionEvents,
   submitConsent,
 } from "./api";
@@ -35,14 +36,14 @@ import type {
   Screen,
 } from "./types";
 
-// G7 (D-G7-05): the second consent+write round (D42) clears `receipt` in
+// the second consent+write round clears `receipt` in
 // the graph state and routes back to `diagnose`, all inside one SSE
 // stream -- `receipt(round 1) -> diagnosis(round 2) -> options ->
 // consent_required`. Replacing a single `receipt` field loses round 1's
 // receipt the instant round 2 starts (an adversarial audit of this
 // stage's plan caught it before it shipped): the fix is to accumulate.
 
-// G10 (A-G10-04): the session id is an HttpOnly cookie on the wire, so
+// the session id is an HttpOnly cookie on the wire, so
 // this page cannot read it back -- and Silpo's login returns the guest to
 // a bare `/`, a fresh load. `sessionStorage` is the app's own copy, per
 // tab, gone when the tab closes; a browser that refuses storage (private
@@ -79,7 +80,7 @@ function App() {
   const [authUrl, setAuthUrl] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [stages, setStages] = useState<StageRow[]>([]);
-  // G10: what the panel argues from -- the recorded consent binding, the
+  // what the panel argues from -- the recorded consent binding, the
   // guard's own refusal word, and the measured evidence (loaded on request).
   const [consentAck, setConsentAck] = useState<ConsentAckResponse | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
@@ -213,6 +214,42 @@ function App() {
     }
   }, [sessionId]);
 
+  // «Перевірити знову»: the same login, a fresh run. Everything the old
+  // run showed is cleared before the new stream starts, so nothing from
+  // the previous check can be read as this one's.
+  const restart = useCallback(async () => {
+    const id = sessionId;
+    if (id === null) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const session = await restartSession(id);
+      setDiagnosis(null);
+      setCandidates([]);
+      setReceipts([]);
+      setStages([]);
+      setConsentAck(null);
+      setCartStates([]);
+      setRefusal(null);
+      setSessionId(session.session_id);
+      activeSession.current = session.session_id;
+      writeStoredSession(session.session_id);
+      await consume(session.session_id);
+    } catch (exc) {
+      if (exc instanceof SessionUnauthorizedError) {
+        setAuthUrl("/auth/start");
+        setScreen("auth_required");
+      } else {
+        setError(exc instanceof Error ? exc.message : String(exc));
+        setScreen("error");
+      }
+    } finally {
+      setBusy(false);
+    }
+  }, [sessionId, consume]);
+
   const consent = useCallback(
     async (actionId: string) => {
       if (sessionId === null) {
@@ -235,7 +272,7 @@ function App() {
 
   // The card shows the diagnosis on its own screen and beside an ordinary
   // offer; the panel keeps it as history on every screen EXCEPT beside an
-  // undo offer, where the stale pre-write gap would mislead (D51) -- seen
+  // undo offer, where the stale pre-write gap would mislead -- seen
   // live: reusing the card's predicate blanked claims 1 and 2 on the
   // receipt screen.
   const compensationOffer =
@@ -252,7 +289,7 @@ function App() {
       </header>
 
       <div className="shell-body">
-        {/* G10 (A-G10-02): the left third is an English technical surface
+        {/* the left third is an English technical surface
             for a jury; the guest card on the right stays Ukrainian and is
             not edited beyond classNames. */}
         <aside className="panel" aria-label="Jury panel">
@@ -264,7 +301,6 @@ function App() {
             consent={consentAck}
             receipts={receipts}
             refusal={refusal}
-            evidence={evidence}
           />
           <MeasuredEarlier evidence={evidence} onLoaded={setEvidence} />
         </aside>
@@ -275,10 +311,18 @@ function App() {
           {/* «Вийти» only once there is a login to end; on the login screen
               the same action is a cancel, not an exit (the author, live). */}
           {sessionId !== null && screen !== "auth_required" && (
-            <p>
+            <p className="session-actions">
               <button type="button" onClick={logout} data-testid="logout">
                 Вийти
               </button>
+              {/* «Перевірити знову»: the cart may have changed in the Silpo app,
+                  or the guest declined every option; a fresh run needs no
+                  second login. Hidden while a stream is open. */}
+              {screen !== "idle" && !busy && (
+                <button type="button" className="quiet" onClick={restart} data-testid="restart">
+                  Перевірити знову
+                </button>
+              )}
             </p>
           )}
 
@@ -307,7 +351,7 @@ function App() {
             </section>
           )}
 
-          {/* G8 (D51): the compensation pass emits no `diagnosis` event (it
+          {/* the compensation pass emits no `diagnosis` event (it
               routes persist_receipt -> write_guard directly, never through
               diagnose), so the last one in state is the PRE-write gap --
               showing it beside an offer to undo the very write that
@@ -335,7 +379,7 @@ function App() {
           )}
         </main>
 
-        <CartColumn states={cartStates} gap={diagnosis?.gap ?? null} evidence={evidence} />
+        <CartColumn states={cartStates} gap={diagnosis?.gap ?? null} />
       </div>
 
       <footer className="shell-footer">silpo lantern</footer>

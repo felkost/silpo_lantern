@@ -9,7 +9,7 @@ flake8==7.3.0
 mypy==2.3.1
 pytest==9.1.1
 pytest-asyncio==1.4.0
-# G4 kickoff: randomizes test execution order every run (auto-enabled once
+# the kickoff audit: randomizes test execution order every run (auto-enabled once
 # installed, no addopts flag needed) so a hidden interdependency between two
 # tests — one leaking state the other happens to rely on — fails loudly
 # instead of staying invisible behind whatever order the files happen to be
@@ -24,7 +24,7 @@ pytest-randomly==5.0.0
 # 4.1.10 instead of accepting whatever "latest" resolved to.
 deepeval==4.1.10
 Jinja2==3.1.6
-# G3: mypy --strict stub packages for the two runtime deps
+# mypy --strict stub packages for the two runtime deps
 # src/lantern/policies/loader.py newly imports (PyYAML, jsonschema — both
 # already pinned in requirements.txt). Dated stub releases matched to the
 # pinned runtime versions (jsonschema==4.26.0) rather than "latest".

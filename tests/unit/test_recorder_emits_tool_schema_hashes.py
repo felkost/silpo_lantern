@@ -1,4 +1,4 @@
-"""T5 (G8 stage spec): `scripts/record_replay_bundle.py` used to leave
+"""T5: `scripts/record_replay_bundle.py` used to leave
 `tool_schema_hashes` empty and both `schema_hash` fields blank "for
 hand-filling" -- `BundlePlayer.tool_schema_hashes` then falls back to
 `("reviewed-hash", "reviewed-hash", False)` for every tool

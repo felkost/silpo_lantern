@@ -1,4 +1,4 @@
-"""T17 (G9 spec): `compute_metrics.py` emits every metric in G9.4's table
+"""`compute_metrics.py` emits every metric in the table
 in the exact shape `render_report.py:336`'s `_load_metrics` reads
 (`data["metrics"]`, a list of `{name, value, n}` objects), writes to a
 `PROJECT_ROOT`-derived path (never the literal gitignored docs path a
@@ -12,11 +12,11 @@ import json
 from src.lantern.config import PROJECT_ROOT
 from scripts.compute_metrics import METRICS_OUTPUT_PATH, build_metrics_report
 
-# D82: `CostDeltaAccuracy` (plan section 13.3's name) became TWO entries.
+# `CostDeltaAccuracy` (plan section 13.3's name) became TWO entries.
 # It compared the recorded delta against the price the product SEARCH
-# advertised and was gated at "exact" -- on an assumption D68 disproved,
+# advertised and was gated at "exact" -- on an assumption an earlier decision disproved,
 # since the cart applies a per-product loyalty discount the search does
-# not carry (D76). One question was really two:
+# not carry. One question was really two:
 #
 #   WriteDeltaFidelity  -- recorded delta vs the cart's own before/after
 #                          movement. Ours, gated 1.00 absolute.
@@ -47,8 +47,8 @@ def test_report_shape_matches_what_render_report_reads() -> None:
     assert "metrics" in report
     names = {m["name"] for m in report["metrics"]}
     assert EXPECTED_METRIC_NAMES <= names
-    # G10: the console may show no proportion without its interval and
-    # its caveat (D81/D82), so the report carries both from the source.
+    # the console may show no proportion without its interval and
+    # its caveat, so the report carries both from the source.
     for metric in report["metrics"]:
         assert set(metric.keys()) == {"name", "value", "n", "interval", "caveat"}
 

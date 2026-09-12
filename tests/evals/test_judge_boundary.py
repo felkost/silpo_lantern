@@ -1,4 +1,4 @@
-"""T22 (D-G9-09): the judges' declared boundary, enforced instead of
+"""T22: the judges' declared boundary, enforced instead of
 asserted.
 
 The claim is that a judge never scores arithmetic, authorization, or

@@ -5,7 +5,7 @@ from `checkpointer.py`'s async pool -- the checkpointer serializes
 authorizes and records one write. Both point at the same Neon database;
 neither needs to know the other's connection.
 
-D-G5-15: kept sync on purpose. `apps/api` resumes the graph with
+kept sync on purpose. `apps/api` resumes the graph with
 `await graph.ainvoke(...)`, but node bodies stay ordinary sync functions --
 a sync `ConnectionPool` call inside a sync node runs in FastAPI's default
 threadpool executor, never on the event loop thread the async checkpointer
@@ -36,7 +36,7 @@ IdempotencyState = Literal["prepared", "in_flight", "confirmed", "failed", "unkn
 
 MAX_POOL_SIZE = 5
 
-# G10 (A-G10-04): a guest who walks away leaves a live Silpo credential in
+# a guest who walks away leaves a live Silpo credential in
 # a public service. Thirty minutes covers a full recovery session with a
 # generous consent pause (CONSENT_TTL is five), and every token read
 # restarts the clock, so a session in use never expires under the guest.
@@ -65,7 +65,7 @@ def open_repository_pool(dsn: str) -> Iterator[ConnectionPool]:
     # `check`: a connection Neon dropped server-side (idle-suspend, a host
     # waking from sleep) looks open on the client until it is used -- the
     # first request after ~20 idle minutes answered 500 with "SSL connection
-    # has been closed unexpectedly" (G10). The check is one round trip on
+    # has been closed unexpectedly". The check is one round trip on
     # checkout and replaces the dead connection instead of handing it out.
     pool = ConnectionPool(
         conninfo=dsn,
@@ -91,7 +91,7 @@ def create_session(
 
 
 def get_session(pool: ConnectionPool, session_id: str) -> Optional[Dict[str, str]]:
-    """G5+G6: looks up a session's own `owner` -- needed by `GET
+    """looks up a session's own `owner` -- needed by `GET
     /session/{id}/events` the FIRST time it is called for a session,
     before any graph checkpoint exists to read `owner` back from."""
     with pool.connection() as conn:
@@ -135,7 +135,7 @@ def load_session_token(
     """Idle expiry lives here, on the read path, because every use of the
     credential -- each MCP call -- comes through it: a row idle past
     `SESSION_IDLE_TTL` is deleted and reported absent, a live one is
-    touched. Both against Postgres's own clock (D-G5-09), so container
+    touched. Both against Postgres's own clock, so container
     clock skew can neither kill a live session nor resurrect a dead one."""
     with pool.connection() as conn:
         conn.execute(
@@ -156,8 +156,32 @@ def load_session_token(
     return token
 
 
+def move_session_token(pool: ConnectionPool, old_id: str, new_id: str) -> bool:
+    """«Перевірити знову»: one recovery run is one session (the graph's
+    checkpoint is keyed by the session's thread), so a second check needs
+    a second session -- but not a second login. The credential moves to
+    the new session row in one transaction; the old session keeps its
+    consents and receipts and loses only the token, exactly as a logout
+    would. Returns False when the old session holds no live credential."""
+    with pool.connection() as conn:
+        with conn.transaction():
+            with conn.cursor(row_factory=dict_row) as cur:
+                cur.execute(
+                    "DELETE FROM oauth_tokens WHERE session_id = %s RETURNING token",
+                    (old_id,),
+                )
+                row = cur.fetchone()
+            if row is None:
+                return False
+            conn.execute(
+                "INSERT INTO oauth_tokens (session_id, token) VALUES (%s, %s)",
+                (new_id, json.dumps(row["token"])),
+            )
+    return True
+
+
 def delete_session_token(pool: ConnectionPool, session_id: str) -> None:
-    """G10 (A-G10-04): logout. Removes the credential and nothing else --
+    """logout. Removes the credential and nothing else --
     the `sessions` row stays because `consents`/`receipts` reference it
     without cascade (0003, 0005): deleting it would fail on the FK, and a
     cascade there would destroy the audit trail a logout must not touch."""
@@ -166,7 +190,7 @@ def delete_session_token(pool: ConnectionPool, session_id: str) -> None:
 
 
 def save_consent(pool: ConnectionPool, consent: ConsentRecord) -> None:
-    """G8 (D-G8-07): `ON CONFLICT (action_id) DO NOTHING` -- a double-clicked
+    """`ON CONFLICT (action_id) DO NOTHING` -- a double-clicked
     consent button, or a retried request, used to raise a bare primary-key
     violation and 500 the endpoint. §12.4's mandatory RG variants name
     «подвійний клік» explicitly, so this is an RG obligation, not a nicety.
@@ -205,7 +229,7 @@ def load_consent(
 ) -> tuple[Optional[ConsentRecord], bool]:
     """Returns `(record, expired)`. `expired` is evaluated **database-side**
     (`expires_at <= now()`) rather than against a Python clock passed in --
-    D-G5-09: the row is stamped by Postgres's own `now()`, and a few
+    the row is stamped by Postgres's own `now()`, and a few
     minutes of container clock skew must not be able to kill a valid
     consent or resurrect a dead one."""
     with pool.connection() as conn:
@@ -249,7 +273,7 @@ def claim_and_consume(
     action_id: str,
     canonical_args_hash: str,
 ) -> Tuple[bool, IdempotencyState]:
-    """D-G5-07b: the idempotency claim and the consent consumption happen
+    """the idempotency claim and the consent consumption happen
     in one transaction, immediately before the write call, inside the node
     that performs it -- never in the Write Guard node, which
     `interrupt_before` protects from re-execution but which measurement
@@ -331,7 +355,7 @@ def mark_action(
 
 
 def save_receipt(pool: ConnectionPool, receipt: Receipt) -> None:
-    """Upsert on `action_id` (D-G5-09): an `unverified` row written first
+    """Upsert on `action_id`: an `unverified` row written first
     (e.g. from a resume-time reconciliation) can be replaced by a
     `receipt` row once a later read-back confirms the outcome."""
     with pool.connection() as conn:

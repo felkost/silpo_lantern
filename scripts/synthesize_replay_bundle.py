@@ -1,18 +1,18 @@
-"""G9 (G9.2, step 1.4): builds a replay bundle OFFLINE, by taping a graph
+"""builds a replay bundle OFFLINE, by taping a graph
 run against `tests/support/write_backend.py`'s fake backend instead of the
 live MCP server.
 
 Why this exists: `record_replay_bundle.py` tapes a LIVE run, and needs the
 author's go-ahead for a real MCP write. The core golden cases GD-02/03/04
 each need their own bundle (they run in `replay` mode so they can join
-G9.6's 18 repeats, which drive `replay()` with a live planner), but their
+the 18 repeats, which drive `replay()` with a live planner), but their
 INPUT is a seeded synthetic cart -- there is nothing live to record. This
 script produces a bundle from such a cart deterministically, at no cost.
 
 Reuses `record_replay_bundle._build_draft_from_tape` verbatim rather than
 re-implementing the tape->bundle transform, so a synthesized bundle and a
 live-recorded one are built by exactly the same code path (including the
-sanitizer and the `mcp_by_tool` fallback queue, D-G9-05).
+sanitizer and the `mcp_by_tool` fallback queue).
 
 The written bundle is self-consistent by construction: it is replayed
 before it is written, and its own replay result becomes its
@@ -188,11 +188,11 @@ def synthesize(
     to the first candidate of every round the graph offers (mirroring
     `replay()`'s own consent loop), and returns the draft bundle.
 
-    `applied_price_ratio` < 1.0 reproduces D68's measured live effect (the
+    `applied_price_ratio` < 1.0 reproduces the measured live effect (the
     cart applies a loyalty discount the catalogue does not report), which
     is what makes a genuine two-round scenario reachable.
 
-    `silent_write_rounds` (D83) names rounds where the write tool reports
+    `silent_write_rounds` names rounds where the write tool reports
     success and the cart does not move -- the read-back then completes and
     disagrees, producing an honest `unverified`. GD-06's declared rubric
     needs exactly that, and it must come from a modelled failure rather
@@ -309,7 +309,7 @@ def main() -> None:
         default=1.0,
         help=(
             "fraction of the catalogue price the cart actually applies "
-            "(D68: Silpo's own loyalty discount measured at ~0.90 live)"
+            "(Silpo's own loyalty discount measured at ~0.90 live)"
         ),
     )
     parser.add_argument(
@@ -319,7 +319,7 @@ def main() -> None:
         default=[],
         help=(
             "round number (1-based) whose write reports success without "
-            "moving the cart, so the read-back completes and disagrees (D83)"
+            "moving the cart, so the read-back completes and disagrees"
         ),
     )
     args = parser.parse_args()

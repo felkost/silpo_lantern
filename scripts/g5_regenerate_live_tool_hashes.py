@@ -1,8 +1,8 @@
-"""D28/D-G5-05: regenerates `reviewed_tools.json`'s per-tool hashes from a
+"""regenerates `reviewed_tools.json`'s per-tool hashes from a
 LIVE `tools/list` capture, through the exact code path production uses
 (`mcp.session.list_tools_raw`), so the reviewed baseline stops being
 computed against the historical raw-capture fixture (a different
-canonicalisation, per D28's own measured finding) and starts matching
+canonicalisation, per the own measured finding) and starts matching
 what the live schema-drift check will actually compare against.
 
 Read-only, no LLM spend, no cart mutation. Author-run: needs the cached
@@ -45,7 +45,7 @@ def main() -> None:
     if new_since_review:
         print(
             f"NOTE: {len(new_since_review)} tool(s) exist live but are not "
-            f"yet reviewed (stay quarantined, per D8): {sorted(new_since_review)}"
+            f"yet reviewed (they stay quarantined): {sorted(new_since_review)}"
         )
 
     reviewed_hashes = {name: h for name, h in hashes.items() if name in reviewed_names}

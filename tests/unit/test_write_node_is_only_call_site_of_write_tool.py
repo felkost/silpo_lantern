@@ -1,11 +1,11 @@
-"""T16 (G5+G6 stage spec); widened T18 (G8 stage spec, D-G8-11): the
+"""the
 write-capable callable is referenced in exactly one node factory
 (`make_write_and_readback_node`), invoked exactly once, and is not a
 parameter of the Write Guard node -- the guard authorizes, it does not
 write (`CLAUDE.md` section 4).
 
-G8 widened the scan from `nodes.py` alone to all of `src/lantern/graph/**`:
-the compensation split (D-G8-11) added `compensation_nodes.py` to the
+The undo widened the scan from `nodes.py` alone to all of `src/lantern/graph/**`:
+the compensation split added `compensation_nodes.py` to the
 same package, and the ORIGINAL scan (parsing only `nodes.py`'s own source)
 would not have seen a second write call site added in that new module at
 all -- a real hole, found at this stage's kickoff, independent of
@@ -88,7 +88,7 @@ def test_call_write_tool_is_invoked_exactly_once_across_the_graph_package() -> N
 def test_synthetic_second_module_violation_is_detected() -> None:
     """Proves the widened, whole-package scan actually catches a SECOND
     write call site added in a module OTHER than `nodes.py` -- the exact
-    shape a careless refactor of D-G8-11's split could introduce with
+    shape a careless refactor of the split could introduce with
     every scan limited to `nodes.py` alone staying green."""
     real_trees = _graph_trees()
     synthetic_source = (

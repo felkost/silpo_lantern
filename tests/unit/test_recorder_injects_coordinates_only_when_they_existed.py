@@ -1,7 +1,7 @@
-"""G9 (1.4): `_build_draft_from_tape` restores synthetic coordinates onto
+"""`_build_draft_from_tape` restores synthetic coordinates onto
 a taped cart, because the sanitizer strips the guest's real address and
 `compare_channels_node` needs SOME coordinates or it degrades to a no-op
-(D-G7-07). That is right for a LIVE capture, whose cart genuinely had an
+. That is right for a LIVE capture, whose cart genuinely had an
 address before sanitization.
 
 It is wrong for an offline synthesis from a coordinate-less synthetic

@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 class CreateSessionResponse(BaseModel):
     """`POST /session` only creates the session row and returns its id --
-    the graph does not run yet (D30: real live push). A new session has
+    the graph does not run yet (real live push). A new session has
     no guest token yet, so `authorized` is False and `auth_url` is where
     the client sends the guest to log in (phone + OTP at Silpo's own
     page); `GET /session/{id}/events` comes after that."""
@@ -20,7 +20,7 @@ class CreateSessionResponse(BaseModel):
 
 
 class ConsentRequest(BaseModel):
-    """D-G5-18/T18: the guest picks an `action_id` only. `args_hash` and
+    """the guest picks an `action_id` only. `args_hash` and
     `state_hash` are never accepted from the client -- the server
     recomputes both from the proposal and cart it already holds, so a
     tampered value on the wire has nothing to overwrite."""
@@ -37,9 +37,9 @@ class ConsentAckResponse(BaseModel):
 
     status: str = "consent_recorded"
     action_id: str
-    # G10 (claim 3): the binding as recorded, so the console can show the
+    # the binding as recorded, so the console can show the
     # hash the guard will compare against the candidate's. No `cart_id`,
-    # ever (D-G10-08).
+    # ever.
     args_hash: str = ""
     state_hash: str = ""
     expires_at: str = ""

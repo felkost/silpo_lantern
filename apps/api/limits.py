@@ -1,7 +1,7 @@
-"""G10 (D89): the two spend caps. `POST /session` is unauthenticated and
+"""the two spend caps. `POST /session` is unauthenticated and
 every live graph start bills the author's OpenRouter key, so the service
 needs a limit before its URL is shared -- not because anyone can read
-another guest's cart (they cannot, D88), but because anyone can spend the
+another guest's cart (they cannot), but because anyone can spend the
 project's money. The ceiling is set from a measured figure: $0.116 for 18
 runs (`g9_core_e2e_repeats_20260909T202521Z.json`), about $0.0064 a run.
 

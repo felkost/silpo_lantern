@@ -1,7 +1,7 @@
 """DR-12: re-read before write, immediate read-back after
 write; a write's `success` is never treated as proof of the outcome.
 
-Implemented at G5+G6: `xfail(strict=True)` removed in the same commit as
+Implemented at `xfail(strict=True)` removed in the same commit as
 `finalize_write_outcome` itself, per this project's own rule that a
 strict-xfail marker left in place after the code exists turns an XPASS
 into a gate failure.

@@ -1,12 +1,12 @@
-"""Probe P1 (G5+G6 stage spec, blocking): does `silpo_find_products_batch`'s
+"""Probe P1 (blocking): does `silpo_find_products_batch`'s
 `products[].id` share the write tool's identifier space with the cart's own
 `shipments[].products[].productId`? Are `companyId`/`branchId` populated in
-practice? This settles D-G5-02/D-G5-03 before any Write Guard code is
+practice? This settles an earlier decision before any Write Guard code is
 written against an assumed answer.
 
 Read-only, no LLM spend. Reuses `scripts/g4_live_evidence_gate_run.py`'s
 already-proven live-connection pattern (fresh session per call, disk-cached
-OAuth token, D20's exception-group unwrap) rather than inventing a new one.
+OAuth token, the exception-group unwrap) rather than inventing a new one.
 
 Author-run per the stage spec's own §10 ("Handed over, not run") — the
 assistant does not self-initiate a live MCP call.
@@ -75,7 +75,7 @@ async def _call_tool(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any
 
 def _sync_call(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
     """Same recursive `BaseExceptionGroup` unwrap as
-    `g4_live_evidence_gate_run.py`'s `_sync_call` (D20) — measured
+    `g4_live_evidence_gate_run.py`'s `_sync_call` — measured
     necessary for this exact async/sync bridge, not copied on faith."""
     print(f"  MCP call: {tool_name}({arguments})")
     try:

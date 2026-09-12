@@ -1,7 +1,7 @@
-"""G10 delivery A (T5, A-G10-04): a token row idle longer than
+"""a token row idle longer than
 `SESSION_IDLE_TTL` is refused AND deleted on the next read; a live one is
 touched, so "idle" means since the last use, not since login. Evaluated
-against Postgres's own `now()` (D-G5-09), which is why this cannot be a
+against Postgres's own `now()`, which is why this cannot be a
 unit test.
 """
 

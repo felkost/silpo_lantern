@@ -1,7 +1,7 @@
-"""T4 (G8 stage spec): `scripts/generate_reviewed_tool_hashes.py` used to
+"""T4: `scripts/generate_reviewed_tool_hashes.py` used to
 hardcode `tools_list_2026-09-05.json` -- running it today would silently
 REVERT the reviewed baseline to the stale hashes and break every live
-write with a schema-drift refusal (five tools drifted, D47). Fixed to
+write with a schema-drift refusal (five tools drifted). Fixed to
 read the fixture named in `reviewed_tools.json`'s own `source` field, and
 to refuse (non-zero exit) when that fixture's own stated
 `source_schema_hash` disagrees with a freshly recomputed one -- a

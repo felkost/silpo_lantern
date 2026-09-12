@@ -1,4 +1,4 @@
-"""G9 (G9.3): the golden-case runner. Parametrized over every case file
+"""the golden-case runner. Parametrized over every case file
 under `datasets/golden-v1.0.0/cases/`, dispatching on each case's own
 `mode` field -- `replay` runs the real compiled graph via
 `graph/replay.py`, `fake_backend` uses `tests/support/write_backend.py`.

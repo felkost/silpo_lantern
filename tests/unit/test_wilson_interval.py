@@ -1,4 +1,4 @@
-"""G9 (D81): the results chart's interval maths, pinned.
+"""the results chart's interval maths, pinned.
 
 The chart is the one artefact a reader takes the stage's numbers from, and
 its whole point is that four metrics sitting exactly on 1.00 or 0.00 must

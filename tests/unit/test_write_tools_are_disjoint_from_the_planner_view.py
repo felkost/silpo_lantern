@@ -1,7 +1,7 @@
-"""T13 (G8 stage spec): every write-kind tool name, and
+"""T13: every write-kind tool name, and
 `silpo_clear_shopping_cart`, must never appear in the planner's own
 visible tool set -- `silpo_remove_cart_products` did not drift, so
-D47/D52's review does not cover it, and "carries a reviewed hash" is the
+the drift review does not cover it, and "carries a reviewed hash" is the
 weaker bar `tool_view.py` itself distinguishes from a human-approved
 paraphrase (`PLANNER_TOOL_PARAPHRASES`). No path was found by which the
 planner could reach a write-capable tool through the live schema; this

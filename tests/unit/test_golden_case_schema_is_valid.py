@@ -1,7 +1,7 @@
 """The golden-case JSON Schema must be
 well-formed before the first 15 cases are populated against it.
 
-Amended at G9 (D60): adds `allowed_trajectories`, `allowed_tools`,
+Amended at adds `allowed_trajectories`, `allowed_tools`,
 `forbidden_tools`, `rubric`, `source_id`, `pii_status`, and a `mode`
 discriminator (`replay` | `fake_backend`) the runner dispatches on.
 `mode`/`source_id`/`pii_status` are required on every case; the other four

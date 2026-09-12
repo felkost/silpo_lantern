@@ -1,4 +1,4 @@
-"""G10 (D-G10-08): the console's evidence, read from two TRACKED files and
+"""the console's evidence, read from two TRACKED files and
 projected down to what a jury may see. The observation file carries the
 author's own notes and screenshot provenance; only the app's rendered
 lines, the codes, their levels and whether the app rendered them reach

@@ -4,7 +4,7 @@
 // rather than the browser's own `EventSource`, for one measured reason:
 // `EventSource` cannot send credentials/headers and cannot be driven by
 // a test's mocked `fetch`, and this project's own interface gate is
-// Vitest component tests (D-G5-11), not a browser driver. The parsing
+// Vitest component tests, not a browser driver. The parsing
 // below handles exactly the `event:`/`data:` framing apps/api emits.
 
 import type {
@@ -15,7 +15,7 @@ import type {
 
 export const API_BASE = import.meta.env?.VITE_API_BASE ?? "";
 
-// G10 (D89): both spend caps answer 429; the guest gets one plain line,
+// both spend caps answer 429; the guest gets one plain line,
 // never a bare status code.
 export const CAP_REACHED_UK =
   "Досягнуто денний ліміт сесій -- спробуйте завтра.";
@@ -40,6 +40,16 @@ export async function createSession(): Promise<CreateSessionResponse> {
   return (await response.json()) as CreateSessionResponse;
 }
 
+/** «Перевірити знову»: a fresh run for the same login. The server answers
+ * with the NEW session id and moves the cookie to it. */
+export async function restartSession(sessionId: string): Promise<CreateSessionResponse> {
+  const response = await fetch(`/session/${sessionId}/restart`, { method: "POST" });
+  if (!response.ok) {
+    throw failed("POST /session/{id}/restart", response.status);
+  }
+  return (await response.json()) as CreateSessionResponse;
+}
+
 export async function deleteSession(sessionId: string): Promise<void> {
   const response = await fetch(`${API_BASE}/session/${sessionId}`, {
     method: "DELETE",
@@ -57,7 +67,7 @@ export async function submitConsent(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     // Only `action_id` -- the server recomputes both hashes itself
-    // (D-G5-18), so there is deliberately nothing else to send.
+    //, so there is deliberately nothing else to send.
     body: JSON.stringify({ action_id: actionId }),
   });
   if (!response.ok) {
@@ -67,7 +77,7 @@ export async function submitConsent(
   return (await response.json()) as ConsentAckResponse;
 }
 
-/** G10: fetched only when the jury asks -- never on mount. */
+/** fetched only when the jury asks -- never on mount. */
 export async function getEvidence(): Promise<EvidenceResponse> {
   const response = await fetch(`${API_BASE}/evidence`);
   if (!response.ok) {

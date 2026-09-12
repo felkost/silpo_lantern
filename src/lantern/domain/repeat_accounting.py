@@ -1,11 +1,11 @@
-"""G9 (G9.6, D-G9-08): pure accounting for the 18 core E2E repeats.
+"""pure accounting for the 18 core E2E repeats.
 
 No I/O -- `scripts/core_e2e_repeats.py` is the shell that runs the
 replays and hands the outcomes here. Domain layer, so it imports nothing
 but the stdlib.
 
 The rules this module exists to enforce, all from plan section 13.4 and
-D-G9-08:
+
 
 * the denominator is ALWAYS the expected total (18), never "however many
   results we happened to collect" -- a short run is invalid, not rescaled;

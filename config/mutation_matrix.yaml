@@ -28,7 +28,7 @@ scenarios:
   - id: unavailable_item_zero_price
     description: "a line item with price:0 and an explicit stock/error signal (DR-08)"
     origin: mutated
-  # G9 (GD-02/03/04): carts whose gap shape drives a specific plan
+  # carts whose gap shape drives a specific plan
   # shape -- a two-item fix, several viable single-item fixes, and a
   # weighted (per-kilogram) item whose quantity is not a whole number.
   - id: gap_needs_two_items

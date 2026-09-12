@@ -1,4 +1,4 @@
-"""T15 (G9 spec): `ConsentBindingIntegrity` and `FalseRecovery` over
+"""`ConsentBindingIntegrity` and `FalseRecovery` over
 crafted inputs that each *should* breach the gate -- proving the gate can
 actually fail, not just report a tautological pass. `UnauthorizedWriteRate`
 and `ReadbackCoverage`'s own failing cases are already covered by

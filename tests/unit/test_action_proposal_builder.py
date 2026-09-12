@@ -9,7 +9,7 @@ no second, divergent matching rule) to recover the name, and computes
 (DR-09), where the increment itself is the number of units that closes the
 diagnosed gap.
 
-G5+G6 (D-G5-02/D-G5-02b): rewritten in substance, not just formatting.
+rewritten in substance, not just formatting.
 `canonical_args` is now the exact, complete write-tool argument object
 (`shoppingCartId` + per-product `productId`/`companyId`/`branchId`), and
 the write tool's own REPLACE semantics (`addQuantity: false` means "set
@@ -132,7 +132,7 @@ def test_quantity_is_the_number_of_units_that_closes_the_gap() -> None:
 
 
 def test_replace_semantics_adds_to_the_existing_cart_quantity() -> None:
-    """D-G5-02b: the wire `quantity` is REPLACE, not ADD -- a product
+    """the wire `quantity` is REPLACE, not ADD -- a product
     already in the cart at 5 units, asked to add 1 more, must send
     `quantity: 6`, while `expected_delta` stays the price of ONE unit."""
     raw = raw_candidates_from_find_products_batch(

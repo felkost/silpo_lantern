@@ -1,4 +1,4 @@
-"""D-G5-20: plan section 6.3's pre-write reserve check -- 20s and two
+"""plan section 6.3's pre-write reserve check -- 20s and two
 reads must remain before a write may begin.
 """
 

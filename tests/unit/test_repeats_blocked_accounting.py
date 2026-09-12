@@ -1,4 +1,4 @@
-"""T24 (G9 spec, D-G9-08): the accounting rules for the 18 core repeats.
+"""the accounting rules for the 18 core repeats.
 
 `ReplayMismatch` cannot distinguish "the tape has no response for these
 args" from "the live planner produced materially different args because

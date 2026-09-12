@@ -43,7 +43,7 @@ from src.lantern.graph.tool_view import (
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 _MODELS_PATH = Path(__file__).resolve().parents[3] / "config" / "models.yaml"
 
-# G10 (D90): where a live session's token usage lands. `apps/api` binds a
+# where a live session's token usage lands. `apps/api` binds a
 # fresh list per `/events` call, the same ContextVar pattern
 # `mcp.session.current_token_storage` uses (measured to reach sync nodes
 # through LangGraph); unbound -- scripts, tests, offline fakes -- means
@@ -56,10 +56,10 @@ current_usage_log: ContextVar[Optional[List[Tuple[str, TokenUsage]]]] = ContextV
 def usage_from_response(response: Any) -> TokenUsage:
     """Reads the provider's own usage block off a raw LangChain message.
 
-    A response carrying none records ZEROS, never an estimate: an
-    unmeasured call must stay visibly unmeasured rather than contribute a
-    guessed number to a cost report. Lived in `scripts/core_e2e_repeats.py`
-    until G10; the live session needed it too."""
+     A response carrying none records ZEROS, never an estimate: an
+     unmeasured call must stay visibly unmeasured rather than contribute a
+     guessed number to a cost report. Lived in `scripts/core_e2e_repeats.py`
+    ; the live session needed it too."""
     metadata = getattr(response, "usage_metadata", None)
     if not isinstance(metadata, dict):
         return TokenUsage(0, 0)
@@ -107,7 +107,7 @@ def _unwrap(role: str, result: Any) -> Any:
 
 _PROMPTS_DIR = Path(__file__).resolve().parent.parent / "prompts"
 
-# G7 (D-G7-02): the single source for which prompt file version is live.
+# the single source for which prompt file version is live.
 # Previously duplicated as a bare string literal in three places
 # (`build.py`'s and `production.py`'s version tuples, and the
 # `load_prompt_content(...)` call below) that could drift from each other
@@ -273,7 +273,7 @@ def build_planner_llm(model: str, api_key: str, fallback: Optional[str] = None) 
     llm = ChatOpenAI(
         model=model, base_url=OPENROUTER_BASE_URL, api_key=SecretStr(api_key)
     )
-    # G10 (D90): `include_raw` so the provider's usage block reaches
+    # `include_raw` so the provider's usage block reaches
     # `_unwrap`; the parsed model is what the node still receives.
     return llm.with_structured_output(SearchIntent, include_raw=True)
 

@@ -54,6 +54,6 @@
   "seed": null,
   "source_schema_hash": "synthetic-cart-wire-shape-v1",
   "transformations": [
-    "G9 (GD-09): two error validations for the SAME productId -- product.offer.stock.max and product.offer.not_found. DR-07's rule groups by productId alone (not by code+productId, which would make the priority unreachable) and lets not_found outrank stock.max, so the guest sees ONE blocker, not two contradictory ones."
+    "two error validations for the SAME productId -- product.offer.stock.max and product.offer.not_found. DR-07's rule groups by productId alone (not by code+productId, which would make the priority unreachable) and lets not_found outrank stock.max, so the guest sees ONE blocker, not two contradictory ones."
   ]
 }

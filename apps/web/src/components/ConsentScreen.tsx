@@ -15,7 +15,7 @@ interface Props {
   candidates: Candidate[];
   onConsent: (actionId: string) => void;
   submitting: boolean;
-  /** G7 (D-G7-05): a second consent+write round (D42) means the guest
+  /** a second consent+write round means the guest
    * may already have one round's receipt by the time this screen shows
    * again -- shown here so it is not lost between rounds. */
   priorReceipts?: ReceiptEvent[];
@@ -27,7 +27,7 @@ export function ConsentScreen({
   submitting,
   priorReceipts = [],
 }: Props) {
-  // G8 (D51): every candidate on this screen is either an ordinary "add"
+  // every candidate on this screen is either an ordinary "add"
   // or a compensation offer -- never a mix (persist_receipt_node REPLACES
   // candidates, never appends across kinds), so checking the first entry
   // is enough to decide which screen this is.

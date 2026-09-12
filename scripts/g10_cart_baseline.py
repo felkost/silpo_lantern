@@ -1,9 +1,9 @@
-"""G10: brings the author's cart to the demo baseline -- a valid delivery
+"""brings the author's cart to the demo baseline -- a valid delivery
 slot -- and reports what else stands between the cart and the hero
 scenario. The pair of `g5_restore_after_write.py`: that one undoes what
 a demo wrote, this one prepares the cart before it.
 
-**Why a slot and nothing else.** The first console session (D94) showed a
+**Why a slot and nothing else.** The first console session showed a
 cart with a lapsed slot and ten `product.offer.stock.max` lines; setting
 the slot alone made all ten disappear -- stock was being evaluated
 against a slot that no longer existed. So the one write this script may

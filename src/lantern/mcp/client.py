@@ -68,7 +68,7 @@ def load_reviewed_tool_names() -> FrozenSet[str]:
 
 @lru_cache(maxsize=1)
 def load_reviewed_tool_hashes() -> Dict[str, str]:
-    """G5+G6 (D-G5-05): the per-tool reviewed baseline, generated from the
+    """the per-tool reviewed baseline, generated from the
     same tracked contract fixture as `load_reviewed_tool_names` by
     `scripts/generate_reviewed_tool_hashes.py` — never hand-typed, since a
     hand-typed hash is unverifiable against anything."""
@@ -88,8 +88,8 @@ def compute_schema_hash(tools_raw: List[Dict[str, Any]]) -> str:
 
 
 def compute_per_tool_schema_hashes(tools_raw: List[Dict[str, Any]]) -> Dict[str, str]:
-    """G5+G6 (D-G5-05): one hash per tool, not the whole-array hash above.
-    The G4 stage report itself named the whole-array granularity "adequate
+    """one hash per tool, not the whole-array hash above.
+    An earlier stage report itself named the whole-array granularity "adequate
     while no write allowlist exists to make 'which tool moved' matter" —
     that condition ends once a Write Guard exists: the guard must detect
     drift in `silpo_add_or_update_cart_products` specifically, not treat
@@ -150,7 +150,7 @@ class CachedTools:
     # had, so no `model_dump` option set recovers byte equality with the raw
     # JSON.
     schema_hash: str
-    # G5+G6 (D-G5-05): one hash per tool, computed the same way as
+    # one hash per tool, computed the same way as
     # `schema_hash` above but scoped to a single tool object — see
     # `compute_per_tool_schema_hashes`. The Write Guard checks this for
     # the one allowlisted write tool specifically, since a whole-array
@@ -214,7 +214,7 @@ class ToolRegistry:
         self._cached = None
 
     def tool_schema_hashes(self, tool_name: str) -> "tuple[str, str, bool]":
-        """G5+G6: `(reviewed_hash, live_hash, is_quarantined)` for one
+        """`(reviewed_hash, live_hash, is_quarantined)` for one
         tool -- the exact shape `graph.nodes.make_write_guard_node`
         expects. A lookup by name, not a generic "call any tool"
         dispatcher: the caller already knows which tool it is asking

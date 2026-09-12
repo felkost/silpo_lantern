@@ -1,5 +1,5 @@
-"""`persist_receipt`, and the compensation offer it may produce (G8,
-D51). Split out of `nodes.py` (D-G8-11): `nodes.py` was already 30% past
+"""`persist_receipt`, and the compensation offer it may produce. Split out of
+`nodes.py`: `nodes.py` was already 30% past
 `CLAUDE.md` section 5's ~400-line ceiling before this stage, and this
 node's own logic grew materially to decide whether a just-persisted write
 is compensable and, if the graph is not going to run another add round,
@@ -9,7 +9,7 @@ whether to offer to undo it.
 `nodes.py` -- `call_write_tool` remains a parameter of exactly one node
 factory in exactly one module (`CLAUDE.md` section 4: only one node may
 call a write tool), and `test_write_node_is_only_call_site_of_write_tool.py`
-was widened (D-G8-11) to scan all of `src/lantern/graph/**` in the same
+was widened to scan all of `src/lantern/graph/**` in the same
 commit that added this module, so a second write call site anywhere in
 the package would still be caught.
 """
@@ -32,10 +32,10 @@ def make_persist_receipt_node(
 ) -> Node:
     """Thin persistence step for the domain decision `WriteOutcome ->
     Receipt` (already made in `make_write_and_readback_node`), PLUS the
-    decision of what happens next: another add round (D42), a
-    compensation offer (D51), or simply stopping.
+    decision of what happens next: another add round, a
+    compensation offer, or simply stopping.
 
-    G8 (D-G8-05): "after the retry budget is spent" was the first draft's
+    "after the retry budget is spent" was the first draft's
     trigger, and it was unreachable in production -- `MAX_WRITE_ROUNDS`
     rounds cost more MCP attempts than `MAX_MCP_ATTEMPTS` allows before
     the loop ever completes. The corrected condition checks the budget
@@ -63,8 +63,8 @@ def make_persist_receipt_node(
             (p for p in state["candidates"] if p.action_id == receipt.action_id), None
         )
 
-        # G8 (D51): a compensation is never itself compensated, and never
-        # restarts the D42 add-retry loop -- it deliberately leaves the
+        # a compensation is never itself compensated, and never
+        # restarts the an earlier decision add-retry loop -- it deliberately leaves the
         # cart blocked (that is the whole point of undoing our own add),
         # and that is the end of this session's write activity.
         if written is not None and written.kind == "compensate":
@@ -80,7 +80,7 @@ def make_persist_receipt_node(
 
         # This round's own outcome is not one we understand well enough to
         # act on -- an unverified write whose reason is not one of
-        # D-G8-02's two "known diff" cases. Stop, exactly as before this
+        # the two "known diff" cases. Stop, exactly as before this
         # stage: no further round, and no compensation offer either,
         # since the last thing that happened is itself unexplained.
         if state["status"] != "verified" and not receipt_is_compensable(receipt):
@@ -104,7 +104,7 @@ def make_persist_receipt_node(
             }
 
         # No further add round remains -- offer to undo the most recently
-        # compensable write, if any accumulated (D-G8-06: a session may
+        # compensable write, if any accumulated (a session may
         # have run several rounds; this offers the last one).
         if compensable:
             last = compensable[-1]

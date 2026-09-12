@@ -70,9 +70,9 @@ ALLOWED_KEYS = frozenset(
         "success",
         "exists",
         "shoppingCartId",
-        # G7 (D-G7-07): widened for `find_products_batch`/`time_slots`/
+        # widened for `find_products_batch`/`time_slots`/
         # `delivery_types`/the write response — sanitizing any of these
-        # with the pre-G7 list silently produced `{}` (the same failure
+        # with the earlier list silently produced `{}` (the same failure
         # mode this file's own 2026-09-06 note already records for the
         # cart shape). `queries`/`query` (search echo), `step`/`available`/
         # `externalProductId` (find_products_batch's own product shape),
@@ -91,12 +91,12 @@ ALLOWED_KEYS = frozenset(
         "deliveryCostMap",
         "options",
         "summary",
-        # G9: `deliveryCostMap` was allow-listed but the keys INSIDE each
+        # `deliveryCostMap` was allow-listed but the keys INSIDE each
         # of its entries were not, so every entry sanitized to `{}` and
         # `channel_snapshot_builder._money_map_entry` then read `None`
         # for two required Decimal fields -- the replayed
         # `compare_channels` node raised on it. Same failure shape this
-        # file's own 2026-09-06 and G7 notes already record twice: a
+        # file's own 2026-09-06 and earlier notes already record twice: a
         # container key allowed without its contents produces an empty
         # object rather than a loud error. Both are pricing figures, no
         # PII.
@@ -119,7 +119,7 @@ _PSEUDONYMISED_KEYS = {
     "branchId": "test_branch",
     "cartId": "test_cart",
     "shoppingCartId": "test_cart",
-    # G7 (D-G7-07): `id` is a bare identifier used across several response
+    # `id` is a bare identifier used across several response
     # shapes (cart id, shipment id, a find_products_batch product's own
     # id) -- pseudonymised like the others, never allow-listed raw. The
     # alias map is keyed by VALUE, so an `id` that happens to equal a
@@ -155,7 +155,7 @@ def sanitize_payload(
     dropped, so the fixture keeps its internal references without carrying
     real ids.
 
-    `aliases`: G7 (D-G7-07). Defaults to a fresh map, same as before --
+    `aliases`: defaults to a fresh map, same as before --
     but a caller sanitizing several responses that belong to ONE bundle
     (a cart read, its own write response, a catalogue lookup) must pass
     the SAME dict across every call, mutated in place. Without this, the
@@ -197,10 +197,10 @@ _UUID_SHAPE = re.compile(
 def _pseudonymise(key: str, value: Any, aliases: Dict[str, str]) -> Any:
     """Same original id -> same replacement, within one sanitize run.
 
-    G9: a UUID-shaped original gets a UUID-shaped pseudonym. The readable
+    a UUID-shaped original gets a UUID-shaped pseudonym. The readable
     `test_id_001` form is not UUID-shaped, and
     `domain/evidence_gate.gate_candidates` requires `product_uuid`,
-    `company_id` and `branch_id` to BE UUID-shaped (D-G5-03 -- the three
+    `company_id` and `branch_id` to BE UUID-shaped (an earlier decision the three
     arguments the write tool's own inputSchema demands). A sanitized
     bundle therefore had every candidate rejected by the Evidence Gate on
     replay, reaching `no_action_available` with no receipts: a bundle

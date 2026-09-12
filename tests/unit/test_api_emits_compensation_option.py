@@ -1,10 +1,10 @@
-"""T16 (G8 stage spec): the compensation offer reaches the guest through
+"""T16: the compensation offer reaches the guest through
 `GET /session/{id}/events`. Two things the ordinary add path never
 exercised: the offer is emitted from `persist_receipt`'s own chunk (not
 `explain`, which is not on the compensation path at all), and it carries
 `kind`/`compensates_action_id` so the client knows to render the undo
 copy. A repeated GET at the offer must replay the receipt ABOVE it too --
-this also fixes the same latent hole for D42's own second round, which
+this also fixes the same latent hole for the own second round, which
 never had a declared test for it either.
 """
 
@@ -134,7 +134,7 @@ class _FakeGraph:
 
 
 def _client(app: FastAPI) -> TestClient:
-    """G10 (A-G10-04): every `/session/{id}/*` route checks the path id
+    """every `/session/{id}/*` route checks the path id
     against the session cookie; each test here drives session `s1`."""
     client = TestClient(app)
     client.cookies.set(SESSION_COOKIE, "s1")

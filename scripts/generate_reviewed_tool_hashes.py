@@ -1,11 +1,11 @@
-"""G5+G6 (D-G5-05): (re)generates `reviewed_tools.json`'s `tool_hashes`
+"""(re)generates `reviewed_tools.json`'s `tool_hashes`
 object from the tracked contract fixture -- never hand-typed, since a
 hand-typed hash is unverifiable against anything.
 
-G8 (D-G8-03/T4 audit finding): used to hardcode
+used to hardcode
 `tools_list_2026-09-05.json`. Running it today would have silently
 REVERTED the reviewed baseline to the stale hashes and broken every live
-write with a schema-drift refusal -- five tools drifted since (D47).
+write with a schema-drift refusal -- five tools drifted since.
 Fixed to read the fixture named in `reviewed_tools.json`'s own `source`
 field, and to refuse (non-zero exit) when that fixture's own stated
 `source_schema_hash` disagrees with a freshly recomputed one -- a

@@ -1,4 +1,4 @@
-"""T15 (G8 stage spec, D-G8-07): a double-clicked consent (or a retried
+"""a double-clicked consent (or a retried
 request) must not 500 -- `repository.save_consent` used to be a bare
 `INSERT` against `action_id UUID PRIMARY KEY`, so a second call for the
 same action_id raised a unique-violation. Integration, not unit: "exactly

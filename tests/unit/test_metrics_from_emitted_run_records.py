@@ -1,9 +1,9 @@
-"""G9 (D80, G9.4): the metrics are computed from records a real run
+"""the metrics are computed from records a real run
 emitted, end to end -- replay -> record -> report.
 
 `compute_metrics.py` shipped with `_load_run_records` returning `[]` and
 said so honestly: no run-record format existed, so every metric reported
-N/A. G9.3 and G9.6 have now both landed, so the format exists and this
+N/A. The golden runner and the repeats have both landed, so the format exists and this
 test is what stops the two halves drifting: the emitter lives in
 `scripts/core_e2e_repeats.py` and the parser in
 `scripts/compute_metrics.py`, and a field renamed on one side without the
@@ -32,7 +32,7 @@ def _report(tmp_path: Path, golden_dir: Path | None = None) -> dict:
     import json
 
     (tmp_path / "g9_run_records_test.json").write_text(
-        # D84: a record file must say which population it belongs to; the
+        # a record file must say which population it belongs to; the
         # loader refuses one that does not rather than guessing.
         json.dumps({"population": "offline", "records": [record]}),
         encoding="utf-8",

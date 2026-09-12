@@ -67,7 +67,7 @@ fact from a live catalogue lookup, not something to guess at here).
 **v2 drops `quantity_hint`.** How many units close a gap is arithmetic
 (gap divided by price, rounded to catalogue `step`, bounded by stock), and
 `CLAUDE.md` reserves arithmetic for code — `build_action_proposals` has
-derived quantity this way, ignoring `quantity_hint`, since G5+G6 (four live
+derived quantity this way, ignoring `quantity_hint`, (four live
 runs showed the model always returned 1, which under-proposed against a
 real gap). `SearchIntent.quantity_hint` carried the field and the note
 explaining why nothing read it until this version; v2 is the deliberate
@@ -90,5 +90,5 @@ Available tools (for your own awareness only — you do not call them; a
 later step does): {planner_tool_view_json}
 ```
 
-**Version notes:** v2 (G7). Drops `quantity_hint` from both the schema and
+**Version notes:** v2. Drops `quantity_hint` from both the schema and
 this text — see the output-contract note above. No other change from v1.

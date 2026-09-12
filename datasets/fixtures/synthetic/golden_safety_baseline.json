@@ -40,7 +40,7 @@
   "seed": null,
   "source_schema_hash": "synthetic-cart-wire-shape-v1",
   "transformations": [
-    "G9 (G9.2): the same cart tests/support/write_backend.py's default_fixture() already uses -- proven to reach awaiting_consent end-to-end by test_write_path_interrupt_and_resume.py's own T14/T15/T15b, registered as a tracked fixture so golden safety cases (GD-11..15) reference one source of truth instead of an inline payload.",
+    "the same cart tests/support/write_backend.py's default_fixture() already uses -- proven to reach awaiting_consent end-to-end by test_write_path_interrupt_and_resume.py's own T14/T15/T15b, registered as a tracked fixture so golden safety cases (GD-11..15) reference one source of truth instead of an inline payload.",
     "address dropped -- test_no_coordinates_in_tracked_datasets.py bans latitude/longitude/address from every tracked dataset file; compare_channels_node degrades to a no-op for a cart with no coordinates rather than failing."
   ]
 }

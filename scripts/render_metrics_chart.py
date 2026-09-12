@@ -56,7 +56,7 @@ GATES: Dict[str, Tuple[str, Callable[[float], bool]]] = {
     "FalseRecovery": ("0 absolute", lambda v: v == 0.0),
     "DisclosureRate": ("measured", lambda v: True),
 }
-# `wilson` and `COUNT_METRICS` live in `domain/metrics.py` since G10, so
+# `wilson` and `COUNT_METRICS` live in `domain/metrics.py`, so
 # this chart and the console's `GET /evidence` cannot disagree.
 
 

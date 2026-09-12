@@ -3,9 +3,9 @@
 // render (plan section 5.1, the product's whole point), plus the
 // delivery-channel comparison (amendment A7).
 //
-// G7 (D-G7-03/D-G7-04): the SSE `diagnosis` event now actually carries
+// the SSE `diagnosis` event now actually carries
 // `validations`/`channels` (it used to be dropped before reaching this
-// component at all -- an adversarial audit of the G7 plan caught it),
+// component at all -- an adversarial audit of the stage plan caught it),
 // and both are rendered in Ukrainian rather than as raw validation codes.
 
 import { translateValidationCode } from "../copy";
@@ -44,8 +44,8 @@ export function DiagnosisScreen({ diagnosis }: Props) {
           </p>
           {diagnosis.primary_code === null && (
             <p className="muted" data-testid="unknown-reason">
-              Жодна з позначок кошика не є відомим правилом, тому система не пропонує
-              дію наосліп — перевірте кошик у застосунку Сільпо.
+              Жоден результат перевірки кошика не є відомим правилом, тому система не
+              пропонує дію наосліп — перевірте кошик у застосунку Сільпо.
             </p>
           )}
           {diagnosis.gap !== null && (
@@ -61,9 +61,9 @@ export function DiagnosisScreen({ diagnosis }: Props) {
             </p>
           )}
 
-          <h3>Усі позначки кошика</h3>
+          <h3>Усі результати перевірок кошика</h3>
           {diagnosis.validations.length === 0 ? (
-            <p>Інших позначок немає.</p>
+            <p>Інших результатів перевірок немає.</p>
           ) : (
             <ul data-testid="disclosures">
               {/* Identical lines grouped with a count: a cart with ten

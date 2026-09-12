@@ -1,7 +1,7 @@
-"""G9 follow-up (D84): the metrics population must not silently merge the
+"""the metrics population must not silently merge the
 offline and live runs.
 
-D80 fixed the metrics' population as the OFFLINE repeats, on the grounds
+an earlier decision fixed the metrics' population as the OFFLINE repeats, on the grounds
 that a live LLM run is not reproducible by anyone cloning this repository.
 It did not stop the live run's own records landing in the same directory
 under the same filename pattern -- and `_load_run_records` globs the

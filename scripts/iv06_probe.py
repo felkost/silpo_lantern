@@ -1,4 +1,4 @@
-"""IV-06 (plan section 8.3, G7 stage plan section 5): does Render's own
+"""IV-06 (plan section 8.3 stage plan section 5): does Render's own
 network egress reach `https://mcp.silpo.ua/mcp` at all? Cloudflare has
 blocked at least one US-cloud egress before (plan section 17's risk
 table), so this is checked BEFORE any deploy, not assumed.
@@ -6,7 +6,7 @@ table), so this is checked BEFORE any deploy, not assumed.
 One JSON-RPC call — `initialize` -- is enough to answer the question: a
 valid JSON-RPC response means Render's egress reaches the server; a 403
 or a timeout means it does not, and the plan's own rule applies without
-regret: Render is struck out, the demo stays local (D-G7-09 already
+regret: Render is struck out, the demo stays local (an earlier decision already
 chose not to need Dockerfiles for this). Deliberately NOT `tools/list`:
 that call needs a completed OAuth exchange this probe has no reason to
 perform, and the egress question is answered by the TCP/TLS handshake

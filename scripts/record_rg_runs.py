@@ -1,4 +1,4 @@
-"""G10 delivery B: runs every `not_run` row of the RG coverage map and
+"""runs every `not_run` row of the RG coverage map and
 keeps the pytest output as the run artefact plan section 12.4 requires
 before a row may read `pass`. The tests already exist and pass in the
 gate; what was missing was a RECORDED run naming which node ids ran,
@@ -9,7 +9,7 @@ when, on which commit, with what result -- the map's own test
 
 Writes `datasets/golden-v1.0.0/rg_runs/rg_runs_<UTC>.json` and prints, per row, the
 verdict to paste into `coverage.json`. It does NOT edit the map: promotion
-is a reviewed edit, and `RG-05` (blocked, D59) and `RG-06`
+is a reviewed edit, and `RG-05` (blocked) and `RG-06`
 (not_applicable) are never run here.
 """
 

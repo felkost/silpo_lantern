@@ -1,4 +1,4 @@
-"""G10 delivery A (T1/T2): the built SPA is served from `/` without
+"""the built SPA is served from `/` without
 shadowing the API. Built against a `tmp_path` dist, never the repo's own
 `apps/web/dist/` -- that directory is gitignored, so a test importing
 `apps.api.main.app` in a fresh clone would see no mount at all and pass

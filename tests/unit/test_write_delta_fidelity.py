@@ -1,10 +1,10 @@
-"""G9 follow-up (D82): the metric that measures OUR arithmetic, split out
+"""the metric that measures OUR arithmetic, split out
 from the one that measures the retailer's pricing.
 
 `CostDeltaAccuracy` was defined as expected-vs-actual delta and gated at
-"exact". It was written before D68, on the assumption that the price the
+"exact". It was written on the assumption that the price the
 product search returns is the price the cart charges. It is not: the cart
-applies a per-product loyalty discount (D76), so the two disagree on 18 of
+applies a per-product loyalty discount, so the two disagree on 18 of
 33 receipts and the gate can never be met by any correct implementation.
 
 Left as it was, it is a permanently red gate that measures Silpo's
@@ -18,7 +18,7 @@ So the question splits in two:
   before/after difference? That is entirely our arithmetic, it is gated at
   1.00 absolute, and it was 7/7 across all three bundles when measured.
 * `SearchPriceFidelity` -- expected versus actual, unchanged in
-  computation and reported WITHOUT a gate, as the observation of D68/D76
+  computation and reported WITHOUT a gate, as the observation
   that it actually is.
 
 The number 0.455 is not deleted by this split, only relabelled. These
@@ -45,7 +45,7 @@ def test_a_recorded_delta_matching_the_cart_movement_passes() -> None:
 
 def test_the_discount_does_not_enter_this_metric() -> None:
     """The search said 178.98 and the cart charged 161.08. That gap is
-    D68's, not ours -- this metric must not see it at all."""
+    Silpo's discount, not ours -- this metric must not see it at all."""
     rows = [WriteDeltaRow(actual_delta=Decimal("161.08"), cart_delta=Decimal("161.08"))]
 
     assert write_delta_fidelity(rows).value == 1.0

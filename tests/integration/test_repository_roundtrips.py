@@ -41,7 +41,7 @@ pytestmark = pytest.mark.skipif(
 @contextmanager
 def _temporary_session(dsn: str, session_id: str) -> Iterator[ConnectionPool]:
     """Deletes everything this test wrote before it returns. These tests run
-    against the same Neon database G8+G9 computes its metrics from, so a
+    against the same Neon database the metrics stage reads its metrics from, so a
     leftover synthetic consent is not untidiness -- it is a wrong number in
     `ConsentRate`/`ReadbackCoverage` later.
     """
@@ -123,7 +123,7 @@ async def test_get_session_returns_string_ids() -> None:
 
 
 async def test_expired_consent_is_reported_expired() -> None:
-    """The expiry flag is evaluated database-side (D-G5-09), so it can only
+    """The expiry flag is evaluated database-side, so it can only
     be tested against a real `now()`."""
     dsn = strip_sqlalchemy_dialect(os.environ["DATABASE_URL"])
     await run_migrations(dsn)

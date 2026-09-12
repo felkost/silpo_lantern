@@ -17,21 +17,21 @@ uvicorn[standard]==0.52.4
 pydantic==2.13.5
 mcp==1.29.0
 langgraph==1.2.11
-# D-G4-01 (G4 kickoff): OpenRouter's LLM gateway (plan section 8.5), called
+# an earlier decision (the kickoff audit): OpenRouter's LLM gateway (plan section 8.5), called
 # through langchain-openai's ChatOpenAI with base_url pointed at OpenRouter
 # — chosen over a raw httpx client (reimplements retry/tool-calling/
 # structured-output already in the library) and the bare openai SDK
 # (weaker native LangGraph node integration). Resolves cleanly against
 # every other pin here (`pip check`: no broken requirements). The SAME
 # commit that adds this pin also adds `langchain_openai`/`langchain_core`
-# to test_layering.py's FORBIDDEN_FOR_DOMAIN_AND_SAFETY set (D-G4-06) —
+# to test_layering.py's FORBIDDEN_FOR_DOMAIN_AND_SAFETY set —
 # neither the existing "langchain" nor "openai" entries match this
 # package's actual top-level module name.
 langchain-openai==1.6.0
 langgraph-checkpoint-postgres==3.1.2
 langsmith==0.12.2
 psycopg[binary]==3.3.5
-psycopg-pool==3.3.1  # G5+G6 (D-G5-07): pinned explicitly — was transitive-only via
+psycopg-pool==3.3.1 # pinned explicitly — was transitive-only via
 # langgraph-checkpoint-postgres, and this stage builds the write path's own
 # sync repository directly on it.
 sqlalchemy==2.0.52
@@ -41,5 +41,5 @@ PyYAML==6.0.3
 # Already installed transitively via mcp>=1.29.0 (mcp requires jsonschema>=4.20.0);
 # pinned directly here because the fixture-validation pipeline (plan section 12.1.1)
 # depends on it too, and a future mcp bump must not silently drop it out from under
-# that unrelated part of the codebase (stage spec D-G1-05, round 2 correction).
+# that unrelated part of the codebase (a stage-spec correction).
 jsonschema==4.26.0

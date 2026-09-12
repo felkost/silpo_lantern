@@ -1,5 +1,5 @@
-"""G7 (§0, decision D-G7-01): a gate test guarding against the exact leak the
-G7 stage plan's own adversarial audit found in its first revision -- a
+"""a gate test guarding against the exact leak the
+stage plan's own adversarial audit found in its first revision -- a
 committed `Receipt.before_state`/`after_state` (full `Cart.model_dump()`
 dumps, `domain/models.py`) or a raw MCP capture carries `latitude`/
 `longitude`/`address`, the guest's real delivery location. `make secret-scan`
@@ -9,7 +9,7 @@ secret SHAPES, not PII fields with ordinary numeric or string values.
 Scoped to every tracked file under `datasets/` (`raw/` is untracked --
 `.gitignore` -- so it is not walked here; that directory's whole reason to
 exist is that its contents are exactly this kind of unsanitized capture).
-Permanent, not scoped to the G7 stage: nothing else in the gate stops a
+Permanent, not scoped to one stage: nothing else in the gate stops a
 future sanitized/replay fixture from acquiring the same problem.
 """
 
@@ -23,7 +23,7 @@ DATASETS_ROOT = PROJECT_ROOT / "datasets"
 FORBIDDEN_KEYS = {"latitude", "longitude", "address"}
 
 
-# G9 (D74): the two documented synthetic constants
+# the two documented synthetic constants
 # `scripts/record_replay_bundle.py` substitutes for a real address. A
 # live-recorded replay bundle MUST carry coordinates -- the sanitizer
 # strips the guest's real ones and these are restored in their place,
@@ -90,7 +90,7 @@ def test_no_tracked_dataset_file_carries_a_coordinate_or_address_key() -> None:
     )
 
 
-# G9 (D74): the narrowing above must not turn the rule off. These pin that
+# the narrowing above must not turn the rule off. These pin that
 # a REAL coordinate still fails, so the allowance covers exactly the two
 # documented synthetic constants and nothing else.
 

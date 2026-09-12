@@ -1,4 +1,4 @@
-"""G9 (D61, D-G9-01 §6 G9.4): pure recovery-metric arithmetic. No I/O --
+"""pure recovery-metric arithmetic. No I/O --
 `scripts/compute_metrics.py` is the shell that reads the idempotency
 journal, receipts, and session records and hands them here as plain
 dataclasses. Domain layer, so this module imports nothing but `decimal`
@@ -31,8 +31,8 @@ def wilson(p: float, n: int, z: float = 1.96) -> Tuple[float, float]:
     approximation because at n=33 with p at 0 or 1 the normal interval
     collapses to zero width -- infinite confidence from 33 samples -- and
     at 1 of 1 it would say [1, 1]; Wilson says [0.21, 1.00], which is what
-    one observation is worth (D81). One helper for the chart and the
-    console, so they cannot disagree (G10)."""
+    one observation is worth. One helper for the chart and the
+    console, so they cannot disagree."""
     if n == 0:
         return (0.0, 0.0)
     denominator = 1 + z * z / n
@@ -45,8 +45,8 @@ def wilson(p: float, n: int, z: float = 1.96) -> Tuple[float, float]:
 # a proportion of anything.
 COUNT_METRICS = frozenset({"FalseRecovery"})
 
-# G10: what a reader must know before reading each number. Rendered beside
-# it on every surface; a metric without one is not shown (D81/D82/§12.3).
+# what a reader must know before reading each number. Rendered beside
+# it on every surface; a metric without one is not shown (plan section 12.3).
 METRIC_CAVEATS: Mapping[str, str] = {
     "UnauthorizedWriteRate": ("Gate 0.00 absolute. Denominator: idempotency claims."),
     "ReadbackCoverage": (
@@ -57,12 +57,12 @@ METRIC_CAVEATS: Mapping[str, str] = {
     ),
     "WriteDeltaFidelity": (
         "Gate 1.00 absolute. The recorded delta against the cart's own movement"
-        " -- what this system controls (D82)."
+        " -- what this system controls."
     ),
     "SearchPriceFidelity": (
         "No gate. NOT a success rate: how often the search price equalled the"
         " price the cart charged. Low because the cart applies a per-product"
-        " loyalty discount the search does not carry (D68/D76/D82)."
+        " loyalty discount the search does not carry."
     ),
     "RecoveryCompletionRate": "Gate 0.85 on the core cases. Offline population.",
     "FalseRecovery": (
@@ -78,7 +78,7 @@ METRIC_CAVEATS: Mapping[str, str] = {
 
 @dataclass(frozen=True)
 class JournalClaim:
-    """Mirrors one row of `idempotency_keys` -- the denominator D61 picks
+    """Mirrors one row of `idempotency_keys` -- the denominator the metrics pick
     over `receipts`, because a claim written before the write call
     survives a crash between the call and `persist_receipt` when no
     receipt ever gets written at all."""
@@ -92,7 +92,7 @@ class JournalClaim:
 def unauthorized_write_rate(
     claims: Sequence[JournalClaim], consents_by_action_id: Mapping[str, object]
 ) -> MetricResult:
-    """D61: fraction of journal claims with no matching consent record --
+    """fraction of journal claims with no matching consent record --
     a write claimed without the authorization that should have preceded
     it. Denominator is every claim, not every receipt."""
     n = len(claims)
@@ -105,11 +105,11 @@ def unauthorized_write_rate(
 def readback_coverage(
     claims: Sequence[JournalClaim], receipts_by_action_id: Mapping[str, object]
 ) -> MetricResult:
-    """D61: fraction of journal claims for which a receipt exists AT ALL
+    """fraction of journal claims for which a receipt exists AT ALL
     -- regardless of that receipt's own `status`. An `unverified` receipt
     still counts as covered: the read-back was ATTEMPTED, which is what
-    coverage measures, not "verification succeeded" (the trap G7/G8's own
-    DR-12 discipline exists to prevent)."""
+    coverage measures, not "verification succeeded" (the trap the DR-12
+    discipline exists to prevent)."""
     n = len(claims)
     if n == 0:
         return MetricResult(value=None, n=0)
@@ -164,7 +164,7 @@ def false_recovery(rows: Sequence[FalseRecoveryRow]) -> MetricResult:
 @dataclass(frozen=True)
 class CostDeltaRow:
     """One receipt's expected versus actual delta. `kind="compensate"`
-    rows are excluded by the caller building this list (D-G8's own
+    rows are excluded by the caller building this list (the own
     `receipts.kind` column makes it a plain filter) -- this dataclass
     still carries `kind` so the exclusion rule is checked here too,
     defensively, rather than trusted to have been applied upstream."""
@@ -175,7 +175,7 @@ class CostDeltaRow:
 
 
 def cost_delta_accuracy(rows: Sequence[CostDeltaRow]) -> MetricResult:
-    """Excludes `kind="compensate"` (D-G9's own D61 note: its
+    """Excludes `kind="compensate"` (its own note: its
     `expected_delta` is derived from the same figure as `actual_delta`, a
     guaranteed-zero-error sample that would dilute the metric) and rows
     with `actual_delta IS NULL` (no write attempted, or unverified with no
@@ -193,12 +193,12 @@ def cost_delta_accuracy(rows: Sequence[CostDeltaRow]) -> MetricResult:
 @dataclass(frozen=True)
 class WriteDeltaRow:
     """One receipt's recorded delta versus the cart's OWN before/after
-    movement (D82).
+    movement.
 
     Split out from `cost_delta_accuracy`, which compares the delta against
     the price the product SEARCH advertised. That comparison was gated at
-    "exact" on an assumption D68 disproved: the cart applies a per-product
-    loyalty discount the search does not carry (D76), so the two disagree
+    "exact" on an assumption a live run disproved: the cart applies a per-product
+    loyalty discount the search does not carry, so the two disagree
     on most receipts no matter how correct the implementation is.
 
     This one asks the question the project actually controls -- does the

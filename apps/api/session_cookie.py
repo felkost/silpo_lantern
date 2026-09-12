@@ -1,7 +1,7 @@
-"""G10 (A-G10-04): the session id lives in an `HttpOnly; Secure;
+"""the session id lives in an `HttpOnly; Secure;
 SameSite=Lax` cookie. `HttpOnly` keeps it from page script, `Secure`
 keeps it off plain http, `SameSite=Lax` closes cross-site POSTs -- the
-ordinary web-session model (D88). Route paths still carry `{session_id}`
+ordinary web-session model. Route paths still carry `{session_id}`
 for the SPA's own fetches, so every such route checks the path against
 the cookie: a leaked id is worthless without the browser that holds it.
 """

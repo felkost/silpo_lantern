@@ -125,7 +125,7 @@ def normalize_cart(raw: Mapping[str, Any]) -> Cart:
     cart id is a data-completeness question for a caller to decide on, not
     a shape this normalizer cannot make sense of.
 
-    `checkoutWebLink` (G5+G6, D-G5-25) is a sibling of `cart` in the wire
+    `checkoutWebLink` is a sibling of `cart` in the wire
     response, not a field inside it — the caller merges it into `raw`
     before calling this function (see `graph.nodes.make_read_node`), so
     this normalizer's own "raw is the cart object" contract still holds

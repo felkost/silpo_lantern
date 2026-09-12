@@ -1,6 +1,6 @@
 {
   "case_id": "GD-06",
-  "scenario": "Resume after the consent interrupt, twice: the bundle replays the REAL compiled graph through a first consented write that lands but leaves the blocker standing, then D42's second consent round, whose write the server reports as successful while the cart does not move -- so the read-back completes, disagrees, and the run ends honestly `unverified` rather than claiming a success no read-back confirmed. Re-cut in the G9 follow-up onto a bundle carrying the tool-name fallback queue (D83), so the case can also run under a live planner; the outcome shape is unchanged.",
+  "scenario": "Resume after the consent interrupt, twice: the bundle replays the REAL compiled graph through a first consented write that lands but leaves the blocker standing, then the second consent round, whose write the server reports as successful while the cart does not move -- so the read-back completes, disagrees, and the run ends honestly `unverified` rather than claiming a success no read-back confirmed. Re-cut onto a bundle carrying the tool-name fallback queue, so the case can also run under a live planner; the outcome shape is unchanged.",
   "gd_ref": "GD-06",
   "input": {
     "fixture_id": "replay_resume_unverified"

@@ -3,7 +3,7 @@ step 5) needs the planner's `SearchIntent` — search terms, which
 `build_action_proposals` needs downstream. Nodes only communicate through
 `RecoveryState`, so the planner's output needs a field to land in.
 
-G7: `SearchIntent.quantity_hint` was removed (`planner_v2.md`) — quantity
+`SearchIntent.quantity_hint` was removed (`planner_v2.md`) — quantity
 is arithmetic on the diagnosed gap, never a model output; this test no
 longer exercises that field.
 """

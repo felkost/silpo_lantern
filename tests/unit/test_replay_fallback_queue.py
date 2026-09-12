@@ -1,6 +1,6 @@
-"""G9 (D-G9-05): the tool-name-keyed fallback queue on `ReplayBundle`.
+"""the tool-name-keyed fallback queue on `ReplayBundle`.
 
-The 18 core repeats (G9.6) run the REAL live planner against replayed MCP
+The 18 core repeats run the REAL live planner against replayed MCP
 -- and `silpo_find_products_batch`'s args carry the live planner's own
 search terms, which vary run to run and therefore never match
 `response_key`'s exact-args hash recorded at tape time. Without a

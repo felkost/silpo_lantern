@@ -1,4 +1,4 @@
-"""G10 delivery C (A-G10-01): the sixth SSE event, `stage` -- one frame per
+"""the sixth SSE event, `stage` -- one frame per
 graph node the stream actually observed, `{node, io}`, in arrival order.
 An append-only log of what ran, never a checklist of what should run:
 a compensation round enters `write_guard` directly, `retry` returns to

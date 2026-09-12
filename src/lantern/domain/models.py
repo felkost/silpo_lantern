@@ -121,7 +121,7 @@ class Cart(BaseModel):
     delivery_cost: Optional[Money] = None
     restrictions: list[str] = []
     constraints: dict[str, bool] = {}
-    # G5+G6 (D-G5-25): the requirements checklist requires the ABSENCE of
+    # the requirements checklist requires the ABSENCE of
     # this field to be treated as an additional signal, never as a plain
     # equivalence to "blocked" -- the tool's own schema documents it as
     # present "when cart is non-empty and error-free", so a missing link
@@ -201,7 +201,7 @@ class ActionProposal(BaseModel):
     itself, not buried inside `canonical_args`; `product_name`/`quantity`
     are X and Y, `expected_delta` is Z. `canonical_args` stays a dict for
     forward compatibility with tools beyond the hero write, but its key
-    set is pinned for the one tool exercised so far (G5+G6, D-G5-02): the
+    set is pinned for the one tool exercised so far: the
     complete, exact `silpo_add_or_update_cart_products` argument object --
     `{shoppingCartId: str, products: [{productId, companyId, branchId:
     str, quantity: number, addQuantity: bool}]}` -- byte-for-byte what the
@@ -216,7 +216,7 @@ class ActionProposal(BaseModel):
     tool_name: str
     product_name: str
     # Signed change to the line: a positive increment for `kind="add"`, a
-    # negative reduction for `kind="compensate"` (G8, D51). Never the wire
+    # negative reduction for `kind="compensate"`. Never the wire
     # `quantity` itself, which for a restore-form compensation is the
     # RESTORED total, not the delta.
     quantity: Decimal
@@ -228,7 +228,7 @@ class ActionProposal(BaseModel):
     # `model_copy(update=...)` since this model is frozen. Default keeps
     # every existing construction site unbroken.
     guest_text_uk: str = ""
-    # G8 (D51): `kind` selects the per-kind write allowlist inside
+    # `kind` selects the per-kind write allowlist inside
     # `safety/write_guard.py` -- it never enters `canonical_args`, which is
     # the byte-exact wire payload `args_hash` binds; a routing hint inside
     # it would make the hashed object diverge from the call. Defaulted so
@@ -244,7 +244,7 @@ class ActionProposal(BaseModel):
 class ConsentRecord(BaseModel):
     """Mirrors `0003_consents.sql` + `0006_consent_receipt_versioning.sql`
     column for column. `cart_id`/`prompt_version`/`policy_version` were
-    added at G5+G6 (D-G5-09): plan section 11 requires a consent bound to
+    added at plan section 11 requires a consent bound to
     the specific cart and the prompt/policy version that produced it, and
     `state_hash` deliberately excludes cart identity (it hashes contents,
     not identity), so `cart_id` has to live here explicitly. `owner` is
@@ -269,7 +269,7 @@ class ConsentRecord(BaseModel):
 class Receipt(BaseModel):
     """Mirrors `0005_receipts.sql` + `0006_consent_receipt_versioning.sql`.
     `status`/`reason`/`expected_delta`/`actual_delta`/`trace_id` were added
-    at G5+G6 (D-G5-09): plan section 13.3's metrics need "read-back
+    at plan section 13.3's metrics need "read-back
     attempted" separated from "verification succeeded", a stored
     expectation to compare a delta against, and a way to join a receipt
     back to its own LangSmith trace — none of which `verified: bool` alone
@@ -298,8 +298,8 @@ class Receipt(BaseModel):
     blocker_cleared: bool = False
     remaining_gap: Optional[Money] = None
     created_at: datetime
-    # G8 (D51/D-G8-15): distinguishes an ordinary add-path receipt from a
-    # compensation one, so G9's `CostDeltaAccuracy` can exclude
+    # distinguishes an ordinary add-path receipt from a
+    # compensation one, so the `CostDeltaAccuracy` can exclude
     # compensation rows -- their `expected_delta` is derived from the same
     # figure as `actual_delta`, so every such row is a guaranteed-zero-error
     # sample. Defaulted so every existing construction site is untouched.

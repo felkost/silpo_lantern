@@ -1,4 +1,4 @@
-"""T1 (G8 stage spec): pure derivation of a compensation write from a
+"""T1: pure derivation of a compensation write from a
 `Receipt` alone (plus the original write's own `canonical_args`, for the
 two fields a receipt cannot carry). No LLM anywhere on this path -- these
 tests construct `Receipt`/`Cart` data directly and never touch the graph.
@@ -123,7 +123,7 @@ def test_increased_line_compensates_with_the_add_tool_at_the_original_quantity()
 def test_expected_delta_uses_the_price_the_cart_applied_not_the_catalogue_price() -> (
     None
 ):
-    """D40/D48: the cart applies a discount the search endpoint never
+    """the cart applies a discount the search endpoint never
     exposes. The compensation must subtract the price the CART charged
     (86.84), never the catalogue's higher figure (96.49)."""
     receipt = _receipt(
@@ -200,7 +200,7 @@ def test_weighted_quantity_round_trips_as_a_json_number() -> None:
 def test_no_proposal_when_company_and_branch_id_are_absent_from_both_sources() -> None:
     """A restore-form compensation needs companyId/branchId (the add tool
     requires both), and `LineItem.company_id`/`branch_id` are optional --
-    `None` on the tracked replay bundle (D-G8-12). Refuses rather than
+    `None` on the tracked replay bundle. Refuses rather than
     sending a payload the server will reject."""
     receipt = _receipt(
         before_products=[

@@ -1,4 +1,4 @@
-"""D-G5-25: `checkoutWebLink`'s absence is an additional signal per the
+"""`checkoutWebLink`'s absence is an additional signal per the
 requirements checklist ("Absence of checkoutWebLink treated as an
 additional signal, not a universal equivalence to blocked"), not a field
 this normalizer used to silently drop.

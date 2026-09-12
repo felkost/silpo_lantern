@@ -65,7 +65,7 @@ def get_openrouter_api_key(env_path: Optional[Path] = None) -> str:
 
 
 def get_owner_secret(env_path: Optional[Path] = None) -> str:
-    """G5+G6 (D-G5-06): a server-side secret mixed into the derived
+    """a server-side secret mixed into the derived
     `owner` hash when the cached MCP OAuth token carries no stable
     subject claim (measured live — probe P2 — that it does not). Never
     derived from `cart_id`: `compute_state_hash` already includes

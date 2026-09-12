@@ -1,4 +1,4 @@
-"""G9 (D78): the 18-repeat runner must trace the way the production graph
+"""the 18-repeat runner must trace the way the production graph
 traces, or its 63 live LLM calls leave the one artefact section 13.4 asks
 for -- a trace per run -- either absent or unusable.
 

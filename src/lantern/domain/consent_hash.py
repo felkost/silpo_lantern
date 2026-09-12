@@ -43,7 +43,7 @@ def compute_args_hash(canonical_args: Mapping[str, Any]) -> str:
 
 
 def compute_owner(session_id: str, owner_secret: str) -> str:
-    """G5+G6 (D-G5-06): a per-session identity hash for the Write Guard's
+    """a per-session identity hash for the Write Guard's
     owner check. Measured (kickoff probe P2): the cached MCP OAuth token
     carries no stable subject claim, so this -- deriving from the
     session's own id plus a server-side secret -- is this project's

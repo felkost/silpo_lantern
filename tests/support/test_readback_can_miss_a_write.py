@@ -1,4 +1,4 @@
-"""G9 follow-up (D83): the fake backend can model a write the read-back
+"""the fake backend can model a write the read-back
 does not reflect.
 
 The one thing the MCP server's own `{success: true}` cannot prove is that

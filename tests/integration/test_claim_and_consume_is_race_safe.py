@@ -1,4 +1,4 @@
-"""T11 (G5+G6 stage spec): three sequential **and three parallel**
+"""T11: three sequential **and three parallel**
 duplicate claims resolve to exactly one write.
 
 The sequential half was already covered. The parallel half is the reason
@@ -52,7 +52,7 @@ def _dsn() -> str:
 def _consent_ready(session_id: str, action_id: str) -> Iterator[ConnectionPool]:
     """Creates one session and one unconsumed consent, and removes both
     plus the journal row afterwards. These tests share the Neon database
-    G8+G9 reads its metrics from, so a leftover synthetic claim is a wrong
+    the metrics stage reads its metrics from, so a leftover synthetic claim is a wrong
     number later, not clutter."""
     dsn = _dsn()
     with open_repository_pool(dsn) as pool:
@@ -106,7 +106,7 @@ def test_t11_three_sequential_claims_yield_exactly_one_winner() -> None:
     winners = [claimed for claimed, _ in results if claimed]
     assert len(winners) == 1, f"expected one winner, got {results}"
     # The losers must be distinguishable from the winner by the flag alone,
-    # not by the state string: both see `in_flight` (D27).
+    # not by the state string: both see `in_flight`.
     assert all(state == "in_flight" for _, state in results)
 
 
@@ -134,7 +134,7 @@ def test_t11_three_parallel_claims_yield_exactly_one_winner() -> None:
 
 def test_t11_the_consent_is_consumed_exactly_once_under_a_race() -> None:
     """The claim and the consent's consumption are one transaction
-    (D-G5-07b). If three threads race and two of them still managed to
+    (an earlier decision). If three threads race and two of them still managed to
     stamp `consumed_at`, the journal would be right and the consent record
     would be lying about who spent it.
     """
@@ -163,7 +163,7 @@ def test_t11_the_consent_is_consumed_exactly_once_under_a_race() -> None:
 def test_t11_a_second_action_on_the_same_cart_is_independent() -> None:
     """A guard against over-tightening: the uniqueness is per action, not
     per cart. Two different approved actions on one cart must both be
-    claimable, or a second consent round (D42) could never write."""
+    claimable, or a second consent round could never write."""
     session_id = str(uuid.uuid4())
     first, second = str(uuid.uuid4()), str(uuid.uuid4())
 

@@ -1,4 +1,4 @@
-"""G9 (G9.5): the judges' rubric is code in this repository, not text a
+"""the judges' rubric is code in this repository, not text a
 model writes for itself at run time.
 
 DeepEval will happily take a one-line `criteria` and generate its own

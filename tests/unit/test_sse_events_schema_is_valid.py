@@ -1,10 +1,10 @@
 """The SSE event envelope schema must
 itself be a well-formed JSON Schema, and validates the five concrete
-`event` names plan section 1.5 declares (D-G5-21) -- not the placeholder
+`event` names plan section 1.5 declares -- not the placeholder
 node-name vocabulary this file used before any route existed to emit any
 of it.
 
-G7 (D-G7-03): `diagnosis` and `receipt` now have their own `data` shape
+`diagnosis` and `receipt` now have their own `data` shape
 (disclosure/channel-comparison fields; blocker_cleared/remaining_gap) --
 the actual, real frame `apps/api/routes.py` emits, captured verbatim
 below, is what these tests validate. `make openapi` cannot show this
@@ -39,7 +39,7 @@ def _diagnosis_data(**overrides: object) -> dict:
         "primary_code": "order.cost.min",
         "gap": "194.11",
         "gap_is_borderline": False,
-        # G10: the arithmetic's inputs and per-code `is_known` ride along.
+        # the arithmetic's inputs and per-code `is_known` ride along.
         "products_total": "404.89",
         "cart": {
             "delivery_type": "DeliveryHome",
@@ -80,7 +80,7 @@ def _receipt_data(**overrides: object) -> dict:
         "actual_delta": "39.99",
         "blocker_cleared": False,
         "remaining_gap": "2.98",
-        # G10 (claim 4): expected against actual, outcome as typed fields.
+        # expected against actual, outcome as typed fields.
         "expected_delta": "39.99",
         "verified": True,
         "kind": "add",
@@ -98,7 +98,7 @@ def test_a_real_diagnosis_event_validates() -> None:
 
 
 def test_a_diagnosis_event_missing_channels_is_rejected() -> None:
-    """The exact regression an adversarial audit of the G7 plan caught:
+    """The exact regression an adversarial audit of the stage plan caught:
     emitting the frame before `compare_channels` had run would ship this
     shape -- now the schema itself refuses it."""
     data = _diagnosis_data()
@@ -169,7 +169,7 @@ def _options_data(**overrides: object) -> dict:
                 "guest_text_uk": "Додати товар",
                 "kind": "add",
                 "compensates_action_id": None,
-                # G10 (claim 3): the guard's hash and the evidence, no product_id.
+                # the guard's hash and the evidence, no product_id.
                 "args_hash": "a" * 64,
                 "tool_name": "silpo_add_or_update_cart_products",
                 "evidence": [
@@ -199,7 +199,7 @@ def test_a_compensation_candidate_validates() -> None:
 
 
 def test_an_options_event_missing_kind_is_rejected() -> None:
-    """G8 (D51): a candidate whose kind is absent could be silently
+    """a candidate whose kind is absent could be silently
     rendered as the wrong screen -- the client must never guess."""
     data = _options_data()
     del data["candidates"][0]["kind"]
@@ -214,9 +214,9 @@ def test_an_options_event_with_an_unknown_kind_is_rejected() -> None:
         jsonschema.validate({"event": "options", "data": data}, _schema())
 
 
-# G10 (A-G10-01): the sixth event. `stage` carries which node completed and
+# the sixth event. `stage` carries which node completed and
 # what kind of I/O it does -- nothing else: no index (the graph's own paths
-# regress on one), no counters (D59), no start signal.
+# regress on one), no counters, no start signal.
 def _stage(io: str) -> dict:
     return {
         "event": "stage",

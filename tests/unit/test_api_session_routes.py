@@ -1,10 +1,10 @@
-"""B2/B3 (G5+G6 stage spec): the session/consent/events routes, tested
+"""B2/B3: the session/consent/events routes, tested
 against a FAKE graph (never a real MCP/LLM call, never a real Neon
 connection -- `repository.*` functions are monkeypatched, since
 `apps.api.routes` calls them as bare module functions).
 
 Rewritten for the live-push design (the author's own call, replacing the
-D29 replay-only draft): `POST /session` only creates the session row,
+an earlier decision replay-only draft): `POST /session` only creates the session row,
 `GET /session/{id}/events` is what actually DRIVES the graph via
 `astream(...)` and emits one SSE event per completed node, and
 `POST /session/{id}/consent` only records consent -- the write's own
@@ -82,7 +82,7 @@ def _diagnosis() -> Diagnosis:
 
 
 def _disclosure() -> DisclosureReport:
-    """G7: `diagnose_node` always returns `disclosure` alongside
+    """`diagnose_node` always returns `disclosure` alongside
     `diagnosis` (`nodes.py:143-146`) -- carries one non-blocker validation
     so `test_events_streams_the_read_pipeline_node_by_node` below can
     assert the SSE frame actually lists it."""
@@ -188,7 +188,7 @@ def _read_pipeline_chunks() -> List[Dict[str, Any]]:
                 "status": "diagnosed",
             }
         },
-        # G7: the diagnosis SSE frame is emitted on THIS chunk, not
+        # the diagnosis SSE frame is emitted on THIS chunk, not
         # "diagnose" -- `channel_comparison` only exists here.
         {"compare_channels": {"channel_snapshots": [], "channel_comparison": []}},
         {"explain": {"candidates": [_proposal()], "status": "awaiting_consent"}},
@@ -197,7 +197,7 @@ def _read_pipeline_chunks() -> List[Dict[str, Any]]:
 
 
 def _client(app: FastAPI) -> TestClient:
-    """G10 (A-G10-04): every `/session/{id}/*` route checks the path id
+    """every `/session/{id}/*` route checks the path id
     against the session cookie; each test here drives session `s1`."""
     client = TestClient(app)
     client.cookies.set(SESSION_COOKIE, "s1")
@@ -264,8 +264,8 @@ def test_events_streams_the_read_pipeline_node_by_node(
     assert '"primary_code": "order.cost.min"' in body
     assert '"gap": "194.11"' in body
     assert '"session_id": "s1"' in body
-    # G7 (D-G7-03): the disclosure layer and channel comparison must reach
-    # this frame -- an adversarial audit of the G7 plan found the naive
+    # the disclosure layer and channel comparison must reach
+    # this frame -- an adversarial audit of the stage plan found the naive
     # fix (emit on the `diagnose` chunk) ships `channels: []` because
     # `channel_comparison` does not exist until the LATER
     # `compare_channels` chunk arrives.
@@ -459,7 +459,7 @@ def test_b3_write_guard_refusal_reaches_the_client_as_an_error_event(
 def test_the_guest_token_is_bound_before_the_graph_is_ever_built(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """G7/IV-07 (live finding): `_get_graph` builds the production graph
+    """Live finding: `_get_graph` builds the production graph
     LAZILY on its own first call across the whole app's lifetime, and
     that build synchronously calls `list_tools_raw()`, which reads
     `current_token_storage` -- falling back to the single operator token
@@ -526,7 +526,7 @@ def test_create_session_points_the_client_at_the_login_url(
     body = client.post("/session").json()
 
     assert body["authorized"] is False
-    # G10 (A-G10-04): a bare path -- the id rides in the cookie, never a URL.
+    # a bare path -- the id rides in the cookie, never a URL.
     assert body["auth_url"] == "/auth/start"
 
 

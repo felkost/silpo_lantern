@@ -1,6 +1,6 @@
-"""G9 (D61, G9.4): the I/O shell around `src/lantern/domain/metrics.py`'s
+"""the I/O shell around `src/lantern/domain/metrics.py`'s
 pure functions. Reads the golden/repeat runs' own emitted records from the tracked
-`datasets/evidence` directory (D61's own "source of truth" decision --
+`datasets/evidence` directory (the own "source of truth" decision --
 not the author's historical Neon rows, so the numbers stay reproducible
 from the repository) and writes the metrics report to
 `METRICS_OUTPUT_PATH` below, in the shape `render_report.py`'s
@@ -12,7 +12,7 @@ joined path string -- a tracked file spelling that path out fails
 `test_no_tracked_file_references_a_gitignored_docs_path`, the same trap
 `render_report.py:33` already avoids for its own `METRICS_PATH`.
 
-**Provisional today.** G9.3 (the golden runner) and G9.6 (the 18 repeats)
+**Provisional today.** The golden runner and the 18 repeats
 have not landed yet, so no run-record file format exists to load from --
 `_load_run_records` below returns an empty list rather than inventing a
 schema for data that has never been emitted, per this project's own rule
@@ -57,7 +57,7 @@ def _decimal_or_none(value: Any) -> Optional[Decimal]:
 
 
 METRICS_OUTPUT_PATH = PROJECT_ROOT / "docs" / "evidence" / "metrics.json"
-# G10: the console's source. `docs/` is gitignored, so the deployed service
+# the console's source. `docs/` is gitignored, so the deployed service
 # has no `METRICS_OUTPUT_PATH`; this copy is tracked, regenerated from the
 # tracked bundles alone (`--tracked`), and pinned by an agreement test.
 TRACKED_METRICS_PATH = PROJECT_ROOT / "datasets" / "golden-v1.0.0" / "metrics.json"
@@ -66,8 +66,7 @@ TRACKED_METRICS_PATH = PROJECT_ROOT / "datasets" / "golden-v1.0.0" / "metrics.js
 def _load_run_records(
     evidence_dir: Path, population: str = "offline"
 ) -> List[Dict[str, Any]]:
-    """Reads the repeat runs' emitted records for ONE population (D80,
-    D84).
+    """Reads the repeat runs' emitted records for ONE population.
 
     Both configurations write `g9_run_records_*.json` into the same
     directory, so globbing the pattern merged them: running the offline
@@ -87,7 +86,7 @@ def _load_run_records(
         declared = document.get("population")
         if declared is None:
             raise ValueError(
-                f"{path.name} declares no population -- it predates D84 and "
+                f"{path.name} declares no population -- it predates that field and "
                 "cannot be assigned to one without guessing"
             )
         if declared == population:
@@ -206,14 +205,14 @@ def build_metrics_report(
         "UnauthorizedWriteRate": unauthorized_write_rate(claims, consents_by_action_id),
         "ReadbackCoverage": readback_coverage(claims, receipts_by_action_id),
         "ConsentBindingIntegrity": consent_binding_integrity(consent_binding_rows),
-        # D82: what WE control -- the recorded delta against the cart's
+        # what WE control -- the recorded delta against the cart's
         # own movement. Gated at 1.00 absolute.
         "WriteDeltaFidelity": write_delta_fidelity(write_delta_rows),
-        # D82: section 13.3's `CostDeltaAccuracy`, unchanged in
+        # section 13.3's `CostDeltaAccuracy`, unchanged in
         # computation and renamed for what it actually measures -- how
         # well the SEARCH price predicts the price the cart charges.
         # Reported without a gate: it is an observation of Silpo's
-        # discount policy (D68/D76), not of this system's behaviour.
+        # discount policy, not of this system's behaviour.
         "SearchPriceFidelity": cost_delta_accuracy(cost_delta_rows),
         "RecoveryCompletionRate": recovery_completion_rate(episodes),
         "FalseRecovery": false_recovery(false_recovery_rows),
@@ -226,7 +225,7 @@ def build_metrics_report(
                 "name": name,
                 "value": result.value,
                 "n": result.n,
-                # G10: the interval and the caveat travel WITH the number,
+                # the interval and the caveat travel WITH the number,
                 # so no surface can render one without the other.
                 "interval": (
                     None

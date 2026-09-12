@@ -77,7 +77,7 @@ def build_item_availability_by_name(
 ) -> List[bool]:
     """Fallback for `build_item_availability` when no confirmed
     `externalProductId` exists for the cart's own line items. Settled by
-    D16's live 11-item cart capture: `LineItem.product_id` (a UUID) and
+    the live 11-item cart capture: `LineItem.product_id` (a UUID) and
     `find_products_batch`'s `externalProductId` (`number | null`) are
     structurally incompatible identifier spaces by construction, not
     merely unobserved to match — so this fallback is the permanent design

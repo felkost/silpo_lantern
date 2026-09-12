@@ -1,4 +1,4 @@
-// G7 (D-G7-04): Ukrainian copy for the two vocabularies the guest would
+// Ukrainian copy for the two vocabularies the guest would
 // otherwise see verbatim -- validation codes from
 // `src/lantern/policies/registry.yaml`, and developer-English refusal
 // reasons from `src/lantern/safety/write_guard.py`. Both translators
@@ -22,7 +22,7 @@ const VALIDATION_CODE_UK: Record<string, string> = {
     "Для цієї суми кошика доступні не всі способи оплати (оплата частинами — від 1000 ₴).",
 };
 
-// G10: the eight indicators as the documentation site names and explains
+// the eight indicators as the documentation site names and explains
 // them in Ukrainian (scripts/report_content_uk.py, `metric_uk`) -- the
 // panel shows the same words under the English identifier, so a jury
 // member reads one explanation on both surfaces.
@@ -64,7 +64,7 @@ export const METRIC_UK: Record<string, [string, string]> = {
 export function translateValidationCode(validation: DisclosedValidation): string {
   return (
     VALIDATION_CODE_UK[validation.code] ??
-    `Цю позначку кошика ще не розпізнано (${validation.code}).`
+    `Цей результат перевірки ще не розпізнано (${validation.code}).`
   );
 }
 
@@ -94,9 +94,9 @@ const ERROR_REASON_UK: Array<[string, string]> = [
   ["read-back diff does not match", "Результат не збігається з тим, на що ви погодились -- перевірте кошик у застосунку Сільпо."],
   ["read-back quantity does not match", "Кількість не збігається з тим, на що ви погодились."],
   ["read-back removed a different quantity", "З кошика прибрано не ту кількість, на яку ви погодились."],
-  ["carries a new error-level validation", "Після зміни в кошику з'явилась нова позначка -- перевірте його."],
+  ["carries a new error-level validation", "Після зміни в кошику з'явився новий результат перевірки з помилкою -- перевірте його."],
   ["cart applied a different price", "Кошик застосував іншу ціну, ніж очікувалось -- сума в чеку точна."],
-  // G8 (D51): compensation-specific refusals (authorize_write, C2-C9) --
+  // compensation-specific refusals (authorize_write, C2-C9) --
   // these must say what we DO and DO NOT know, not a generic "check the
   // app", since the guest was just offered an undo and needs to know
   // whether it happened.
