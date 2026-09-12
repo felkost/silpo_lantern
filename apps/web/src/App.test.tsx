@@ -1245,3 +1245,66 @@ describe("restart", () => {
     expect(sessionStorage.getItem("lantern_session_id")).toBe("s2");
   });
 });
+
+// «Не додавати нічого» (the author): declining every option is an outcome
+// of its own, not a screen the Customer abandons. Nothing is posted; the
+// diagnosis stays; the summary says so and points at «Перевірити знову».
+describe("decline all options", () => {
+  it("shows the nothing-written summary without any request", async () => {
+    sessionStorage.setItem("lantern_session_id", "s1");
+    const calls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        calls.push(`${init?.method ?? "GET"} ${url}`);
+        return new Response(
+          sseStream([
+            frame("diagnosis", {
+              ...ENVELOPE,
+              primary_code: "order.cost.min",
+              gap: "93.38",
+              gap_is_borderline: false,
+              products_total: "605.62",
+              threshold_source: "validation_context",
+              validations: [{ code: "order.cost.min", level: "error", type: "cost", is_known: true }],
+              channels: [],
+            }),
+            frame("options", {
+              ...ENVELOPE,
+              candidates: [
+                {
+                  action_id: "a1",
+                  product_name: "Сир",
+                  quantity: "1",
+                  expected_delta: "95.97",
+                  guest_text_uk: "Сир закриє недостачу.",
+                  kind: "add",
+                  tool_name: "silpo_add_or_update_cart_products",
+                  args_hash: "abc",
+                  evidence: [],
+                },
+              ],
+            }),
+            frame("consent_required", ENVELOPE),
+          ]),
+          { status: 200 },
+        );
+      }),
+    );
+
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByTestId("decline-all")).toBeInTheDocument();
+    });
+    const before = calls.length;
+
+    await act(async () => {
+      screen.getByTestId("decline-all").click();
+    });
+
+    expect(screen.getByTestId("declined")).toHaveTextContent("Нічого не записано");
+    expect(screen.getByTestId("gap")).toHaveTextContent("93.38");
+    expect(screen.getByTestId("restart")).toBeInTheDocument();
+    expect(calls.length).toBe(before);
+  });
+});

@@ -415,10 +415,40 @@ code,
   margin: 4px 0 6px;
 }
 
+/* session actions: a slim strip above the card, not a card of its own --
+   compact buttons, glyph + label, a native tooltip on hover */
 .session-actions {
-  display: flex;
-  gap: 8px;
+  display: inline-flex;
+  gap: 6px;
   flex-wrap: wrap;
+  margin: 0 0 10px;
+  padding: 4px;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--card) 60%, transparent);
+}
+
+.small {
+  padding: 5px 10px;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.2;
+  border-radius: 7px;
+}
+
+.guest .session-actions .small {
+  border-color: transparent;
+}
+
+.guest .session-actions .small:hover {
+  border-color: var(--hairline);
+}
+
+.icon {
+  flex: none;
+  opacity: 0.85;
 }
 
 /* measured-earlier rows: identifier and value on one line, sample on the next */

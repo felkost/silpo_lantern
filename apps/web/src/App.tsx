@@ -20,6 +20,7 @@ import {
 } from "./api";
 import { CartColumn, type CartState } from "./components/CartColumn";
 import { ClaimPanel } from "./components/ClaimPanel";
+import { Icon } from "./components/Icon";
 import { ConsentScreen } from "./components/ConsentScreen";
 import { MeasuredEarlier } from "./components/MeasuredEarlier";
 import { DiagnosisScreen } from "./components/DiagnosisScreen";
@@ -250,6 +251,15 @@ function App() {
     }
   }, [sessionId, consume]);
 
+  // «Не додавати нічого»: a client-side outcome. The graph stays paused
+  // at the guard with no consent recorded, so nothing can be written; the
+  // consent offers expire on their own. The honest summary is shown, with
+  // the diagnosis still in view.
+  const decline = useCallback(() => {
+    setCandidates([]);
+    setScreen("declined");
+  }, []);
+
   const consent = useCallback(
     async (actionId: string) => {
       if (sessionId === null) {
@@ -278,7 +288,9 @@ function App() {
   const compensationOffer =
     candidates.length > 0 && candidates.every((c) => c.kind === "compensate");
   const showDiagnosis =
-    screen === "diagnosis" || (screen === "consent" && !compensationOffer);
+    screen === "diagnosis" ||
+    screen === "declined" ||
+    (screen === "consent" && !compensationOffer);
 
   return (
     <div className="shell">
@@ -311,19 +323,31 @@ function App() {
           {/* «Вийти» only once there is a login to end; on the login screen
               the same action is a cancel, not an exit (the author, live). */}
           {sessionId !== null && screen !== "auth_required" && (
-            <p className="session-actions">
-              <button type="button" onClick={logout} data-testid="logout">
-                Вийти
+            <div className="session-actions" role="group" aria-label="Дії з сесією">
+              <button
+                type="button"
+                className="quiet small"
+                onClick={logout}
+                data-testid="logout"
+                title="Вийти з Сільпо: доступ до кошика буде видалено з сервера"
+              >
+                <Icon name="signout" /> Вийти
               </button>
               {/* «Перевірити знову»: the cart may have changed in the Silpo app,
                   or the guest declined every option; a fresh run needs no
                   second login. Hidden while a stream is open. */}
               {screen !== "idle" && !busy && (
-                <button type="button" className="quiet" onClick={restart} data-testid="restart">
-                  Перевірити знову
+                <button
+                  type="button"
+                  className="quiet small"
+                  onClick={restart}
+                  data-testid="restart"
+                  title="Прочитати кошик ще раз без повторного входу"
+                >
+                  <Icon name="restart" /> Перевірити знову
                 </button>
               )}
-            </p>
+            </div>
           )}
 
           {screen === "idle" && (
@@ -362,9 +386,21 @@ function App() {
             <ConsentScreen
               candidates={candidates}
               onConsent={consent}
+              onDecline={decline}
               submitting={busy}
               priorReceipts={receipts}
             />
+          )}
+
+          {screen === "declined" && (
+            <section aria-labelledby="declined-heading" data-testid="declined">
+              <h2 id="declined-heading">Нічого не записано</h2>
+              <p>
+                Ви не обрали жодного варіанта, і кошик лишився таким, яким був. Блокування
+                нікуди не зникло: можна додати щось самому в застосунку Сільпо і натиснути
+                «Перевірити знову», або вийти.
+              </p>
+            </section>
           )}
 
           {screen === "receipt" && receipts.length > 0 && (

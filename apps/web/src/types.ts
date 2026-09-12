@@ -158,4 +158,5 @@ export type Screen =
   | "diagnosis"
   | "consent"
   | "receipt"
+  | "declined"
   | "error";
