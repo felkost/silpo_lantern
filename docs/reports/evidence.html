@@ -342,7 +342,7 @@ every hundred requests it adds one purchase with more than one dollar of margin.
 <p>Three things from the project brief were not measured, and here is why.</p>
 <p><b>A before/after comparison in sessions with Customers.</b> The brief provides for
 moderated sessions: a Customer works through a blocked cart first without the agent,
-then with it, and an observer records the time, the number of actions and the outcome.
+then with it, and a moderator records the time, the number of actions and the outcome.
 The protocol for those sessions is written. No sessions were held, because the project
 had no access to participants; <code>n</code> = 0. Consequence: everything these pages
 say about clarity and convenience for the Customer rests on the author's own runs, not
@@ -356,7 +356,9 @@ paying for itself on these pages is conditional ("provided p₁ − p₀ &gt; 0"
 result. The measured indicators show that the agent works safely and correctly; they do
 not show that it increases sales.</p>
 <p><b>The language quality of the explanations.</b> The project has automatic answer
-evaluators (one language model scoring another's text). They were checked against
+evaluators (one language model scoring another's text; the DeepEval library, judge model
+<code>openai/gpt-5.6-luna</code> — see "Language models" on the Architecture page).
+They were checked against
 labelled examples, and that check showed: they reliably detect structural defects — a
 mixed-up sum, an extra product, a missing warning — and do not reliably judge the
 quality of the Ukrainian. So they are used only to find defects, and their quality
@@ -366,5 +368,5 @@ it.</p>
 <div class="next"><a href="safety.html">← Safety & consent</a>
 
 <a href="data-model.html">Data model →</a></div>
-<p class="meta">Regenerated 2026-09-12T00:07:34+00:00. No external network resources.</p>
+<p class="meta">Regenerated 2026-09-12T00:25:30+00:00. No external network resources.</p>
 </main></div></body></html>

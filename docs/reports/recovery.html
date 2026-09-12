@@ -517,7 +517,8 @@ one the Customer sees, in Ukrainian. <b>On the right</b> — the cart as Silpo's
 returned it: one column with the state at the first read and one more after each
 read-back; the line the write added is highlighted, and the totals stand side by side
 so they can be compared.</p>
-<p><b>On the left</b> — two blocks for the observer. The first is a log of the steps
+<p><b>On the left</b> — three blocks for the jury (the column is labelled so on the
+console: «Журі»). The first, <code>Observed nodes</code>, is a log of the steps
 the agent actually ran in this session, in execution order; beside each step, what it
 touched: Silpo's server, the language model, the database, or nothing (computation in
 code). Under the log, the session's spend on the language model: how many tokens were
@@ -526,7 +527,8 @@ own usage data. Beside it, the <b>project ceiling</b> — $20: the limit on lang
 spend for the whole project, from the first test to today, set by the author and
 recorded in the settings file (<code>config/models.yaml</code>). It is shown so the
 session's spend has something to be compared with.</p>
-<p>The second block on the left is four claims about how the system works. They are
+<p>The second block, <code>What this run shows</code>, is four claims about how the
+system works. They are
 the project's own claims, and under each one the console shows the data from the
 current session that proves it; the field names are deliberately the same as in the
 code, so they can be checked against it.</p>
@@ -551,6 +553,11 @@ write with only "success", no totals. So the system reads the cart again and sho
 the expected change beside the one read back: equal — "verified"; not equal, or the
 read-back failed — "unverified"</td></tr>
 </table>
+<p>The third block, <code>Measured earlier — not this session</code>, shows on request
+the eight indicators from the Measurements page — with <code>n</code>, interval and
+caveat. The heading says deliberately that these were measured earlier, on recorded
+runs, and not in this session: so the jury does not confuse the project's indicators
+with what is happening on screen now.</p>
 
 <h2 id="scenarios">The other scenarios</h2>
 <table>
@@ -585,5 +592,5 @@ again</td></tr>
 <div class="next"><a href="architecture.html">← Architecture</a>
 
 <a href="safety.html">Safety & consent →</a></div>
-<p class="meta">Regenerated 2026-09-12T00:07:34+00:00. No external network resources.</p>
+<p class="meta">Regenerated 2026-09-12T00:25:30+00:00. No external network resources.</p>
 </main></div></body></html>

@@ -24,6 +24,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
+import yaml
 from jinja2 import Template
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -36,6 +37,7 @@ OUT_DIR = ROOT / "docs" / "reports"
 UML_SVG_DIR = ROOT / "docs" / "uml" / "svg"
 METRICS_PATH = ROOT / "datasets" / "golden-v1.0.0" / "metrics.json"
 COVERAGE_PATH = ROOT / "datasets" / "golden-v1.0.0" / "coverage.json"
+MODELS_PATH = ROOT / "config" / "models.yaml"
 
 # Ukrainian pages sit one directory down, so "safety.html" resolves inside
 # the same language and "../safety.html" crosses to the other one.
@@ -168,6 +170,38 @@ def _metrics() -> Dict[str, Any]:
     }
 
 
+def _models() -> Dict[str, Any]:
+    """The model basket as `config/models.yaml` pins it — ids, prices and the
+    verification date come from the file, never from the page text, so the
+    site cannot name a model the code does not use."""
+    doc = yaml.safe_load(MODELS_PATH.read_text(encoding="utf-8"))
+    planner = doc["planner"]
+    explainer = doc["explainer"]
+    judge = doc["eval_judge"]
+    explainer_price = next(
+        c["price_usd_per_million"]
+        for c in explainer["candidates"]
+        if c["model"] == explainer["selected"]
+    )
+    judge_price = next(
+        c["price_usd_per_million"]
+        for c in judge["candidates"]
+        if c["model"] == judge["selected"]
+    )
+    return {
+        "planner": planner["model"],
+        "planner_fallback": planner["fallback"],
+        "planner_price": planner["price_usd_per_million"],
+        "explainer": explainer["selected"],
+        "explainer_price": explainer_price,
+        "explainer_candidates": len(explainer["candidates"]),
+        "judge": judge["selected"],
+        "judge_price": judge_price,
+        "verified_at": doc["verified_at"],
+        "ceiling": doc["budget_ceiling_usd"],
+    }
+
+
 def _contexts() -> Dict[str, Dict[str, Any]]:
     """The diagram slots and data each page needs — identical in both
     languages, which is what keeps the two versions showing the same
@@ -185,6 +219,7 @@ def _contexts() -> Dict[str, Dict[str, Any]]:
             "domain_activity_svg": _inline_svg("diagnose_activity"),
             "g4_activity_svg": _inline_svg("g4_planner_evidence_rank_activity"),
             "g4_sequence_svg": _inline_svg("g4_llm_tool_choice_sequence"),
+            "models": _models(),
         },
         "recovery.html": {
             "sequence_svg": _inline_svg("hero_sequence"),
