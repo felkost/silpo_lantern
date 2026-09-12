@@ -1,4 +1,4 @@
-"""T12/T13/T13b/T13c (G5+G6 stage spec): `finalize_write_outcome` verifies
+"""T12/T13/T13b/T13c: `finalize_write_outcome` verifies
 identity, not merely a matching total, and turns a raising `canonical_diff`
 into `unverified` rather than letting the exception escape.
 """

@@ -1,6 +1,6 @@
 {
   "case_id": "GD-01",
-  "scenario": "Exact single candidate, live-recorded: the hero flow replays a real author-approved run against mcp.silpo.ua -- read chain, live planner and explainer, three consented writes each proved by its own read-back, ending `verified` with the order.cost.min blocker cleared. The live capture measured D68's loyalty discount three more times (178.98 -> 161.08, 15.99 -> 14.39, 1.49 -> 1.34), which is why two rounds were needed before the third cleared the block.",
+  "scenario": "Exact single candidate, live-recorded: the hero flow replays a real author-approved run against mcp.silpo.ua -- read chain, live planner and explainer, three consented writes each proved by its own read-back, ending `verified` with the order.cost.min blocker cleared. The live capture measured the loyalty discount three more times (178.98 -> 161.08, 15.99 -> 14.39, 1.49 -> 1.34), which is why two rounds were needed before the third cleared the block.",
   "gd_ref": "GD-01",
   "input": {
     "fixture_id": "replay_hero_live_20260909"

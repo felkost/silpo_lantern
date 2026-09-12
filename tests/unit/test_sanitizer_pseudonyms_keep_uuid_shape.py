@@ -1,17 +1,17 @@
-"""G9 (1.4): the sanitizer pseudonymises stable identifiers (`id`,
+"""the sanitizer pseudonymises stable identifiers (`id`,
 `productId`, `companyId`, `branchId`, `shoppingCartId`) so a fixture never
 carries a real catalogue or account id. It emitted plain counters --
 `test_id_005`, `test_company_006` -- which are not UUID-shaped.
 
 `domain/evidence_gate.gate_candidates` requires `product_uuid`,
-`company_id` and `branch_id` to be UUID-shaped (D-G5-03: they are the
+`company_id` and `branch_id` to be UUID-shaped (they are the
 three arguments the write tool's own inputSchema demands per product). So
 every candidate in a SANITIZED bundle was rejected by the Evidence Gate on
 replay, and the graph reached `no_action_available` with no receipts --
 a bundle that cannot pass its own gate.
 
 Found while synthesizing GD-03's bundle offline, which is exactly where it
-was cheapest to find: the same defect would have surfaced during G9.1's
+was cheapest to find: the same defect would have surfaced.1's
 LIVE recording, after the live LLM and MCP spend, on a bundle that could
 never replay.
 

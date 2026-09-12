@@ -1,7 +1,7 @@
-"""T26 (G9 spec, G9.7): the RG coverage map may not claim anything it
+"""the RG coverage map may not claim anything it
 cannot back.
 
-This is the test the G8+G9 kickoff audit's own finding motivates: five RG
+This is the test the kickoff audit own finding motivates: five RG
 rows had been claimed `pass` on the strength of topically-related tests
 that did not exercise the rubric. A coverage map is worth less than
 nothing if it can say `pass` without a run artefact -- it converts an
@@ -138,7 +138,7 @@ def test_an_integration_only_row_is_blocked_without_a_database() -> None:
 def test_a_pass_row_names_an_artefact_git_tracks() -> None:
     """A tracked file may only reference tracked files (CLAUDE.md §4): a
     `run_artefact` under a gitignored directory is a claim a fresh clone
-    cannot check. Caught at G10 delivery B, where the first recorder wrote
+    cannot check. Caught delivery B, where the first recorder wrote
     into `datasets/evidence/`, which `.gitignore` excludes."""
     for row in _rows():
         if row["status"] != "pass":

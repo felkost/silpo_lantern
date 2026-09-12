@@ -1,7 +1,7 @@
 """Process entry point: `python -m apps.api` (what `make run` invokes).
 
 Windows needs this launcher rather than a plain `uvicorn apps.api.main:app`.
-Measured at G1+G2 stage close, against the installed uvicorn 0.52:
+Measured stage close, against the installed uvicorn 0.52:
 
 - `uvicorn.Server.run()` calls `asyncio_run(...)` with the loop factory from
   `config.get_loop_factory()`, and `uvicorn/loops/asyncio.py` returns
@@ -26,13 +26,13 @@ import uvicorn
 
 
 def main() -> None:
-    # G7 (IV-07): Render injects its own $PORT and expects a bind on
+    # Render injects its own $PORT and expects a bind on
     # 0.0.0.0 -- `LANTERN_API_PORT`/`LANTERN_API_HOST` stay the local-dev
     # defaults (127.0.0.1:8000) so nothing about a plain `make run`
     # changes; $PORT wins only when Render (or any host following the
     # same convention) actually sets it.
     on_render = "PORT" in os.environ
-    # G10 (D89): behind Render's proxy `request.client.host` is the proxy
+    # behind Render's proxy `request.client.host` is the proxy
     # unless X-Forwarded-For is trusted -- and the per-IP session cap would
     # then be one shared cap for everyone. Local dev keeps uvicorn's default.
     proxy: Dict[str, Any] = {"forwarded_allow_ips": "*"} if on_render else {}

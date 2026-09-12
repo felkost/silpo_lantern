@@ -1,9 +1,9 @@
-"""D-G5-05: `ToolRegistry.tool_schema_hashes` returns per-tool
+"""`ToolRegistry.tool_schema_hashes` returns per-tool
 (reviewed_hash, live_hash, is_quarantined) -- the exact shape the Write
 Guard needs -- distinct from the whole-array `schema_hash` drift tripwire.
 
-G7 (D-G7-08): points at `tools_list_2026-09-07.json`, not the
-`...-09-05` fixture -- a live write attempt (G7 stage plan section 4)
+points at `tools_list_2026-09-07.json`, not the
+`...-09-05` fixture -- a live write attempt (the stage plan)
 found `silpo_add_or_update_cart_products`'s description had drifted from
 the 09-05 snapshot (clarifying prose only, confirmed structurally
 identical `inputSchema`), and `reviewed_tools.json` was regenerated from

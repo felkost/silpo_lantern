@@ -58,7 +58,7 @@ RecoveryStatus = Literal[
     "planned",
     "awaiting_consent",
     "aborted",
-    # G5+G6 additions: "consented" is set once the write guard authorizes
+    # an earlier stage additions: "consented" is set once the write guard authorizes
     # (never before -- an LLM never sets this), "written" once the write
     # call itself returns, "verified"/"unverified" once the independent
     # read-back settles the outcome (plan section 11: success from MCP is
@@ -96,14 +96,14 @@ class RecoveryState(TypedDict):
     write_rounds_used: int
     mcp_attempts_used: int
     tokens_used: int
-    # G10 (D90): priced from the same usage `tokens_used` counts; both are
+    # priced from the same usage `tokens_used` counts; both are
     # written by `apps/api/routes.py` after each `/events` run, from the
     # provider's own usage block -- never estimated.
     llm_cost_usd: float
     deadline: datetime
-    # G5+G6 additions. `consent_action_id` is the ONLY thing the API sets
+    # an earlier stage additions. `consent_action_id` is the ONLY thing the API sets
     # before resuming the graph (via `graph.update_state`, never via the
-    # interrupt's own resume payload -- D-G5-08 requires the guard to
+    # interrupt's own resume payload requires the guard to
     # trust nothing from the resume path). It is a bare pointer; the
     # write guard node loads the actual `ConsentRecord` from Neon by this
     # id and only then populates `consent` below for the write node to use.
@@ -112,13 +112,13 @@ class RecoveryState(TypedDict):
     consent: Optional[ConsentRecord]
     write_response: Optional[Dict[str, Any]]
     receipt: Optional[Receipt]
-    # G8 (D51/D-G8-06): every COMPENSABLE receipt seen this session,
-    # oldest first. The D42 retry branch clears `receipt` between rounds
+    # every COMPENSABLE receipt seen this session,
+    # oldest first. The an earlier decision retry branch clears `receipt` between rounds
     # so it is not re-emitted -- without a separate accumulator, only the
     # LAST write would ever be undoable, and a guest could retain up to
     # `MAX_WRITE_ROUNDS - 1` items with no offer at all.
     compensable: List[Receipt]
-    # G8 (D51/D-G8-08): a refused COMPENSATION is non-terminal -- unlike
+    # a refused COMPENSATION is non-terminal -- unlike
     # the add path, whose refusal stays fail-closed and permanent
     # (`submit_consent` only accepts a new consent at `awaiting_consent`,
     # and `aborted` is a dead end). Bounded to a single re-offer so a
@@ -183,7 +183,7 @@ def has_write_reserve(
     mcp_reads_needed: int = 2,
     mcp_read_timeout_seconds: int = 10,
 ) -> bool:
-    """G5+G6 (D-G5-20): plan section 6.3 -- "before write, a reserve of
+    """plan section 6.3 -- "before write, a reserve of
     20s and two reads must remain; otherwise do not start the write." This
     is a distinct check from `enforce_budget`: it looks *forward* at what
     the write path is about to need (the write call itself plus the
@@ -249,7 +249,7 @@ _RECOVERY_STATE_MSGPACK_MODULES = [
     (ChannelSnapshot.__module__, ChannelSnapshot.__name__),
     (ChannelComparisonRow.__module__, ChannelComparisonRow.__name__),
     (SearchIntent.__module__, SearchIntent.__name__),
-    # G5+G6 additions -- without these, the checkpointer's default
+    # an earlier stage additions -- without these, the checkpointer's default
     # serializer degrades a consent/receipt/diff crossing the interrupt
     # boundary exactly as it did for ActionProposal before it was listed
     # here (measured live, see this list's own header comment).

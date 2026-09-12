@@ -1,4 +1,4 @@
-"""G9 (GD-05): the runner needs a money assertion, or a discount case can
+"""the runner needs a money assertion, or a discount case can
 say nothing about discounts.
 
 GD-05's whole subject is that `minOrderCost` is compared against

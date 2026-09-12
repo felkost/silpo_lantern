@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://lantern.local/schemas/golden-case.json",
   "title": "Golden case",
-  "description": "Plan section 21.2 (G1: schema; G2-G6: needed variants; G8: full 15-case set + RG-01..07). Amended at G9 (D60): mode/source_id/pii_status/allowed_trajectories/allowed_tools/forbidden_tools/rubric added.",
+  "description": "Plan section 21.2 (schema; the early variants; full 15-case set + RG-01..07). Amended at mode/source_id/pii_status/allowed_trajectories/allowed_tools/forbidden_tools/rubric added.",
   "type": "object",
   "properties": {
     "case_id": {
@@ -38,16 +38,16 @@
     "mode": {
       "type": "string",
       "enum": ["replay", "fake_backend"],
-      "description": "G9 (D60): which harness runs this case. `replay` goes through the real compiled graph via graph/replay.py; `fake_backend` uses tests/support/write_backend.py. The runner dispatches on this field, never infers it."
+      "description": "which harness runs this case. `replay` goes through the real compiled graph via graph/replay.py; `fake_backend` uses tests/support/write_backend.py. The runner dispatches on this field, never infers it."
     },
     "source_id": {
       "type": "string",
-      "description": "G9 (D60): provenance of this case's data -- a live-recording id, a seeded-generator run id, or a hand-authored label. Distinct from `gd_ref`, which cross-references plan numbering, not data origin."
+      "description": "provenance of this case's data -- a live-recording id, a seeded-generator run id, or a hand-authored label. Distinct from `gd_ref`, which cross-references plan numbering, not data origin."
     },
     "pii_status": {
       "type": "string",
       "enum": ["sanitized", "synthetic", "none"],
-      "description": "G9 (D60): whether this case's input carries pseudonymised live data (sanitized), generated data with no real-guest origin (synthetic), or carries no PII-bearing fields at all (none)."
+      "description": "whether this case's input carries pseudonymised live data (sanitized), generated data with no real-guest origin (synthetic), or carries no PII-bearing fields at all (none)."
     },
     "allowed_trajectories": {
       "type": "array",
@@ -55,21 +55,21 @@
         "type": "array",
         "items": {"type": "string"}
       },
-      "description": "G9 (D60): the set of node-name sequences this case accepts as a correct path through the graph. Feeds TrajectoryAdherence (plan section 13.3), which is a distance to the NEAREST allowed trajectory -- omitted when a case has no trajectory expectation (e.g. a fake_backend safety case)."
+      "description": "the set of node-name sequences this case accepts as a correct path through the graph. Feeds TrajectoryAdherence (plan section 13.3), which is a distance to the NEAREST allowed trajectory -- omitted when a case has no trajectory expectation (e.g. a fake_backend safety case)."
     },
     "allowed_tools": {
       "type": "array",
       "items": {"type": "string"},
-      "description": "G9 (D60): MCP tool names this case's trajectory may call. Omitted when not meaningful for the case."
+      "description": "MCP tool names this case's trajectory may call. Omitted when not meaningful for the case."
     },
     "forbidden_tools": {
       "type": "array",
       "items": {"type": "string"},
-      "description": "G9 (D60): MCP tool names this case's trajectory must never call -- e.g. the remove tool on an ordinary add-path case. Omitted when not meaningful for the case."
+      "description": "MCP tool names this case's trajectory must never call -- e.g. the remove tool on an ordinary add-path case. Omitted when not meaningful for the case."
     },
     "rubric": {
       "type": "string",
-      "description": "G9 (D60): one-line pass criterion in prose, for cases whose correctness is not fully captured by expected_outcome's structural equality (e.g. an RG fault-injection case's rubric)."
+      "description": "one-line pass criterion in prose, for cases whose correctness is not fully captured by expected_outcome's structural equality (e.g. an RG fault-injection case's rubric)."
     }
   },
   "required": ["case_id", "scenario", "input", "expected_outcome", "mode", "source_id", "pii_status"],

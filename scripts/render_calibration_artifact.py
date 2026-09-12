@@ -1,4 +1,4 @@
-"""G9 follow-up (T20): renders the labelling sheet as a page that can be
+"""renders the labelling sheet as a page that can be
 published as an Artifact, so the labels are stored server-side and can be
 read back directly.
 
@@ -12,7 +12,7 @@ hand. Neither is the labeller's problem to solve.
 The pairs come from `judge_calibration_pairs.json`, and the `expected`
 field and both `origin` fields are DROPPED here: the sheet must not carry
 which member was constructed or which model wrote which, or the labels
-stop being an independent reference point (D-G9-09).
+stop being an independent reference point.
 """
 
 from __future__ import annotations
@@ -180,7 +180,7 @@ def build_page(pairs: List[Dict[str, Any]]) -> str:
 <div class="wrap">
 <header>
   <h1>Розмітка пар для калібрування судді</h1>
-  <p class="sub">{len(pairs)} пар · Lantern · G9, T20</p>
+  <p class="sub">{len(pairs)} пар · Lantern</p>
 </header>
 <div class="brief">
   <span><b>Оберіть текст, який краще відповідає питанню над парою.</b>

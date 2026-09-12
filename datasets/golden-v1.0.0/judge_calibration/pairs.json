@@ -347,5 +347,5 @@
       "expected": null
     }
   ],
-  "$comment": "T20 judge-calibration set. Built by scripts/build_judge_calibration_set.py with the recorded seed; every text is a real model output (UA-Eval generations from G4, or a live guest_text_uk from a tracked replay bundle). 16 pairs are NATURAL -- two different models on the same prompt, nobody knows the better one -- and 7 are CONSTRUCTED by DELETING the amount clause from a real explainer sentence, so the better member follows from the construction. Tracked rather than left in the gitignored evidence directory because the human labels beside it cannot be regenerated, and an agreement statistic nobody can re-derive is not a measurement."
+  "$comment": "T20 judge-calibration set. Built by scripts/build_judge_calibration_set.py with the recorded seed; every text is a real model output (UA-Eval generations, or a live guest_text_uk from a tracked replay bundle). 16 pairs are NATURAL -- two different models on the same prompt, nobody knows the better one -- and 7 are CONSTRUCTED by DELETING the amount clause from a real explainer sentence, so the better member follows from the construction. Tracked rather than left in the gitignored evidence directory because the human labels beside it cannot be regenerated, and an agreement statistic nobody can re-derive is not a measurement."
 }

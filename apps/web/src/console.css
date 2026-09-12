@@ -1,6 +1,6 @@
-/* G10 delivery C: the only stylesheet. Imported from main.tsx, never from
+/* The only stylesheet. Imported from main.tsx, never from
    App.tsx, so Vitest (which never loads main.tsx) stays out of the CSS
-   pipeline. Colour family echoes Silpo's surfaces (D-G10-07: echo, never
+   pipeline. Colour family echoes Silpo's surfaces (echo, never
    imitate -- no logo, no brand typography). Mono is semantics here: what
    is set in it was measured or computed, not written. */
 
@@ -235,11 +235,20 @@ code,
 }
 
 .cart-lines li {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
   gap: 12px;
   padding: 5px 0;
   border-top: 1px solid var(--hairline);
+}
+
+/* like a till receipt: the amount column never wraps and its digits line up */
+.cart-amount {
+  white-space: nowrap;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
 }
 
 .cart-lines li:first-child {
@@ -389,14 +398,111 @@ code,
   cursor: pointer;
 }
 
-.help p {
+.help-body,
+.help-body p,
+.terms p {
   margin: 4px 0 0;
   color: var(--ink-2);
+}
+
+.terms p i {
+  font-style: italic;
+  color: var(--ink);
 }
 
 .panel .uk {
   font-size: 13px;
   margin: 4px 0 6px;
+}
+
+/* session actions: a slim strip above the card, not a card of its own --
+   compact buttons, glyph + label, a native tooltip on hover */
+.session-actions {
+  display: inline-flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 0 0 10px;
+  padding: 4px;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--card) 60%, transparent);
+}
+
+.small {
+  padding: 5px 10px;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.2;
+  border-radius: 7px;
+}
+
+.guest .session-actions .small {
+  border-color: transparent;
+}
+
+.guest .session-actions .small:hover {
+  border-color: var(--hairline);
+}
+
+.icon {
+  flex: none;
+  opacity: 0.85;
+}
+
+/* measured-earlier rows: identifier and value on one line, sample on the next */
+
+.metrics li {
+  padding: 8px 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.metrics li:first-child {
+  border-top: 0;
+}
+
+.metric-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.metric-sample {
+  margin-top: 2px;
+}
+
+.metrics .uk {
+  margin: 4px 0 2px;
+  font-size: 13px;
+}
+
+.measured-sub {
+  margin: 14px 0 4px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.validation-row {
+  padding: 4px 0;
+}
+
+.validation-row .uk {
+  margin: 2px 0 0;
+}
+
+/* claim evidence: one fact per row, the field name first, the value after it */
+
+.rows li {
+  padding: 3px 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.rows li:first-child {
+  border-top: 0;
 }
 
 /* the stage feed: one row per observed node, io as a coloured badge */

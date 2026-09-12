@@ -1,4 +1,4 @@
-// G10: the one control on the shared header -- a sun/moon switch, no
+// the one control on the shared header -- a sun/moon switch, no
 // caption (the author's call). Writes `data-theme` on the root so an
 // explicit choice wins over `prefers-color-scheme` in both directions
 // (console.css guards its dark block on `:not([data-theme="light"])`).

@@ -1,4 +1,4 @@
-"""G9 (D73): the key a bundle stores for a taped call must equal the key
+"""the key a bundle stores for a taped call must equal the key
 `replay()` computes for that same call.
 
 `_build_draft_from_tape` ran the taped ARGS through `sanitize_payload`,

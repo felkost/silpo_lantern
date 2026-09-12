@@ -53,7 +53,7 @@ class PlannerVisibleTool:
 
 
 def _strip_nested_descriptions(node: Any) -> Any:
-    """G8 (D-G8-09): a tool's own description is untrusted input at EVERY
+    """a tool's own description is untrusted input at EVERY
     level, not only the top level -- the top-level description was
     already replaced by a human paraphrase, but `inputSchema` used to
     pass through raw, and a server-authored imperative inside a PROPERTY

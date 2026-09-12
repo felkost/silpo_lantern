@@ -1,4 +1,4 @@
-"""T13 (G9 spec): `ReadbackCoverage` must not be implemented as
+"""`ReadbackCoverage` must not be implemented as
 "verification succeeded" -- a claim whose read-back was unreachable still
 counts as covered (an attempt was made), and its receipt correctly reads
 `unverified`, never a fabricated success (DR-12).

@@ -1,6 +1,6 @@
-"""T10/T11 (G8 stage spec): the ordinary add path cannot reach the
+"""T10/T11: the ordinary add path cannot reach the
 compensation-only remove tool, proven over all 40 live tool names -- not
-`reviewed_tools.json`'s 39 (D56/D52: `silpo_create_shopping_cart` stays
+`reviewed_tools.json`'s 39 (`silpo_create_shopping_cart` stays
 permanently quarantined and is deliberately the one name the reviewed
 baseline omits; parametrising over the reviewed set alone would be the
 one tool this sweep never tries).

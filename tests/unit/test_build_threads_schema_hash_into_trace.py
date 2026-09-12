@@ -6,7 +6,7 @@ that wiring end to end without needing live tracing enabled, by spying on
 `traced_llm_call` itself rather than on a real LangSmith run.
 
 The set of traced calls is asserted exactly, not by membership: it grew
-from two to three when the write got a span of its own (D-G5-13), and it
+from two to three when the write got a span of its own, and it
 had been two for a whole stage during which the one call that changes a
 guest's cart was the only step emitting nothing. An exact set is what
 makes the next such omission fail here instead of going unnoticed.
@@ -137,7 +137,7 @@ def test_trace_tags_reach_both_the_planner_and_explainer_call() -> None:
 
 
 def test_the_production_graph_tags_every_traced_call() -> None:
-    """D22's lesson from G4, and it was lost again: `production.py` was
+    """the lesson, and it was lost again: `production.py` was
     written without `trace_tags`, so every live run of this stage — six
     real cart writes included — went to LangSmith indistinguishable from
     any other trace in the project.

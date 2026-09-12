@@ -1,9 +1,9 @@
-"""T14 (G8 stage spec): the compensation offer, proven through the REAL
+"""T14: the compensation offer, proven through the REAL
 compiled graph at the PRODUCTION `MAX_WRITE_ROUNDS` -- not patched down to
 1. The first draft of this stage's design hid the trigger's own
 unreachability by patching the constant; this harness runs three real
 add rounds, each falling short of the blocker by the same discount
-mechanism D40/D48 measured live (the cart applies a lower price than the
+mechanism an earlier decision measured live (the cart applies a lower price than the
 catalogue quoted), so the compensation offer is exercised as it will
 actually ship.
 
@@ -30,7 +30,7 @@ _NOW = datetime(2026, 9, 8, 12, 0, 0, tzinfo=timezone.utc)
 _TOOL_HASH = "reviewed-hash-abc"
 _TARGET_PRODUCT_ID = "11111111-1111-1111-1111-111111111111"
 _CATALOG_PRICE = 1.00  # what find_products_batch quotes
-_ACTUAL_PRICE = 0.80  # what the cart actually applies -- D40/D48's discount
+_ACTUAL_PRICE = 0.80  # what the cart actually applies -- the discount
 
 _FIND_PRODUCTS_RESPONSE = {
     "queries": [
@@ -307,7 +307,7 @@ def test_the_offer_restores_the_original_quantity() -> None:
 
 
 def test_consent_action_id_is_cleared_after_the_offer() -> None:
-    """D-G8-08 (found in adversarial review): without clearing it, the
+    """an earlier decision (found in adversarial review): without clearing it, the
     next `GET /events`-equivalent resume would re-enter `write_guard`
     with the ALREADY-CONSUMED consent from the write being compensated,
     refusing with 'consent has already been consumed' before the guest
@@ -351,7 +351,7 @@ class _SingleAddBackend(_RealisticFakeBackend):
     """A brand-new-line add write (existing quantity 0), so its
     compensation is the REMOVE-form -- and a simulated crash between the
     write's own side effect and the read-back exercises the exact window
-    D-G8-04 fixed (`KeyError` on `product["quantity"]` for a payload that
+    an earlier decision fixed (`KeyError` on `product["quantity"]` for a payload that
     has none)."""
 
     def __init__(self) -> None:
@@ -374,7 +374,7 @@ class _SingleAddBackend(_RealisticFakeBackend):
 
 
 def test_remove_form_crash_before_readback_reconciles_without_a_keyerror() -> None:
-    """Isolates the exact window D-G8-04 fixed: a remove-form
+    """Isolates the exact window an earlier decision fixed: a remove-form
     compensation's `canonical_args` carries no `quantity` key, so reading
     `product["quantity"]` unconditionally raised `KeyError` after the
     journal row was claimed and before `mark_action` -- stranding it

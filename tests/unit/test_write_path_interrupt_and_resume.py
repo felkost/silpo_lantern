@@ -1,4 +1,4 @@
-"""T14/T15/T15b (G5+G6 stage spec): the compiled graph pauses at
+"""T14/T15/T15b: the compiled graph pauses at
 `write_guard` under a real checkpointer, resumes correctly from a FRESH
 graph object using only what a real API process would have (the consent
 recorded in "Neon" -- here a fake dict, never the interrupt's own resume
@@ -306,7 +306,7 @@ def test_t15b_crash_after_write_before_readback_reconciles_on_resume() -> None:
     but before the read-back completes -- `write_and_readback_node` is
     the node LangGraph re-runs on resume (measured: `interrupt_before`
     does not protect it), so its own `claim_and_consume` call is what must
-    prevent a second write, not the guard before it (D-G5-07b/07c)."""
+    prevent a second write, not the guard before it (an earlier decision/07c)."""
     backend = _FakeWriteBackend()
     backend.crash_readback_once = True
     saver = InMemorySaver()

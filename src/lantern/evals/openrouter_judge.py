@@ -1,4 +1,4 @@
-"""G9 (D-G9-03): the DeepEval judge wrapper. Implements `DeepEvalBaseLLM`'s
+"""the DeepEval judge wrapper. Implements `DeepEvalBaseLLM`'s
 four abstract methods (`generate`, `a_generate`, `get_model_name`,
 `load_model`) against the project's existing OpenRouter-bound
 `ChatOpenAI` pattern (`graph/llm_adapter.py`'s `build_eval_judge_llm`) --
@@ -6,8 +6,8 @@ a fixed path and class name (not "or equivalent"), so this is the ONE
 place a judge model is constructed, never a second HTTP client the
 project's single OpenRouter integration would otherwise drift from.
 
-Layer: application (`tests/unit/test_layering.py`'s `LAYER_OF["evals"]`,
-D-G9-06) -- it calls the application-layer OpenRouter adapter pattern and
+Layer: application (`tests/unit/test_layering.py`'s `LAYER_OF["evals"]`)
+-- it calls the application-layer OpenRouter adapter pattern and
 is consumed only from `tests/evals/`.
 """
 

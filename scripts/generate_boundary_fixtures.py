@@ -63,7 +63,7 @@ def _base_cart(rng: random.Random, cart_id: str) -> Dict[str, Any]:
                 ],
             }
         ],
-        # G9: every seeded cart carries a timeslot. Without one,
+        # every seeded cart carries a timeslot. Without one,
         # `collect_and_gate_node` aborts with "cart has no active
         # timeslot" -- product availability is slot-bound -- so a
         # timeslot-less fixture is structurally incapable of driving the
@@ -246,7 +246,7 @@ def _update_manifest(
     manifest["generator_version"] = GENERATOR_VERSION
     manifest["generated_at"] = generated_at
     manifest["seed"] = seed
-    # G9: MERGE, never replace. The manifest also carries entries this
+    # MERGE, never replace. The manifest also carries entries this
     # generator does not produce -- recorded/sanitized live captures, the
     # replay BUNDLE, and the golden-case fixtures added by hand -- and
     # replacing the list wholesale silently dropped all of them. A

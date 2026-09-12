@@ -3,9 +3,9 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 // Plan section 7.1: "Frontend | React / Vite / TS". The recovery card
-// (Diagnosis+disclosure / Consent / Receipt) landed at G5+G6.
+// (Diagnosis+disclosure / Consent / Receipt) landed.
 //
-// D-G5-11: the interface gate is Vitest component tests + a pytest
+// the interface gate is Vitest component tests + a pytest
 // API-negative suite, not Playwright -- the plan's own pass criterion
 // ("a write is impossible before exact consent") is an API property a
 // request tests more directly than a browser driver does.

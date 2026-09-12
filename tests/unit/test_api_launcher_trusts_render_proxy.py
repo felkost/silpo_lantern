@@ -1,4 +1,4 @@
-"""G10 (D89): behind Render's proxy `request.client.host` is the proxy
+"""behind Render's proxy `request.client.host` is the proxy
 itself unless uvicorn trusts `X-Forwarded-For` -- and then the per-IP
 session cap would be one shared cap for every guest. The launcher trusts
 the proxy only when `$PORT` is set (Render's own convention, the same

@@ -1,4 +1,4 @@
-"""G8 (D51, spec section 6.4): after a COMPENSATION write, the blocker
+"""after a COMPENSATION write, the blocker
 status reported to the guest is re-derived from the read-back cart's own
 CURRENT validations, not the stale pre-write `Diagnosis` -- a compensation
 that drops `productsTotal` below a DIFFERENT threshold must not report the

@@ -1,4 +1,4 @@
-"""T6 (G8 stage spec, D-G8-09): a tool's own description is untrusted
+"""a tool's own description is untrusted
 input at EVERY level, not only the top level. `tool_view.py`'s own
 `PLANNER_TOOL_PARAPHRASES` already replaces the top-level description,
 but `build_planner_tool_view` passed `inputSchema` through raw --
@@ -6,7 +6,7 @@ but `build_planner_tool_view` passed `inputSchema` through raw --
 prompt, so a server-authored imperative inside a PROPERTY description
 reached the planner today (measured: `silpo_get_product_details`'s
 `slug` property literally says "MUST be taken from ... Never construct
-from name" -- and the four G8.2-reviewed tools carry similar imperatives
+from name" -- and the four reviewed tools carry similar imperatives
 in their weighted-unit and min-order-cost fields).
 
 Parametrised over both tracked fixtures, since the drift itself only

@@ -6,9 +6,9 @@ back to the `RawCandidate` it was built from, using the exact same
 `resolve_product_id` the gate itself uses for matching -- one id-resolution
 rule, not two that could quietly diverge.
 
-G5+G6 (D-G5-02/D-G5-02b): the write tool uses REPLACE semantics
+the write tool uses REPLACE semantics
 (`addQuantity: false` means "set the line's quantity to this value", not
-"add this many more") -- measured live (D11): a quantity change from 5 to
+"add this many more") -- measured live: a quantity change from 5 to
 6 with `addQuantity: false` produced a delta of exactly one unit price,
 not six. So for a product already in the cart at quantity `M`,
 `quantity_increment` (what the guest is being asked to add) yields a wire
@@ -26,8 +26,8 @@ from src.lantern.domain.models import ActionProposal, Cart, EvidenceTuple, Money
 
 
 def _to_json_number(value: Decimal) -> Union[int, float]:
-    """`canonical_args` may contain only JSON-native scalars (G5+G6,
-    D-G5-02c) -- measured that `canonical_json` renders a `Decimal` as a
+    """`canonical_args` may contain only JSON-native scalars --
+    measured that `canonical_json` renders a `Decimal` as a
     JSON *string*, which would make the hashed object diverge from the
     number actually sent on the wire. A whole quantity becomes a plain
     `int`; a weighted-goods fraction (e.g. `0.5`) becomes a `float`, which
@@ -82,7 +82,7 @@ def build_action_proposals(
     figure, or the product is weighted and that total is not a multiple
     of its `step` -- both accepted by the write tool's own schema, both
     documented by the tool itself as surfacing only later, as a cart
-    validation the guest never consented to (G5+G6, D-G5-03). Dropping on
+    validation the guest never consented to. Dropping on
     stock is what keeps the new arithmetic honest: closing a large gap
     with a cheap product needs many units, and a candidate that cannot
     supply them is not offered at all rather than offered uselessly.

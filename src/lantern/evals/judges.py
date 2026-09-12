@@ -1,4 +1,4 @@
-"""G9 (G9.5): the three offline DeepEval judges, and the boundary they
+"""the three offline DeepEval judges, and the boundary they
 are not allowed to cross.
 
 Plan §13.3 names three: `RecoveryExplanationQuality`,

@@ -48,7 +48,7 @@ apps/web/*.tsbuildinfo
 # --- Notebook outputs: raw cart/session data can carry PII ---
 # Ignore outputs, keep the notebook source itself tracked.
 notebooks/.ipynb_checkpoints/
-# stripped via nbstripout pre-commit once configured at G1; until then,
+# stripped via nbstripout pre-commit once configured; until then,
 # outputs are cleared by hand before every commit that touches this file.
 
 # --- Raw fixture captures: sanitized copies only reach the repo ---

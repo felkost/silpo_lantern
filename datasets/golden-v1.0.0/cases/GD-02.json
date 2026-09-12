@@ -1,6 +1,6 @@
 {
   "case_id": "GD-02",
-  "scenario": "The fix takes two items across two consent rounds, because the cart applies ~10% less than the catalogue quoted (D68, measured live at G8-5). Round 1 lands 449.10 against an expected 499.00 and leaves a 49.90 residual; round 2 closes it. Both writes are verified receipts carrying the price-difference note -- neither is downgraded to unverified for a discrepancy the tolerance was built to absorb.",
+  "scenario": "The fix takes two items across two consent rounds, because the cart applies ~10% less than the catalogue quoted (measured live). Round 1 lands 449.10 against an expected 499.00 and leaves a 49.90 residual; round 2 closes it. Both writes are verified receipts carrying the price-difference note -- neither is downgraded to unverified for a discrepancy the tolerance was built to absorb.",
   "gd_ref": "GD-02",
   "input": {
     "fixture_id": "replay_gap_needs_two_items"
@@ -34,5 +34,5 @@
   ],
   "allowed_tools": ["silpo_add_or_update_cart_products"],
   "forbidden_tools": ["silpo_remove_cart_products"],
-  "rubric": "A verified write that leaves the blocker standing opens exactly one further round (D42), never silently reports success. The second round consents against the cart the FIRST write left, not the original snapshot, and the two writes accumulate rather than replacing one another."
+  "rubric": "A verified write that leaves the blocker standing opens exactly one further round, never silently reports success. The second round consents against the cart the FIRST write left, not the original snapshot, and the two writes accumulate rather than replacing one another."
 }

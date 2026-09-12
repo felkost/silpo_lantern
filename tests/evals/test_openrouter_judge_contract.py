@@ -1,4 +1,4 @@
-"""T18 (G9 spec, D-G9-03): `OpenRouterJudge` implements `DeepEvalBaseLLM`'s
+"""`OpenRouterJudge` implements `DeepEvalBaseLLM`'s
 four abstract methods (`generate`, `a_generate`, `get_model_name`,
 `load_model`) against the project's existing OpenRouter-bound
 `ChatOpenAI` pattern (`graph/llm_adapter.py`'s `build_eval_judge_llm`),

@@ -26,7 +26,7 @@
     "/session/{session_id}": {
       "delete": {
         "summary": "Delete Session",
-        "description": "G10 (A-G10-04): logout. Deletes the guest's token row -- the only\ncredential this session holds -- and clears the cookie; a following\n`/events` is refused as unauthorized. The session row and its\nconsents/receipts stay as the audit record they are.",
+        "description": "logout. Deletes the guest's token row -- the only\ncredential this session holds -- and clears the cookie; a following\n`/events` is refused as unauthorized. The session row and its\nconsents/receipts stay as the audit record they are.",
         "operationId": "delete_session_session__session_id__delete",
         "parameters": [
           {
@@ -42,6 +42,46 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/{session_id}/restart": {
+      "post": {
+        "summary": "Restart Session",
+        "description": "\u00ab\u041f\u0435\u0440\u0435\u0432\u0456\u0440\u0438\u0442\u0438 \u0437\u043d\u043e\u0432\u0443\u00bb: a fresh recovery run for the same guest without\na second login. One run is one session -- the graph's checkpoint is\nkeyed by the session -- so this creates a new session row, moves the\ncredential onto it and points the cookie at it. The old session keeps\nits consents and receipts as the audit record they are. The new\nsession's first `/events` is a fresh graph start and counts against\nthe daily LLM ceiling like any other.",
+        "operationId": "restart_session_session__session_id__restart_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateSessionResponse"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -147,7 +187,7 @@
     "/evidence": {
       "get": {
         "summary": "Evidence",
-        "description": "G10 (claims 1 and 5): what a jury may be shown -- the tracked\nmetrics with `n`, interval and caveat, and the sanitised disclosure\nobservation. On `router`, not `app`: anything registered after the\nroot mount in `main.py` is shadowed by it.",
+        "description": "what a jury may be shown -- the tracked\nmetrics with `n`, interval and caveat, and the sanitised disclosure\nobservation. On `router`, not `app`: anything registered after the\nroot mount in `main.py` is shadowed by it.",
         "operationId": "evidence_evidence_get",
         "responses": {
           "200": {
@@ -168,7 +208,7 @@
     "/auth/start": {
       "get": {
         "summary": "Auth Start",
-        "description": "Sends THIS guest to Silpo's own login (phone + OTP). The session\ncomes from the cookie `POST /session` set (G10, A-G10-04) -- never from\nthe URL, which the browser records -- because the token that comes\nback belongs to one guest, and the callback has to know whose session\nto store it against.",
+        "description": "Sends THIS guest to Silpo's own login (phone + OTP). The session\ncomes from the cookie `POST /session` set -- never from\nthe URL, which the browser records -- because the token that comes\nback belongs to one guest, and the callback has to know whose session\nto store it against.",
         "operationId": "auth_start_auth_start_get",
         "responses": {
           "200": {
@@ -329,7 +369,7 @@
           "action_id"
         ],
         "title": "ConsentRequest",
-        "description": "D-G5-18/T18: the guest picks an `action_id` only. `args_hash` and\n`state_hash` are never accepted from the client -- the server\nrecomputes both from the proposal and cart it already holds, so a\ntampered value on the wire has nothing to overwrite."
+        "description": "the guest picks an `action_id` only. `args_hash` and\n`state_hash` are never accepted from the client -- the server\nrecomputes both from the proposal and cart it already holds, so a\ntampered value on the wire has nothing to overwrite."
       },
       "CreateSessionResponse": {
         "properties": {
@@ -358,7 +398,7 @@
           "session_id"
         ],
         "title": "CreateSessionResponse",
-        "description": "`POST /session` only creates the session row and returns its id --\nthe graph does not run yet (D30: real live push). A new session has\nno guest token yet, so `authorized` is False and `auth_url` is where\nthe client sends the guest to log in (phone + OTP at Silpo's own\npage); `GET /session/{id}/events` comes after that."
+        "description": "`POST /session` only creates the session row and returns its id --\nthe graph does not run yet (real live push). A new session has\nno guest token yet, so `authorized` is False and `auth_url` is where\nthe client sends the guest to log in (phone + OTP at Silpo's own\npage); `GET /session/{id}/events` comes after that."
       },
       "HTTPValidationError": {
         "properties": {

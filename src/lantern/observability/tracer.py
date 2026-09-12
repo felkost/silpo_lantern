@@ -121,7 +121,7 @@ def redact_explainer_input(kwargs: Mapping[str, Any]) -> Dict[str, Any]:
 
 
 def redact_write_input(kwargs: Mapping[str, Any]) -> Dict[str, Any]:
-    """What the WRITE call traces (D-G5-13). Every identifier in
+    """What the WRITE call traces. Every identifier in
     `canonical_args` is dropped: the cart id and the product ids identify a
     real person's real basket, and a third-party trace is exactly the place
     they must not appear. What a reviewer needs is that a write happened,

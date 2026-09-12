@@ -113,7 +113,7 @@ def main() -> None:
         default=WEB_CLIENT_PATH,
         help=(
             "Where to write the registration (default: the local-dev "
-            "path, .cache/silpo_mcp_web_client.json). G7/IV-07: pass a "
+            "path, .cache/silpo_mcp_web_client.json). pass a "
             "DIFFERENT path when registering a second client for a "
             "deployed redirect_uri, so this write never overwrites the "
             "local-dev client's own registration."

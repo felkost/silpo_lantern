@@ -3,7 +3,7 @@
 Before this module, every live MCP call in the project was a duplicated
 copy of this same async/sync bridge inside `scripts/capture_fixture.py`,
 `scripts/g4_live_evidence_gate_run.py`, and `scripts/silpo_mcp_login.py`.
-G5+G6 (D-G5-10): this is the module the write call goes through, so D20's
+this is the module the write call goes through, so the
 recursive `BaseExceptionGroup` unwrap -- measured necessary on a read --
 cannot silently fail to apply to a write.
 """
@@ -83,7 +83,7 @@ async def _list_tools_async(server_url: str) -> List[Dict[str, Any]]:
     solved: the public SDK (`ClientSession.list_tools`) parses straight
     into typed `Tool` objects with no exposed hook for the raw JSON-RPC
     bytes underneath. `mcp.client.reviewed_tools.json`'s baseline was
-    generated from a genuinely raw captured fixture, and D-G4-10 already
+    generated from a genuinely raw captured fixture, and an earlier decision already
     measured that a `Tool.model_validate(...).model_dump(...)` round-trip
     does not reproduce that raw JSON byte-for-byte (the SDK adds fields
     the wire payload never had). This function's `model_dump(...)` output
@@ -92,7 +92,7 @@ async def _list_tools_async(server_url: str) -> List[Dict[str, Any]]:
     fixture's historical baseline computed from raw capture bytes.
     Before this schema-drift check is meaningful against a live server,
     `reviewed_tools.json`'s baseline must be regenerated from a live
-    capture through this exact code path — the first live A6/G7 run's job,
+    capture through this exact code path — the first live live run's job,
     not solvable offline.
     """
     auth = _build_auth(server_url)
@@ -117,7 +117,7 @@ def call_tool(
     graph nodes expect. `asyncio.run` wraps any exception raised inside
     the SDK's own `anyio` task groups (the streamable-HTTP transport, then
     separately the session's own teardown) in a `BaseExceptionGroup` --
-    measured **two layers deep** for this transport (D20) -- so a plain
+    measured **two layers deep** for this transport -- so a plain
     `except McpAdapterError` at the call site would never see the real
     exception without this unwrap.
     """
@@ -132,7 +132,7 @@ def call_tool(
 
 def list_tools_raw(*, server_url: str = DEFAULT_MCP_URL) -> List[Dict[str, Any]]:
     """Sync `tools/list` fetch -- the `Callable[[], List[Dict]]` shape
-    `mcp.client.ToolRegistry` expects. Same D20 exception-group unwrap as
+    `mcp.client.ToolRegistry` expects. Same exception-group unwrap as
     `call_tool`."""
     try:
         return asyncio.run(_list_tools_async(server_url))

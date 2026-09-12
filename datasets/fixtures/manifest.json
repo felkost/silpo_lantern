@@ -1,5 +1,5 @@
 {
-  "$comment": "Skeleton per plan section 12.1.1 step 4/8. Populated at G2 with real sanitized/synthetic/mutated fixture entries. Schema: datasets/fixtures/envelope.schema.json",
+  "$comment": "Skeleton per plan section 12.1.1 step 4/8. Populated with real sanitized/synthetic/mutated fixture entries. Schema: datasets/fixtures/envelope.schema.json",
   "coverage": {
     "DR": [
       "a line item with price:0 and an explicit stock/error signal (DR-08)",
@@ -15,10 +15,10 @@
       "productsTotal well below minOrderCost — a clear order.cost.min block"
     ],
     "GD": [
-      "GD-02: two consent rounds, because the cart applies ~10% less than the catalogue quoted (D68)",
+      "GD-02: two consent rounds, because the cart applies ~10% less than the catalogue quoted",
       "GD-03: several viable single-item fixes -- ranking picks one, one round clears the blocker",
       "GD-04: weighted per-kg candidate -- fractional quantity, multiple of the catalogue step",
-      "GD-06: resume after the consent interrupt, twice (D42's second round) -- replayed against the REAL compiled graph, ending honestly unverified",
+      "GD-06: resume after the consent interrupt, twice (the second round) -- replayed against the REAL compiled graph, ending honestly unverified",
       "GD-07: price:0 with an explicit stock signal -- known blocker, no candidate offered",
       "GD-08: validation code absent from the registry -- disclosed as unknown, never trusted",
       "GD-09: two error validations for one product -- deduped to one blocker, not_found outranks stock.max",
@@ -31,7 +31,7 @@
     ],
     "RG": [],
     "replay": [
-      "the full hero flow (read -> ... -> receipt), including a second consent+write round (D42), replayed offline against the REAL compiled graph -- no MCP/LLM/Postgres call"
+      "the full hero flow (read -> ... -> receipt), including a second consent+write round, replayed offline against the REAL compiled graph -- no MCP/LLM/Postgres call"
     ]
   },
   "fixtures": [
@@ -45,7 +45,7 @@
       "fixture_id": "cart_multi_item_diverse",
       "origin": "recorded",
       "path": "datasets/fixtures/sanitized/cart_multi_item_diverse.json",
-      "provenance": "live capture 2026-09-06, 11-item diverse cart (D16); identifiers pseudonymised, address dropped"
+      "provenance": "live capture 2026-09-06, 11-item diverse cart; identifiers pseudonymised, address dropped"
     },
     {
       "fixture_id": "cart_probe_exists",
@@ -57,7 +57,7 @@
       "fixture_id": "duplicate_validations_same_product",
       "origin": "mutated",
       "path": "datasets/fixtures/mutated/duplicate_validations_same_product.json",
-      "provenance": "G9 (GD-09): two error validations for one productId, exercising DR-07's dedupe priority end-to-end through the graph rather than at the pure-domain level test_dr_07 already covers."
+      "provenance": "two error validations for one productId, exercising DR-07's dedupe priority end-to-end through the graph rather than at the pure-domain level test_dr_07 already covers."
     },
     {
       "fixture_id": "gap_above_threshold_clears",
@@ -88,7 +88,7 @@
       "fixture_id": "golden_safety_baseline",
       "origin": "synthetic",
       "path": "datasets/fixtures/synthetic/golden_safety_baseline.json",
-      "provenance": "G9 (G9.2): the same cart tests/support/write_backend.py's default_fixture() uses, registered as a tracked fixture for the golden safety cases (GD-11..15, fake_backend mode) to reference by fixture_id rather than an inline payload."
+      "provenance": "the same cart tests/support/write_backend.py's default_fixture() uses, registered as a tracked fixture for the golden safety cases (GD-11..15, fake_backend mode) to reference by fixture_id rather than an inline payload."
     },
     {
       "fixture_id": "money_as_minor_units_string",
@@ -104,49 +104,49 @@
       "fixture_id": "replay_discounted_cart_20260909",
       "origin": "recorded",
       "path": "datasets/fixtures/replay/discounted_cart_20260909.json",
-      "provenance": "G9 (GD-05): recorded from a LIVE author-approved run against mcp.silpo.ua on 2026-09-09, against a cart deliberately shaped into the state where the minOrderCost comparison is DISCRIMINATING: productsTotal 651.25 (below the 699 threshold, so the cart is blocked) while total 750.25 and totalAfterDiscounts 705.32 are both above it. A build comparing either of those instead of productsTotal finds no blocker at all on this fixture. Two consented writes, ending verified. Sanitized as GD-01's bundle is; shaping and capture both undone afterwards, cart back to productsTotal 523.32."
+      "provenance": "recorded from a LIVE author-approved run against mcp.silpo.ua on 2026-09-09, against a cart deliberately shaped into the state where the minOrderCost comparison is DISCRIMINATING: productsTotal 651.25 (below the 699 threshold, so the cart is blocked) while total 750.25 and totalAfterDiscounts 705.32 are both above it. A build comparing either of those instead of productsTotal finds no blocker at all on this fixture. Two consented writes, ending verified. Sanitized as GD-01's bundle is; shaping and capture both undone afterwards, cart back to productsTotal 523.32."
     },
     {
       "fixture_id": "replay_gap_has_several_viable_plans",
       "origin": "synthetic",
       "path": "datasets/fixtures/replay/replay_gap_has_several_viable_plans.json",
-      "provenance": "G9 (GD-03): synthesized OFFLINE by scripts/synthesize_replay_bundle.py from the gap_has_several_viable_plans cart -- no live call. Self-consistent by construction: replayed before writing, and its own replay result is its expected_outcome."
+      "provenance": "synthesized OFFLINE by scripts/synthesize_replay_bundle.py from the gap_has_several_viable_plans cart -- no live call. Self-consistent by construction: replayed before writing, and its own replay result is its expected_outcome."
     },
     {
       "fixture_id": "replay_gap_needs_two_items",
       "origin": "synthetic",
       "path": "datasets/fixtures/replay/replay_gap_needs_two_items.json",
-      "provenance": "G9 (GD-02): synthesized OFFLINE from the gap_needs_two_items cart with applied_price_ratio=0.9, reproducing D68's measured live loyalty discount so a genuine two-round D42 scenario exists without live spend."
+      "provenance": "synthesized OFFLINE from the gap_needs_two_items cart with applied_price_ratio=0.9, reproducing the measured live loyalty discount so a genuine two-round an earlier decision scenario exists without live spend."
     },
     {
       "fixture_id": "replay_hero_live_20260909",
       "origin": "recorded",
       "path": "datasets/fixtures/replay/hero_live_20260909.json",
-      "provenance": "G9 (GD-01, G9.1): recorded from a LIVE author-approved run against mcp.silpo.ua on 2026-09-09 by scripts/record_replay_bundle.py -- the read chain, the real planner/explainer LLM calls, three consented writes and their read-backs, ending verified. Sanitized through one shared alias map with the two documented synthetic coordinates substituted for the real address (D-G7-07, D74). Carries the six refused get_time_slots calls the live server returns for the two channels that resolve no branch, without which it cannot replay its own run (D75). Self-consistent by construction: replayed before writing, and its own replay result is its expected_outcome."
+      "provenance": "recorded from a LIVE author-approved run against mcp.silpo.ua on 2026-09-09 by scripts/record_replay_bundle.py -- the read chain, the real planner/explainer LLM calls, three consented writes and their read-backs, ending verified. Sanitized through one shared alias map with the two documented synthetic coordinates substituted for the real address. Carries the six refused get_time_slots calls the live server returns for the two channels that resolve no branch, without which it cannot replay its own run. Self-consistent by construction: replayed before writing, and its own replay result is its expected_outcome."
     },
     {
       "fixture_id": "replay_hero_order_cost_min",
       "origin": "synthetic",
       "path": "datasets/fixtures/replay/hero_order_cost_min.json",
-      "provenance": "G7: replays the REAL compiled graph offline (tests/e2e/test_replay_hero_bundle.py) -- built from the same synthetic cart tests/unit/test_write_path_interrupt_and_resume.py uses, not a live capture. A live-recorded bundle is scripts/record_replay_bundle.py's job, pending the author's go-ahead for a live MCP write."
+      "provenance": "replays the REAL compiled graph offline (tests/e2e/test_replay_hero_bundle.py) -- built from the same synthetic cart tests/unit/test_write_path_interrupt_and_resume.py uses, not a live capture. A live-recorded bundle is scripts/record_replay_bundle.py's job, pending the author's go-ahead for a live MCP write."
     },
     {
       "fixture_id": "replay_resume_unverified",
       "origin": "synthetic",
       "path": "datasets/fixtures/replay/replay_resume_unverified.json",
-      "provenance": "G9 follow-up (GD-06, D83): synthesized OFFLINE from the gap_needs_two_items cart with applied_price_ratio=0.9 and round 2 declared a silent write -- the tool reports success and the cart does not move, so the read-back completes and disagrees. Replaces the G7 bundle as GD-06's fixture: that one predates the tool-name fallback queue, so a live planner had nothing to fall back to and GD-06 was blocked in all three of G9.6's repeats. Reproduces the same outcome shape (receipt, then unverified on a read-back identity mismatch), now from a MODELLED failure rather than from a fixture running out of recorded cart states. The G7 bundle stays tracked: tests/e2e/test_replay_hero_bundle.py asserts against it."
+      "provenance": "GD-06: synthesized OFFLINE from the gap_needs_two_items cart with applied_price_ratio=0.9 and round 2 declared a silent write -- the tool reports success and the cart does not move, so the read-back completes and disagrees. Replaces the earlier live bundle as GD-06's fixture: that one predates the tool-name fallback queue, so a live planner had nothing to fall back to and GD-06 was blocked in all three of the repeats. Reproduces the same outcome shape (receipt, then unverified on a read-back identity mismatch), now from a MODELLED failure rather than from a fixture running out of recorded cart states. The live bundle stays tracked: tests/e2e/test_replay_hero_bundle.py asserts against it."
     },
     {
       "fixture_id": "replay_weighted_item_in_cart",
       "origin": "synthetic",
       "path": "datasets/fixtures/replay/replay_weighted_item_in_cart.json",
-      "provenance": "G9 (GD-04): synthesized OFFLINE from the weighted_item_in_cart cart -- a per-kilogram candidate whose quantity (0.3 kg) is fractional and a multiple of the catalogue step."
+      "provenance": "synthesized OFFLINE from the weighted_item_in_cart cart -- a per-kilogram candidate whose quantity (0.3 kg) is fractional and a multiple of the catalogue step."
     },
     {
       "fixture_id": "timeslot_spans_dst_transition",
       "origin": "mutated",
       "path": "datasets/fixtures/mutated/timeslot_spans_dst_transition.json",
-      "provenance": "G9 (GD-10): a timeslot spanning Ukraine's 2026 DST transition, paired with a timeslot.not_available validation -- the boundary shape where a naive local-time comparison reads an expired slot as live."
+      "provenance": "a timeslot spanning Ukraine's 2026 DST transition, paired with a timeslot.not_available validation -- the boundary shape where a naive local-time comparison reads an expired slot as live."
     },
     {
       "fixture_id": "unavailable_item_zero_price",

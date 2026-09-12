@@ -4,7 +4,7 @@ events` (SSE), `POST /session/{id}/consent`, `GET /auth/start`,
 module and its own docstring's "no I/O" contract is unrelated to session
 state.
 
-Live per-node push (revised from the D29 replay-only draft, on the
+Live per-node push (revised from the an earlier decision replay-only draft, on the
 author's request): `GET /session/{id}/events` is what actually DRIVES the
 graph, via `graph.astream(..., stream_mode="updates")` -- measured
 (`.venv` probe) to yield one `{node_name: partial_state}` chunk per
@@ -62,7 +62,7 @@ router = APIRouter()
 
 CONSENT_TTL = timedelta(minutes=5)  # plan section 11.1
 
-# G10 (A-G10-01): what kind of I/O each graph node does, for the `stage`
+# what kind of I/O each graph node does, for the `stage`
 # event -- so the console's loader can say "MCP" / "model" / "database"
 # from an observation, not a guess. Keys are the ten names `build.py`
 # registers; `write_guard` reads the live tool schema (MCP) and the
@@ -104,7 +104,7 @@ _registry: Optional[PolicyRegistry] = None
 
 
 def _is_known(code: str) -> bool:
-    # G10: `is_known` per validation on the diagnosis frame -- the same
+    # `is_known` per validation on the diagnosis frame -- the same
     # exact-match registry `diagnose()` uses, so the console's "unknown"
     # and the domain's "unknown" cannot disagree. Loaded once.
     global _registry
@@ -144,7 +144,7 @@ def _caps(request: Request) -> Any:
 
 @router.post("/session", response_model=CreateSessionResponse)
 async def create_session(request: Request, response: Response) -> CreateSessionResponse:
-    # G10 (D89): per-IP cap before any row is written. `request.client`
+    # per-IP cap before any row is written. `request.client`
     # is the proxy on Render unless uvicorn trusts X-Forwarded-For -- see
     # `apps/api/__main__.py`.
     ip = request.client.host if request.client else "unknown"
@@ -156,9 +156,9 @@ async def create_session(request: Request, response: Response) -> CreateSessionR
     thread_id = session_id
     owner = compute_owner(session_id, request.app.state.owner_secret)
     repository.create_session(request.app.state.repo_pool, session_id, thread_id, owner)
-    # G10 (A-G10-04): the id travels as a cookie from here on; `/auth/start`
+    # the id travels as a cookie from here on; `/auth/start`
     # reads it from there, so the URL the guest navigates to carries
-    # nothing (G10-5).
+    # nothing.
     set_session_cookie(response, session_id)
     # A brand-new session has no guest token yet, so the client's next
     # step is `/auth/start`, not `/events`. Returned rather than left for
@@ -170,13 +170,35 @@ async def create_session(request: Request, response: Response) -> CreateSessionR
 
 @router.delete("/session/{session_id}", status_code=204)
 async def delete_session(session_id: str, request: Request, response: Response) -> None:
-    """G10 (A-G10-04): logout. Deletes the guest's token row -- the only
+    """logout. Deletes the guest's token row -- the only
     credential this session holds -- and clears the cookie; a following
     `/events` is refused as unauthorized. The session row and its
     consents/receipts stay as the audit record they are."""
     require_session_cookie(request, session_id)
     repository.delete_session_token(request.app.state.repo_pool, session_id)
     clear_session_cookie(response)
+
+
+@router.post("/session/{session_id}/restart", response_model=CreateSessionResponse)
+async def restart_session(
+    session_id: str, request: Request, response: Response
+) -> CreateSessionResponse:
+    """«Перевірити знову»: a fresh recovery run for the same guest without
+    a second login. One run is one session -- the graph's checkpoint is
+    keyed by the session -- so this creates a new session row, moves the
+    credential onto it and points the cookie at it. The old session keeps
+    its consents and receipts as the audit record they are. The new
+    session's first `/events` is a fresh graph start and counts against
+    the daily LLM ceiling like any other."""
+    require_session_cookie(request, session_id)
+    new_id = str(uuid.uuid4())
+    owner = compute_owner(new_id, request.app.state.owner_secret)
+    pool = request.app.state.repo_pool
+    repository.create_session(pool, new_id, new_id, owner)
+    if not repository.move_session_token(pool, session_id, new_id):
+        raise HTTPException(status_code=401, detail="no live login for this session")
+    set_session_cookie(response, new_id)
+    return CreateSessionResponse(session_id=new_id, authorized=True, auth_url="")
 
 
 @router.get("/session/{session_id}/events")
@@ -190,7 +212,7 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
     """
     require_session_cookie(request, session_id)
     # Bind THIS guest's own credential BEFORE touching the graph at all --
-    # G7/IV-07 found live that `_get_graph` builds the production graph
+    # A live run found that `_get_graph` builds the production graph
     # lazily on its OWN first call, ever, across the whole app's lifetime
     # (`app.state.graph` is cached permanently once built), and that
     # build calls `list_tools_raw()` synchronously to seed the tool
@@ -221,7 +243,7 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
         session_row = repository.get_session(request.app.state.repo_pool, session_id)
         if session_row is None:
             raise HTTPException(status_code=404, detail="session not found")
-        # G10 (D89): a fresh start is what bills the LLM; a resume or a
+        # a fresh start is what bills the LLM; a resume or a
         # replay below does not, so only this branch counts.
         if not _caps(request).admit_llm_run():
             raise HTTPException(
@@ -252,7 +274,7 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
 
     version_tuple = _version_tuple(request)
 
-    # G10 (D90): this run's model calls land here; the frames show the
+    # this run's model calls land here; the frames show the
     # session's cumulative SPEND (checkpoint + this run), never a
     # remainder -- the ceiling is a project decision, the provider's
     # dashboard is the only real balance.
@@ -292,7 +314,7 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
         def _diagnosis_line(
             diagnosis: Any, disclosure: Any, channels: Sequence[Any], cart: Any
         ) -> str:
-            # G7 (D-G7-03): carries the disclosure layer and the
+            # carries the disclosure layer and the
             # delivery-channel comparison, not just primary_code/gap --
             # both were already computed for the planner's own prompt
             # (`llm_adapter.py`) and never reached the guest before this.
@@ -308,14 +330,14 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
                     "gap_is_borderline": bool(
                         disclosure and disclosure.gap_is_borderline
                     ),
-                    # G10 (claim 2): the arithmetic's inputs, so the panel
+                    # the arithmetic's inputs, so the panel
                     # can show `threshold - products_total = gap` as code
                     # did it. `products_total` is money, not identity;
                     # the cart's id and coordinates never leave the server.
                     "products_total": (
                         str(cart.products_total) if cart is not None else None
                     ),
-                    # G10 (the console's cart column): the starting state a
+                    # the starting state a
                     # jury needs in front of them -- lines, total, channel,
                     # slot. Product names are allowed; the cart id, the
                     # address and the coordinates never leave the server.
@@ -353,7 +375,7 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
                     **base,
                     "status": receipt.status if receipt else fallback_status,
                     "reason": receipt.reason if receipt else None,
-                    # G10 (claim 4): expected against actual, and the
+                    # expected against actual, and the
                     # outcome as the receipt's own typed fields.
                     "expected_delta": (
                         str(receipt.expected_delta)
@@ -390,7 +412,7 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
             )
 
         def _options_line(candidates: Any) -> str:
-            # G8 (D51): `kind`/`compensates_action_id` tell the client
+            # `kind`/`compensates_action_id` tell the client
             # whether this is the ordinary "add" screen or the "undo what
             # we just added" screen -- a compensation candidate's own
             # `kind` is never inferred client-side from anything else.
@@ -407,7 +429,7 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
                             "guest_text_uk": p.guest_text_uk,
                             "kind": p.kind,
                             "compensates_action_id": p.compensates_action_id,
-                            # G10 (claim 3): the hash the guard will bind
+                            # the hash the guard will bind
                             # to, computed here with the guard's own
                             # canonicalizer -- state holds no such field.
                             "args_hash": compute_args_hash(p.canonical_args),
@@ -431,7 +453,7 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
 
         emitted_receipt = False
         if should_advance:
-            # G7 (D-G7-03): the diagnosis frame needs BOTH `diagnose`'s
+            # the diagnosis frame needs BOTH `diagnose`'s
             # own output (diagnosis, disclosure) and `compare_channels`'s
             # (channel_comparison) -- two separate node chunks in
             # `stream_mode="updates"`, never a merged state at either
@@ -450,7 +472,7 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
                 for node_name, partial in chunk.items():
                     if node_name == "__interrupt__":
                         continue
-                    # G10 (A-G10-01): the stage frame reads NOTHING from
+                    # the stage frame reads NOTHING from
                     # `partial`, which is why it may sit before the falsy
                     # guard below -- a node that ran but updated no channel
                     # still belongs in the feed, and nothing here can hit
@@ -465,7 +487,7 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
                         },
                     )
                     # A node that updates no channel arrives here as
-                    # `{node_name: None}` (measured live at G7, where it
+                    # `{node_name: None}` (measured live, where it
                     # crashed the stream with AttributeError AFTER the
                     # write had landed and the receipt had been persisted,
                     # so the guest saw a 500 instead of their own receipt).
@@ -487,7 +509,7 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
                             partial.get("channel_comparison") or [],
                             cart_seen,
                         )
-                    # G8 (D51): the compensation offer arrives on
+                    # the compensation offer arrives on
                     # `persist_receipt`'s own chunk, not `explain` --
                     # `explain` is not on the compensation path at all.
                     # Emitting from any node chunk that carries candidates
@@ -521,10 +543,10 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
                     existing_state.get("channel_comparison") or [],
                     existing_state.get("cart"),
                 )
-            # G8 (D51): a compensation offer's checkpoint still carries the
+            # a compensation offer's checkpoint still carries the
             # receipt it undoes -- replaying it here means a browser
             # refresh at the offer shows the receipt above it, the same
-            # gap D42's own second-round offer had (never a declared test
+            # gap the own second-round offer had (never a declared test
             # for it either) closed for both at once.
             if existing_state.get("receipt") is not None:
                 yield _receipt_line(existing_state["receipt"], status or "")
@@ -582,7 +604,7 @@ async def submit_consent(
     if cart is None:
         raise HTTPException(status_code=409, detail="session has no cart yet")
     now = datetime.now(timezone.utc)
-    # D-G5-18/T18: both hashes recomputed server-side from what the
+    # both hashes recomputed server-side from what the
     # session already holds -- a client-supplied hash is never accepted,
     # so tampering with one on the wire has nothing to overwrite.
     consent = ConsentRecord(
@@ -611,8 +633,8 @@ async def submit_consent(
         },
     )
 
-    # G10 (claim 3): the binding the guard will check, as recorded -- and
-    # no `cart_id` (D-G10-08).
+    # the binding the guard will check, as recorded -- and
+    # no `cart_id`.
     return ConsentAckResponse(
         action_id=proposal.action_id,
         args_hash=consent.args_hash,
@@ -623,7 +645,7 @@ async def submit_consent(
 
 @router.get("/evidence")
 async def evidence() -> Dict[str, Any]:
-    """G10 (claims 1 and 5): what a jury may be shown -- the tracked
+    """what a jury may be shown -- the tracked
     metrics with `n`, interval and caveat, and the sanitised disclosure
     observation. On `router`, not `app`: anything registered after the
     root mount in `main.py` is shadowed by it."""

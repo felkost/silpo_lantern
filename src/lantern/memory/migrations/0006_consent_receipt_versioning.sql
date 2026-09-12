@@ -1,4 +1,4 @@
--- D-G5-09 (G5+G6 kickoff audit): the consent record plan section 11
+-- an earlier decision (the kickoff audit): the consent record plan section 11
 -- describes carries cart_id, prompt_version and policy_version, and none
 -- of the three existed on `consents` — a consent could not be bound to
 -- the cart it was granted against by id, nor to the prompt/policy version
@@ -13,7 +13,7 @@ ALTER TABLE consents ADD COLUMN prompt_version TEXT;
 ALTER TABLE consents ADD COLUMN policy_version TEXT;
 
 -- The receipt as `0005` defined it cannot represent what plan section 13.3
--- requires G8+G9 to measure: `ReadbackCoverage` needs "attempt made" and
+-- requires the metrics to measure: `ReadbackCoverage` needs "attempt made" and
 -- "verification succeeded" as separate facts, `CostDeltaAccuracy` needs a
 -- stored expected delta to compare against, and no column let a receipt
 -- be joined back to its own LangSmith trace. `verified` stays (existing

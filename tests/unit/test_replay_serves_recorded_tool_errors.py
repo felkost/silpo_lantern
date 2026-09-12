@@ -1,4 +1,4 @@
-"""G9 (D75): a live capture whose graph DEGRADED a channel must replay
+"""a live capture whose graph DEGRADED a channel must replay
 that degradation, not skip it.
 
 `compare_channels_node` calls `fetch_time_slots` once per delivery type
@@ -30,7 +30,7 @@ from scripts.record_replay_bundle import TAPED_ERROR_KEY, _build_draft_from_tape
 # under its alias and every call below would MISS the args-keyed lookup
 # and reach the fallback -- which is the path these tests exist to keep
 # OUT of the picture. (This module's first version used a real UUID and
-# passed only because the fallback cursor was itself broken, D79.)
+# passed only because the fallback cursor was itself broken.)
 _BRANCH = "branch-1"
 
 

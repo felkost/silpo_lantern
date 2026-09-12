@@ -188,5 +188,5 @@
       <text x="390" y="926" fill="#24242e" font-size="12">Foreign key, one to zero-or-one</text>
       <line x1="620" y1="922" x2="670" y2="922" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3"/>
       <text x="680" y="926" fill="#24242e" font-size="12">Logical link by value, no foreign key</text>
-      <text x="40" y="952" fill="#6b7280" font-size="12">PK primary key · FK foreign key · UQ unique constraint. consents and receipts reference sessions WITHOUT cascade (D92): a session row is never deleted; logout deletes oauth_tokens only.</text>
+      <text x="40" y="952" fill="#6b7280" font-size="12">PK primary key · FK foreign key · UQ unique constraint. consents and receipts reference sessions WITHOUT cascade: a session row is never deleted; logout deletes oauth_tokens only.</text>
     </svg>

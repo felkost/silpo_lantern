@@ -1,7 +1,7 @@
 // Flat config for ESLint 9 -- `package.json` has carried a `lint` script
-// since the G1+G2 scaffold with no config file for it to use, so
+// since the first scaffold with no config file for it to use, so
 // `npm run lint` failed on a missing config rather than on any code.
-// G5+G6 closes that.
+// This closes that.
 
 import js from "@eslint/js";
 import globals from "globals";

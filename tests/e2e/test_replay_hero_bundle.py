@@ -1,8 +1,8 @@
-"""G7 (D-G7-06): the offline proof that a tracked bundle replays the REAL
+"""the offline proof that a tracked bundle replays the REAL
 compiled hero graph to the recorded outcome -- no MCP network call, no
 LLM call, no Postgres connection. This is what the project's Definition
 of Done calls "a controlled live proof and an explicitly labeled replay
-fallback"; the live proof is G5+G6's own A6 evidence, this is the replay
+fallback"; the live proof is the own A6 evidence, this is the replay
 fallback.
 
 `datasets/fixtures/replay/hero_order_cost_min.json` is `origin: synthetic`

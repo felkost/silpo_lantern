@@ -10,12 +10,16 @@
 // consented to the write.
 
 import type { Candidate, ReceiptEvent } from "../types";
+import { Icon } from "./Icon";
 
 interface Props {
   candidates: Candidate[];
   onConsent: (actionId: string) => void;
+  /** «Не додавати нічого»: the Customer declines every option. Nothing is
+   * written; the session stays paused at the guard with no consent. */
+  onDecline?: () => void;
   submitting: boolean;
-  /** G7 (D-G7-05): a second consent+write round (D42) means the guest
+  /** a second consent+write round means the guest
    * may already have one round's receipt by the time this screen shows
    * again -- shown here so it is not lost between rounds. */
   priorReceipts?: ReceiptEvent[];
@@ -24,10 +28,11 @@ interface Props {
 export function ConsentScreen({
   candidates,
   onConsent,
+  onDecline,
   submitting,
   priorReceipts = [],
 }: Props) {
-  // G8 (D51): every candidate on this screen is either an ordinary "add"
+  // every candidate on this screen is either an ordinary "add"
   // or a compensation offer -- never a mix (persist_receipt_node REPLACES
   // candidates, never appends across kinds), so checking the first entry
   // is enough to decide which screen this is.
@@ -97,6 +102,20 @@ export function ConsentScreen({
           </li>
         ))}
       </ul>
+      {onDecline && (
+        <p>
+          <button
+            type="button"
+            className="quiet small"
+            disabled={submitting}
+            onClick={onDecline}
+            data-testid="decline-all"
+            title="Жодного варіанта не обрано; кошик лишається як був"
+          >
+            <Icon name="decline" /> {isCompensationOffer ? "Залишити як є" : "Не додавати нічого"}
+          </button>
+        </p>
+      )}
       <p>
         <small>
           Оформлення й оплату завжди робите ви — застосунок лише змінює кошик за

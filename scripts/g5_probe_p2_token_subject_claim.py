@@ -1,5 +1,5 @@
-"""Probe P2 (G5+G6 stage spec): does the cached OAuth token carry a stable
-subject claim usable as `owner`'s primary source (D-G5-06)? Local file read
+"""Probe P2: does the cached OAuth token carry a stable
+subject claim usable as `owner`'s primary source? Local file read
 only, no network call, free.
 
 Usage:
@@ -51,7 +51,7 @@ def main() -> None:
             "doesn't decode as JSON) — no `sub` claim available this way."
         )
         print(
-            "D-G5-06 fallback applies: owner derives from the sessions "
+            "an earlier decision fallback applies: owner derives from the sessions "
             "row + a server-side secret, never from cart_id."
         )
         return
@@ -61,13 +61,13 @@ def main() -> None:
     if sub:
         print(f"Stable subject claim found: sub={sub!r}")
         print(
-            "D-G5-06 primary branch applies: "
+            "an earlier decision primary branch applies: "
             'owner = sha256("lantern-owner-v1|" + sub)'
         )
     else:
         print("No `sub` claim in the payload.")
         print(
-            "D-G5-06 fallback applies: owner derives from the sessions "
+            "an earlier decision fallback applies: owner derives from the sessions "
             "row + a server-side secret, never from cart_id."
         )
 

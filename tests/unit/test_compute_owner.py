@@ -1,4 +1,4 @@
-"""D-G5-06: `compute_owner` is a per-session identity hash, never derived
+"""`compute_owner` is a per-session identity hash, never derived
 from `cart_id` (which `compute_state_hash` already includes)."""
 
 from src.lantern.domain.consent_hash import compute_owner

@@ -1,7 +1,7 @@
-"""G9 (D79): the tool-name fallback queue must stay aligned with the
+"""the tool-name fallback queue must stay aligned with the
 tape's call order, not with its own miss count.
 
-`mcp_by_tool` is the recorded calls for one tool IN TAPE ORDER (D-G9-05).
+`mcp_by_tool` is the recorded calls for one tool IN TAPE ORDER.
 Its cursor only advanced on a fallback hit, so a tool called through BOTH
 lookups drifted: `silpo_find_products_batch` is called twice per round --
 once by `compare_channels` with names taken from the cart (args match the
@@ -14,7 +14,7 @@ planner's search was answered with the availability response recorded for
 Downstream that is not a crash but a wrong-product consent: the graph
 proposes a product from the wrong response, writes it, and the read-back
 shows something else -- so the run ends `unverified` and reads as a system
-failure when the harness caused it. Six of the eighteen G9.6 repeats
+failure when the harness caused it. Six of the eighteen repeats
 failed exactly this way.
 
 The cursor therefore advances on EVERY call to that tool, whichever

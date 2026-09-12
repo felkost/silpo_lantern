@@ -1,10 +1,10 @@
-"""G9 (1.4): `generate_boundary_fixtures.py`'s `_update_manifest` replaced
+"""`generate_boundary_fixtures.py`'s `_update_manifest` replaced
 `manifest["fixtures"]` wholesale with only the envelopes IT generated --
 correct when the generator was written and every fixture came from the
 matrix, silently destructive now that the manifest also carries recorded
 captures (`cart_blocked_order_cost_min`, `cart_multi_item_diverse`), the
 replay BUNDLE (`replay_hero_order_cost_min`), and the golden-case
-fixtures added by hand at G9.
+fixtures added by hand.
 
 Running the generator to add three new matrix rows would therefore have
 dropped seven of fifteen entries, and nothing in the gate would have

@@ -16,8 +16,8 @@ asyncio_mode = "auto"
 # os.environ. Because deepeval ships a pytest plugin, that happened on every
 # run — the offline gate saw real credentials, and the integration tests'
 # "skip unless DATABASE_URL is set" guard never fired on a machine that has a
-# .env file (measured at G1+G2 close: 5 passed instead of 5 skipped).
-# The eval suite re-enables the plugin explicitly when it is built at G8+G9.
+# .env file (measured close: 5 passed instead of 5 skipped).
+# The eval suite re-enables the plugin explicitly when it is built.
 addopts = "-p no:deepeval"
 markers = [
     "xfail_strict: declared-failing tests for domain rules not yet implemented",

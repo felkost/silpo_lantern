@@ -30,7 +30,7 @@ LAYER_OF = {
     "observability": "infra",
     "graph": "application",
     "prompts": "application",
-    # G9 (D-G9-06): the DeepEval judge wrapper calls the project's existing
+    # the DeepEval judge wrapper calls the project's existing
     # OpenRouter adapter (application-layer) and is consumed only from
     # tests/evals/ -- application is the correct layer, not a new one.
     "evals": "application",
@@ -188,7 +188,7 @@ def _iter_python_files():
 
 
 def _iter_write_allowlist_scan_files():
-    """G5+G6 (D-G5-24): the write-allowlist tripwire below used to scan
+    """the write-allowlist tripwire below used to scan
     only `src/`, so `apps/api` -- the interface layer this stage adds a
     consent endpoint to -- could import `WRITE_TOOL_ALLOWLIST` directly
     with every existing test staying green. `apps/` is not in `LAYER_OF`
@@ -257,7 +257,7 @@ def test_no_python_files_yet_or_all_respect_layering():
 
 
 def test_evals_package_is_mapped_and_scanned():
-    """G9 (D-G9-06): `src/lantern/evals/` (the DeepEval judge wrapper) must
+    """`src/lantern/evals/` (the DeepEval judge wrapper) must
     be a mapped layer, not silently skipped by `_layer_of_module` returning
     `None` -- CLAUDE.md §2 claims layer assignment is a property of every
     file, and an unmapped package makes that claim false for it.
@@ -268,7 +268,7 @@ def test_evals_package_is_mapped_and_scanned():
 def test_layering_tripwire_detects_a_synthetic_violation_reaching_evals():
     """Proves the general cross-layer check actually catches an import
     INTO `evals` from a lower layer, not just that `evals` participates in
-    the walk. Before D-G9-06 mapped `evals`, `_layer_of_module` returned
+    the walk. Before an earlier decision mapped `evals`, `_layer_of_module` returned
     `None` for it, so `imported_layer is None` short-circuited the check
     at line 225 above and a domain-layer file importing an LLM-calling
     judge module would have passed silently -- the same shape of gap as
@@ -309,7 +309,7 @@ def test_domain_and_safety_never_import_io_libraries():
     assert not violations, "\n".join(violations)
 
 
-# G8 (D-G8-11 audit): widened from the single literal `WRITE_TOOL_ALLOWLIST`
+# widened from the single literal `WRITE_TOOL_ALLOWLIST`
 # to all three write-allowlist constants `write_guard.py` now defines --
 # `COMPENSATION_TOOL_ALLOWLIST` and `_ALLOWLIST_BY_KIND` are exactly as
 # security-relevant as the original: importing either directly bypasses

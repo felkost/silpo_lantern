@@ -1,6 +1,6 @@
 {
   "case_id": "GD-05",
-  "scenario": "Discounts: the recorded cart carries subTotal 1034.96 and subDiscount 284.71, which put productsTotal (651.25) and both total (750.25) and totalAfterDiscounts (705.32) on OPPOSITE sides of the 699 minOrderCost threshold. That is the whole point of the fixture -- comparing the threshold against total or totalAfterDiscounts finds no blocker here, so this case fails outright against the mistake CLAUDE.md's invariant records as previously shipped and reversed. Two consented writes follow; the first is discounted 47.76 -> 42.98, the SECOND is not discounted at all (9.99 -> 9.99), which is why D68's rate is recorded as product-dependent rather than a cart-wide rule.",
+  "scenario": "Discounts: the recorded cart carries subTotal 1034.96 and subDiscount 284.71, which put productsTotal (651.25) and both total (750.25) and totalAfterDiscounts (705.32) on OPPOSITE sides of the 699 minOrderCost threshold. That is the whole point of the fixture -- comparing the threshold against total or totalAfterDiscounts finds no blocker here, so this case fails outright against the mistake CLAUDE.md's invariant records as previously shipped and reversed. Two consented writes follow; the first is discounted 47.76 -> 42.98, the SECOND is not discounted at all (9.99 -> 9.99), which is why the rate is recorded as product-dependent rather than a cart-wide rule.",
   "gd_ref": "GD-05",
   "input": {
     "fixture_id": "replay_discounted_cart_20260909"

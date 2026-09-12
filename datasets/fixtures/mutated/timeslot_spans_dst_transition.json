@@ -48,6 +48,6 @@
   "seed": null,
   "source_schema_hash": "synthetic-cart-wire-shape-v1",
   "transformations": [
-    "G9 (GD-10): the timeslot spans Ukraine's 2026 DST transition (2026-10-25, UTC+3 -> UTC+2 at 01:00 UTC). Both endpoints display as 03:30 Kyiv wall-clock for a genuinely one-hour window -- the exact shape where a naive local-time comparison reads an expired slot as still live. Paired with a timeslot.not_available validation, the codeless order/timeslot-level shape both live order codes also use."
+    "the timeslot spans Ukraine's 2026 DST transition (2026-10-25, UTC+3 -> UTC+2 at 01:00 UTC). Both endpoints display as 03:30 Kyiv wall-clock for a genuinely one-hour window -- the exact shape where a naive local-time comparison reads an expired slot as still live. Paired with a timeslot.not_available validation, the codeless order/timeslot-level shape both live order codes also use."
   ]
 }

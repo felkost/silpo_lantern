@@ -1,5 +1,5 @@
-"""G9 (D62/D-G9-05): `replay()` gains optional `planner_call`/`explainer_call`
-parameters so the 18 core repeats (G9.6) can wire in the REAL live planner/
+"""`replay()` gains optional `planner_call`/`explainer_call`
+parameters so the 18 core repeats can wire in the REAL live planner/
 explainer against replayed MCP -- while every existing offline caller
 (`tests/e2e/test_replay_hero_bundle.py`, the golden runner) keeps working
 unchanged. This test proves the "unchanged" half: omitting the new

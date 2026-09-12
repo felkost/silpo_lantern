@@ -1,4 +1,4 @@
-"""T7 (G8 stage spec, G8.2): the four unreviewed drifted tools' new text
+"""the four unreviewed drifted tools' new text
 is not just longer prose -- it states TWO semantics the code already
 depends on, and this pins that the tracked fixture's own wording still
 agrees with what the code implements. If a future fixture refresh changes

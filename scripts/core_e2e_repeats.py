@@ -1,11 +1,11 @@
-"""G9 (G9.6): the 18 core E2E repeats -- GD-01..06 x 3, with a LIVE
+"""the 18 core E2E repeats -- GD-01..06 x 3, with a LIVE
 planner and explainer against REPLAYED MCP and Postgres.
 
-The configuration the author approved at the G8+G9 kickoff: only the two
+The configuration the author approved at the kickoff audit: only the two
 LLM boundaries are live. MCP stays on the tape, so the repeats measure
 planner/explainer non-determinism without touching a real cart and
 without a real write. `replay()`'s optional `planner_call`/
-`explainer_call` (D62/D-G9-05) are what make that possible, and
+`explainer_call` are what make that possible, and
 `mcp_by_tool`'s fallback queue is what survives the live planner's own
 varying search terms -- an args-keyed tape could never match them.
 
@@ -15,7 +15,7 @@ three blocked invalidates the run, a safety failure blocks regardless of
 the average) so they are unit-testable without a live call.
 
 Tokens and cost come from the provider's OWN reported usage, never an
-estimate -- D59 leaves no other source, and an invented token count would
+estimate leaves no other source, and an invented token count would
 land in a report judged against a $20 project ceiling. `include_raw=True`
 is what keeps the raw response (and its `usage_metadata`) reachable
 alongside the parsed structured output; that is why this script builds
@@ -67,7 +67,7 @@ CORE_CASE_IDS = ["GD-01", "GD-02", "GD-03", "GD-04", "GD-05", "GD-06"]
 REPEATS_PER_CASE = 3
 
 
-# G10 (D90): both moved into `graph/llm_adapter.py` so the live session
+# both moved into `graph/llm_adapter.py` so the live session
 # and this script measure and price a token the same way. Re-exported
 # here for T25 and for the callers below.
 from src.lantern.graph.llm_adapter import (  # noqa: E402
@@ -170,7 +170,7 @@ def _live_callables(usage_log: List[Tuple[str, TokenUsage]]):
             **{**parsed.model_dump(), "action_id": proposal.action_id}
         )
 
-    # G9 (D78): the same wrapper `build_recovery_graph` puts on these two
+    # the same wrapper `build_recovery_graph` puts on these two
     # calls. Without it the run's 63 LLM calls reached LangSmith as bare
     # LangGraph auto-instrumentation -- no named span, and metadata
     # carrying nothing but `ls_integration` and a revision id, so no
@@ -198,7 +198,7 @@ def build_run_record(
     *, case_id: str, repeat: int, thread_id: str, status: str, result: Any
 ) -> Dict[str, Any]:
     """One run's evidence, in the shape `compute_metrics._load_run_records`
-    reads (D80).
+    reads.
 
     Everything here is READ OFF the run, never asserted about it: the
     journal claims are the rows the graph actually wrote before each write
@@ -242,7 +242,7 @@ def build_run_record(
         after = receipt.after_state or {}
         before = receipt.before_state or {}
         validations = after.get("validations") or []
-        # D82: the cart's OWN movement, independent of whatever delta the
+        # the cart's OWN movement, independent of whatever delta the
         # receipt recorded -- comparing the receipt against itself would
         # make WriteDeltaFidelity a tautology.
         cart_delta = Decimal(str(after.get("products_total", "0"))) - Decimal(
@@ -343,11 +343,11 @@ def run_repeats(*, estimate_only: bool, offline: bool = False) -> Dict[str, Any]
             ),
         }
 
-    # D80: `--offline` runs the same 18 repeats against each bundle's OWN
+    # `--offline` runs the same 18 repeats against each bundle's OWN
     # recorded planner and explainer. It is not a cheaper substitute for
     # the live configuration -- section 13.4's repeats measure live
     # planner non-determinism and only the live run can -- but it is the
-    # population the METRICS are computed over, because D61 requires
+    # population the METRICS are computed over, because an earlier decision requires
     # numbers a fresh clone can reproduce, and nobody can reproduce
     # someone else's live LLM run.
     if offline:
@@ -365,7 +365,7 @@ def run_repeats(*, estimate_only: bool, offline: bool = False) -> Dict[str, Any]
         )
 
     load_env()
-    # D-G7-15, and D78: before anything creates a LangSmith client or emits
+    # Before anything creates a LangSmith client or emits
     # a span. LangGraph instruments every node itself and serialises the
     # whole RecoveryState, so without this the cart's coordinates ride
     # along in a neighbouring span -- measured on a live run 2026-09-07,
@@ -397,7 +397,7 @@ def _execute(
 ) -> Dict[str, Any]:
     runs: List[Dict[str, Any]] = []
     outcomes: List[RepeatOutcome] = []
-    # D80: the per-run evidence `compute_metrics.py` reads. Separate from
+    # the per-run evidence `compute_metrics.py` reads. Separate from
     # the summary above, which is a report for a human -- these are rows.
     records: List[Dict[str, Any]] = []
 
@@ -423,7 +423,7 @@ def _execute(
                 )
                 status, reason = _classify(case, result)
             except ReplayMismatch as exc:
-                # D-G9-08: a tape miss and a live planner regression raise
+                # a tape miss and a live planner regression raise
                 # identically, so this is `blocked` -- never `fail`, and
                 # never excluded from the denominator either.
                 status, reason = "blocked", f"ReplayMismatch: {exc}"
@@ -501,7 +501,7 @@ def main() -> None:
         help=(
             "run the same repeats against each bundle's own recorded "
             "planner/explainer -- no live call, no cost; the population "
-            "the metrics are computed over (D80)"
+            "the metrics are computed over"
         ),
     )
     parser.add_argument(
@@ -521,7 +521,7 @@ def main() -> None:
         records_out.write_text(
             json.dumps(
                 {
-                    # D84: which population these belong to. Both
+                    # which population these belong to. Both
                     # configurations write into one directory under one
                     # filename pattern, and the metrics loader must take
                     # exactly one of them.

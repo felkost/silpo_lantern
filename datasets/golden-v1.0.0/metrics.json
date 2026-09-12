@@ -1,6 +1,6 @@
 {
   "population": "offline",
-  "generated_at": "2026-09-10T17:45:18+00:00",
+  "generated_at": "2026-09-12T00:59:18+00:00",
   "regenerate": "python -m scripts.compute_metrics --tracked",
   "metrics": [
     {
@@ -41,7 +41,7 @@
         0.8957,
         1.0
       ],
-      "caveat": "Gate 1.00 absolute. The recorded delta against the cart's own movement -- what this system controls (D82)."
+      "caveat": "Gate 1.00 absolute. The recorded delta against the cart's own movement -- what this system controls."
     },
     {
       "name": "SearchPriceFidelity",
@@ -51,7 +51,7 @@
         0.1507,
         0.4422
       ],
-      "caveat": "No gate. NOT a success rate: how often the search price equalled the price the cart charged. Low because the cart applies a per-product loyalty discount the search does not carry (D68/D76/D82)."
+      "caveat": "No gate. NOT a success rate: how often the search price equalled the price the cart charged. Low because the cart applies a per-product loyalty discount the search does not carry."
     },
     {
       "name": "RecoveryCompletionRate",

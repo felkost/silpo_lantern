@@ -1,8 +1,8 @@
-"""G9 (D-G9-05): `_build_draft_from_tape` also populates `mcp_by_tool`,
+"""`_build_draft_from_tape` also populates `mcp_by_tool`,
 grouping the same taped responses by bare tool name in call order --
 never hand-written, never a second source of truth from the args-keyed
 `mcp` queue. Closes the interface-with-no-producer the adversarial review
-found in G9's Revision 1 spec.
+found in the Revision 1 spec.
 
 Offline throughout: exercises the pure transform against a synthetic
 tape -- no live call, no replay, no file write.

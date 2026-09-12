@@ -1,4 +1,4 @@
-"""T11 (G9 spec): `FakeWriteBackend` serves two different carts/products/
+"""`FakeWriteBackend` serves two different carts/products/
 prices, proving the extraction from
 `test_write_path_interrupt_and_resume.py`'s hardcoded original is real,
 not a relocation. Offline throughout.

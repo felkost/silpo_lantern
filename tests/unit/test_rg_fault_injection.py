@@ -1,4 +1,4 @@
-"""G9 (G9.7): the fault-injection cases RG-01, RG-02, RG-04 and RG-05
+"""the fault-injection cases RG-01, RG-02, RG-04 and RG-05
 name. Written rather than relabelled: plan section 12.4's own rule is
 that a new test's status before it runs is `not_run`, never `pass`, and
 the kickoff audit found five RG rows had been claimed on the strength of
@@ -201,7 +201,7 @@ def test_rg04_a_search_that_finds_nothing_writes_nothing() -> None:
 
 # --------------------------------------------------------------------
 # RG-05: a persistently failing / hanging MCP call. The rubric asks for
-# completion within budget. Per D59 the budget loop is NOT wired
+# completion within budget. Per an earlier decision the budget loop is NOT wired
 # (`enforce_budget` is called nowhere, `cycles_used`/`tokens_used` are
 # never incremented), so what CAN be asserted today is that a persistent
 # transport failure terminates rather than looping -- and that is

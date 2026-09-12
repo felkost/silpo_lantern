@@ -1,4 +1,4 @@
-// G10: an append-only log of the nodes the stream reported completing.
+// an append-only log of the nodes the stream reported completing.
 // No pre-drawn checklist and no "pending" rows: a compensation round
 // enters write_guard directly and retry returns to diagnose, so a fixed
 // list would promise work the run does not do. The only forward-looking
@@ -6,7 +6,7 @@
 // nothing about what comes next.
 
 import { IO_LABEL, type StageRow } from "../stages";
-import { Help } from "./Help";
+import { Help, Terms } from "./Help";
 
 interface Props {
   rows: StageRow[];
@@ -14,21 +14,32 @@ interface Props {
 }
 
 export function StageFeed({ rows, streaming }: Props) {
-  // The last frame carries the session's cumulative spend (D90): shown as
+  // The last frame carries the session's cumulative spend: shown as
   // spent, beside the project's ceiling -- never as what remains.
   const spend = [...rows].reverse().find((r) => r.usage)?.usage;
   return (
     <section className="panel-block" aria-labelledby="stage-heading">
       <h2 id="stage-heading">Observed nodes</h2>
       <Help>
-        Журнал кроків, які агент справді виконав у цій сесії, у порядку виконання.
-        Біля кожного кроку — до чого він звертався: MCP — читання чи запис кошика через
-        сервер Сільпо; LLM — виклик мовної моделі; DB — база даних; pure — обчислення в
-        коді, без мережі. «working…» означає, що потік відкритий і сервер ще працює.
-        Рядок «Spent» — витрати цієї сесії на мовну модель: токени й долари за даними
-        самого постачальника моделі, за зафіксованими в проєкті цінами. «Project
-        ceiling» — межа витрат на модель для всього проєкту, яку встановив автор у
-        config/models.yaml; це не залишок.
+        <p>Кроки, які агент виконав у цій сесії, у порядку виконання. Позначка біля кроку
+        — до чого він звертався.</p>
+        <Terms
+          items={[
+            ["MCP", "читання або запис кошика через сервер Сільпо."],
+            ["LLM", "виклик мовної моделі."],
+            ["DB", "база даних сервісу."],
+            ["pure", "обчислення в коді, без мережі."],
+            ["working…", "потік відкритий, сервер ще працює."],
+            [
+              "Spent",
+              "витрати цієї сесії на мовну модель: токени й долари за даними постачальника, за цінами, зафіксованими в проєкті.",
+            ],
+            [
+              "Project ceiling",
+              "межа витрат на модель для всього проєкту, встановлена автором; це не залишок.",
+            ],
+          ]}
+        />
       </Help>
       {rows.length === 0 && !streaming && (
         <p className="muted">Nothing observed in this session yet.</p>

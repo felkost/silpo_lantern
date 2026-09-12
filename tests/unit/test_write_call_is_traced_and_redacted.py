@@ -1,4 +1,4 @@
-"""T17 (G5+G6 stage spec): the write redactor emits no raw args, and the
+"""T17: the write redactor emits no raw args, and the
 write call is actually wrapped in a span.
 
 Both halves matter and only one is obvious. The redactor is easy to write

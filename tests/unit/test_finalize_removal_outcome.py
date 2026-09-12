@@ -1,4 +1,4 @@
-"""T12 (G8 stage spec): `finalize_write_outcome`'s mirrored identity rule
+"""T12: `finalize_write_outcome`'s mirrored identity rule
 for a compensation's remove-form (`expect_absent=True`) -- exactly one
 `removed` entry matching the expected product at the expected quantity,
 and nothing else changed. The add path's own identity rule
@@ -133,7 +133,7 @@ def test_a_coincidentally_equal_negative_total_is_unverified() -> None:
     """A DIFFERENT product's removal happens to move the total by the same
     amount as the consented one -- we consented to remove p2, but p1
     (same price) was actually the one that disappeared. Must not be
-    mistaken for the consented removal (mirrors D-G5-19's add-path
+    mistaken for the consented removal (mirrors the add-path
     identity rule)."""
     before = _cart(
         "173.68",

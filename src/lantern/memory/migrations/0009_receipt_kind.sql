@@ -1,4 +1,4 @@
--- G8 (D51/D-G8-15): distinguishes an ordinary add-path receipt from a
+-- distinguishes an ordinary add-path receipt from a
 -- compensation receipt. Without this, `CostDeltaAccuracy` (plan section
 -- 13's metric measuring expected-vs-actual delta) cannot exclude
 -- compensation rows -- their `expected_delta` is derived from the same

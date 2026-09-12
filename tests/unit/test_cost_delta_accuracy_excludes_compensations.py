@@ -1,4 +1,4 @@
-"""T14 (G9 spec): `CostDeltaAccuracy` excludes `kind="compensate"` receipts
+"""`CostDeltaAccuracy` excludes `kind="compensate"` receipts
 -- their `expected_delta` is derived from the same figure as their
 `actual_delta` (`domain/compensation.py`'s own derivation), so every such
 row is a guaranteed-zero-error sample that would dilute the very

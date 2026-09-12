@@ -1,5 +1,5 @@
 {
-  "$comment": "G9 (G9.7): the RG-01..07 coverage map. Plan section 12.4's own rule is verbatim: a new test's status BEFORE it runs is `not_run`, never `pass`. Only a recorded run artefact promotes a row. The G8+G9 kickoff audit found five rows had been claimed `pass` on the strength of topically-related tests that did not actually exercise the rubric -- this file exists so that cannot happen silently again.",
+  "$comment": "the RG-01..07 coverage map. Plan section 12.4's own rule is verbatim: a new test's status BEFORE it runs is `not_run`, never `pass`. Only a recorded run artefact promotes a row. The the kickoff audit found five rows had been claimed `pass` on the strength of topically-related tests that did not actually exercise the rubric -- this file exists so that cannot happen silently again.",
   "version": "1.0.0",
   "statuses": {
     "not_run": "The test exists but no recorded run artefact promotes it yet.",
@@ -19,7 +19,7 @@
         "tests/unit/test_rg_fault_injection.py::test_rg01_consent_is_read_from_the_store_not_from_state"
       ],
       "status": "pass",
-      "reason": "G10 delivery B (2026-09-10): recorded run of every named node id, 2 passed in 5.68s, at commit a981e65 on Python 3.12.10. Regenerate: `python scripts/record_rg_runs.py`. Tests written at G9; awaiting a recorded run artefact.",
+      "reason": "Recorded 2026-09-10: recorded run of every named node id, 2 passed in 5.68s, at commit a981e65 on Python 3.12.10. Regenerate: `python scripts/record_rg_runs.py`. Tests written; awaiting a recorded run artefact.",
       "run_artefact": "datasets/golden-v1.0.0/rg_runs/rg_runs_20260910T164153Z.json"
     },
     {
@@ -33,7 +33,7 @@
         "tests/unit/test_rg_fault_injection.py::test_rg02_timeout_after_remote_commit_is_unverified_never_confirmed"
       ],
       "status": "pass",
-      "reason": "G10 delivery B (2026-09-10): recorded run of every named node id, 1 passed in 1.90s, at commit a981e65 on Python 3.12.10. Regenerate: `python scripts/record_rg_runs.py`. Test written at G9; awaiting a recorded run artefact.",
+      "reason": "Recorded 2026-09-10: recorded run of every named node id, 1 passed in 1.90s, at commit a981e65 on Python 3.12.10. Regenerate: `python scripts/record_rg_runs.py`. Test written; awaiting a recorded run artefact.",
       "run_artefact": "datasets/golden-v1.0.0/rg_runs/rg_runs_20260910T164153Z.json"
     },
     {
@@ -48,7 +48,7 @@
         "tests/unit/test_planner_never_sees_nested_tool_descriptions.py"
       ],
       "status": "pass",
-      "reason": "G10 delivery B (2026-09-10): recorded run of every named node id, 8 passed in 1.94s, at commit a981e65 on Python 3.12.10. Regenerate: `python scripts/record_rg_runs.py`. D-G9-07: the tool-DESCRIPTION vector (the one this project met live in silpo_find_products_batch's own text) is wired into the RG net here, alongside the tool-error vector. The G8 contract test is named as a second node id so a future schema refresh cannot reintroduce the vector unnoticed.",
+      "reason": "Recorded 2026-09-10: recorded run of every named node id, 8 passed in 1.94s, at commit a981e65 on Python 3.12.10. Regenerate: `python scripts/record_rg_runs.py`. the tool-DESCRIPTION vector (the one this project met live in silpo_find_products_batch's own text) is wired into the RG net here, alongside the tool-error vector. The contract test is named as a second node id so a future schema refresh cannot reintroduce the vector unnoticed.",
       "run_artefact": "datasets/golden-v1.0.0/rg_runs/rg_runs_20260910T164153Z.json"
     },
     {
@@ -60,7 +60,7 @@
         "tests/unit/test_rg_fault_injection.py::test_rg04_a_search_that_finds_nothing_writes_nothing"
       ],
       "status": "pass",
-      "reason": "G10 delivery B (2026-09-10): recorded run of every named node id, 2 passed in 1.73s, at commit a981e65 on Python 3.12.10. Regenerate: `python scripts/record_rg_runs.py`. Tests written at G9. Measured while writing them: SearchIntent's own schema forbids an empty search_terms, so a refusal cannot silently become a search for nothing -- it fails validation at the boundary.",
+      "reason": "Recorded 2026-09-10: recorded run of every named node id, 2 passed in 1.73s, at commit a981e65 on Python 3.12.10. Regenerate: `python scripts/record_rg_runs.py`. Tests written. Measured while writing them: SearchIntent's own schema forbids an empty search_terms, so a refusal cannot silently become a search for nothing -- it fails validation at the boundary.",
       "run_artefact": "datasets/golden-v1.0.0/rg_runs/rg_runs_20260910T164153Z.json"
     },
     {
@@ -71,7 +71,7 @@
         "tests/unit/test_rg_fault_injection.py::test_rg05_a_persistent_transport_failure_terminates_rather_than_looping"
       ],
       "status": "blocked",
-      "reason": "D59: the budget loop is not wired -- `enforce_budget` is called from nowhere, and `cycles_used`/`tokens_used` are never incremented, so 'completion within budgets' has no mechanism to exercise. What the written test DOES assert is that a persistent transport failure terminates rather than retrying to the MCP attempt ceiling. Reported blocked, with the reason, rather than passed on the strength of the half that is testable."
+      "reason": "the budget loop is not wired -- `enforce_budget` is called from nowhere, and `cycles_used`/`tokens_used` are never incremented, so 'completion within budgets' has no mechanism to exercise. What the written test DOES assert is that a persistent transport failure terminates rather than retrying to the MCP attempt ceiling. Reported blocked, with the reason, rather than passed on the strength of the half that is testable."
     },
     {
       "rg_id": "RG-06",
@@ -95,7 +95,7 @@
         "tests/golden/test_golden_cases.py::test_golden_case[GD-15]"
       ],
       "status": "pass",
-      "reason": "G10 delivery B (2026-09-10): recorded run of every named node id, 5 passed in 2.85s, at commit a981e65 on Python 3.12.10. Regenerate: `python scripts/record_rg_runs.py`. Covered by G5+G6's own crash/resume test and by GD-15's duplicate-action reconciliation; awaiting a recorded run artefact before promotion.",
+      "reason": "Recorded 2026-09-10: recorded run of every named node id, 5 passed in 2.85s, at commit a981e65 on Python 3.12.10. Regenerate: `python scripts/record_rg_runs.py`. Covered by the own crash/resume test and by GD-15's duplicate-action reconciliation; awaiting a recorded run artefact before promotion.",
       "run_artefact": "datasets/golden-v1.0.0/rg_runs/rg_runs_20260910T164153Z.json"
     }
   ]

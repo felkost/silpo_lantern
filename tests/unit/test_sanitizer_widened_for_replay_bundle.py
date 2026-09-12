@@ -1,10 +1,10 @@
-"""G7 (D-G7-07/[A-5]/[A-6]): two forced changes to the sanitizer, found by
+"""two forced changes to the sanitizer, found by
 an adversarial audit of this stage's plan against `sanitize_payload`'s
 actual coverage.
 
 [A-5]: `ALLOWED_KEYS` was built for cart-snapshot fields; sanitizing a
 `find_products_batch`/`time_slots`/`delivery_types`/write response with
-the pre-G7 list silently produced `{}` -- the same failure mode
+the earlier list silently produced `{}` -- the same failure mode
 `sanitize_fixture.py`'s own 2026-09-06 note already records for the cart
 shape. Verified below with the ACTUAL response shapes
 `tests/unit/test_write_path_interrupt_and_resume.py` uses.
@@ -80,8 +80,8 @@ def test_find_products_batch_response_does_not_sanitize_to_empty() -> None:
     assert product["externalProductId"] == 795319
     # A bare identifier: pseudonymised, not passed through raw.
     assert product["id"] != "11111111-1111-1111-1111-111111111111"
-    # G9: a UUID-shaped original keeps a UUID-shaped pseudonym -- the
-    # Evidence Gate requires that shape (D-G5-03), and the old
+    # a UUID-shaped original keeps a UUID-shaped pseudonym -- the
+    # Evidence Gate requires that shape, and the old
     # `test_id_NNN` form made every candidate in a sanitized bundle fail
     # the gate on replay. Still obviously synthetic, still deterministic.
     assert product["id"].startswith("00000000-0000-4000-8000-")

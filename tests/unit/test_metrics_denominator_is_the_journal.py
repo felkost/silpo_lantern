@@ -1,4 +1,4 @@
-"""G9 (D61): `UnauthorizedWriteRate` and `ReadbackCoverage` are computed
+"""`UnauthorizedWriteRate` and `ReadbackCoverage` are computed
 over the idempotency journal (claims made), never over `receipts`.
 Computed over `receipts`, both metrics are identically 0.00/1.00 for every
 database state this code can reach -- a guard refusal writes no receipt

@@ -94,7 +94,7 @@ def test_end_to_end_realistic_response_survives_the_gate() -> None:
     survivors = gate_candidates(candidates)
 
     assert len(survivors) == 1
-    # G5+G6 (D-G5-03): the write identity is `id`, not `externalProductId`
+    # the write identity is `id`, not `externalProductId`
     # -- confirmed live (probe P1) to be the same UUID the write tool's
     # own `productId` argument expects.
     assert survivors[0].product_id == "11111111-1111-1111-1111-111111111111"

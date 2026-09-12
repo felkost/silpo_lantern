@@ -1,8 +1,8 @@
-"""G10 delivery C: the console's evidence rides on the existing events,
+"""the console's evidence rides on the existing events,
 additively -- every value stringified at the boundary (a `Decimal` or
 `datetime` reaching `json.dumps` raises INSIDE the streaming generator,
-after a write may have landed: the G7 precedent). And no personal data
-on the wire, asserted over every frame rather than reviewed (D-G10-08).
+after a write may have landed: the earlier precedent). And no personal data
+on the wire, asserted over every frame rather than reviewed.
 """
 
 import json
@@ -132,7 +132,7 @@ def test_consent_ack_carries_the_binding_but_no_cart_id(
 
 
 def test_no_frame_carries_a_forbidden_key(monkeypatch: pytest.MonkeyPatch) -> None:
-    """D-G10-08 on the wire: walk every frame of a read run and a write
+    """an earlier decision on the wire: walk every frame of a read run and a write
     run for the keys that could carry a guest's identity or location."""
     read = _FakeGraph(
         chunks=_read_pipeline_chunks(), final_state=_awaiting_consent_state()

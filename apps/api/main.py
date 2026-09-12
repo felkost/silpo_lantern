@@ -4,7 +4,7 @@ stays a free, offline contract test (confirmed: a bare
 FastAPI/Starlette version — the health check's own network-free guarantee
 does not depend on the lifespan below being absent).
 
-G5+G6: `app.state.graph_builder` builds and caches the production graph
+`app.state.graph_builder` builds and caches the production graph
 LAZILY, on first use inside a route handler -- never inside this lifespan.
 Building it eagerly here would require a live `OPENROUTER_API_KEY` and a
 live `tools/list` MCP call just to *start* the app, breaking `/health`'s
@@ -58,7 +58,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     install_trace_redaction()
     dsn = strip_sqlalchemy_dialect(get_database_url())
     await run_migrations(dsn)
-    # D-G5-15: `recovery_state_serde()` extends the msgpack allowlist with
+    # `recovery_state_serde()` extends the msgpack allowlist with
     # `ConsentRecord`/`Receipt`/`CartDiff` -- without it, a consent
     # crossing the `interrupt_before` checkpoint boundary degrades exactly
     # as `ActionProposal` once did before it was added to the same list.
@@ -73,7 +73,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             # in-process store (same assumption `ToolRegistry` already
             # documents for this project).
             app.state.oauth_pending = {}
-            # G10 (D89): env overrides so the author can tighten either
+            # env overrides so the author can tighten either
             # cap on Render without a deploy; defaults in `limits.py`.
             app.state.spend_caps = SpendCaps(
                 sessions_per_ip=int(
@@ -108,7 +108,7 @@ def health() -> Dict[str, str]:
 
 
 def mount_web(app: FastAPI, dist: Path) -> bool:
-    """G10 (D87): serves the built recovery card from `/`. Must be called
+    """serves the built recovery card from `/`. Must be called
     AFTER every API route is registered -- a root mount registered earlier
     shadows `/health` (measured, spec §4). `StaticFiles` raises on a missing
     directory, so a clone without `npm run build` is warned about, not

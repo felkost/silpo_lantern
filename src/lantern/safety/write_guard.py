@@ -35,7 +35,7 @@ from src.lantern.domain.models import (
     Receipt,
 )
 
-# G5+G6 (D-G5-04): never derived from a live `tools/list` annotation --
+# never derived from a live `tools/list` annotation --
 # `readOnlyHint`/`destructiveHint`/`idempotentHint` are, per plan section
 # 1.2, "not a guarantee of authorization." A tool earns a place here only
 # by an explicit, reviewed decision, never by virtue of appearing in a
@@ -44,7 +44,7 @@ WRITE_TOOL_ALLOWLIST: Final[frozenset[str]] = frozenset(
     {"silpo_add_or_update_cart_products"}
 )
 
-# G8 (D51/D-G8-01): the compensation kind's own allowlist -- a dated
+# the compensation kind's own allowlist -- a dated
 # divergence from plan section 11.1's "hero keeps one write-tool" sentence
 # (amendment A9), not silent scope creep.
 # `silpo_remove_cart_products` is needed because the add tool's own schema
@@ -95,7 +95,7 @@ class WriteOutcome(BaseModel):
 
 
 def _add_args_shape_errors(canonical_args: dict[str, Any]) -> list[str]:
-    """D-G5-17: the guard's own strict shape check is the authority, not
+    """the guard's own strict shape check is the authority, not
     the live `inputSchema` -- measured (M4) that schema has no
     `additionalProperties: false`, does not require `addQuantity`, and
     lets `products` carry any number of items. A payload this project
@@ -103,7 +103,7 @@ def _add_args_shape_errors(canonical_args: dict[str, Any]) -> list[str]:
     than one product) must be refused here even though the live schema
     alone would accept it.
 
-    G8 (D-G8-03): renamed from `_canonical_args_shape_errors` -- body
+    renamed from `_canonical_args_shape_errors` -- body
     byte-for-byte unchanged (`test_write_guard_compensation.py`'s own
     `test_add_shape_check_is_unchanged` pins that) -- because a second
     write-capable tool with a genuinely different argument shape now
@@ -140,7 +140,7 @@ def _add_args_shape_errors(canonical_args: dict[str, Any]) -> list[str]:
 
 
 def _remove_args_shape_errors(canonical_args: dict[str, Any]) -> list[str]:
-    """G8 (D-G8-03): the remove tool's live schema is `minItems: 1` with
+    """the remove tool's live schema is `minItems: 1` with
     NO `maxItems` -- this local check is what stops one malformed args
     object from naming every product in the cart. Exactly
     `{shoppingCartId, products}`, exactly one product, product keys
@@ -194,18 +194,18 @@ def authorize_write(
     `ConsentRecord` alone -- the caller (the Write Guard node) is the one
     place that has all four.
 
-    G8 (D51): `receipt`/`written_args` are keyword-only and default to
+    `receipt`/`written_args` are keyword-only and default to
     `None` so every existing call site (the ordinary add path) is
     untouched. `receipt` is the write a `kind="compensate"` proposal
     claims to undo; `written_args` is that ORIGINAL write's own
     `canonical_args`, re-loaded by the caller from Neon by
-    `proposal.compensates_action_id` (D-G8-12) -- never from in-memory
+    `proposal.compensates_action_id` -- never from in-memory
     state, which by the time a guest consents to a compensation has
     already been replaced with the compensation proposal itself.
     """
     canonical_args = proposal.canonical_args
 
-    # G8 (D51): selecting the allowlist by kind, rather than checking
+    # selecting the allowlist by kind, rather than checking
     # `proposal.tool_name in WRITE_TOOL_ALLOWLIST` directly, is what keeps
     # the add path's behaviour byte-for-byte unchanged (`kind="add"` maps
     # to exactly `WRITE_TOOL_ALLOWLIST`, the identical object) while also
@@ -292,7 +292,7 @@ def authorize_write(
             canonical_args=canonical_args,
         )
 
-    # G8 (D51): compensation-specific binding, checked only for
+    # compensation-specific binding, checked only for
     # `kind="compensate"` -- C1 (no allowlist for the kind) is already
     # folded into the allowlist check above.
     if proposal.kind == "compensate":
@@ -375,10 +375,10 @@ def finalize_write_outcome(
     only that the request was accepted (plan section 11, DR-12). The
     only thing that can produce `status="receipt"` is an independent
     read-back whose diff matches the consented action by *identity*, not
-    merely by total (D-G5-19): a coincidentally equal total from an
+    merely by total: a coincidentally equal total from an
     unrelated concurrent change is `unverified`, not a receipt.
 
-    G8 (D51): `expect_absent=True` is the compensation remove-form's own
+    `expect_absent=True` is the compensation remove-form's own
     identity rule, mirrored from the add path's -- exactly one REMOVED
     entry matching `expected_product_id` at `expected_quantity`, nothing
     else changed. Defaults to `False`, so every existing call site (the
@@ -397,7 +397,7 @@ def finalize_write_outcome(
     try:
         diff = canonical_diff(before, read_back_result)
     except ValueError as exc:
-        # D-G5-19b: measured (M6) that this invariant holds on ordinary
+        # measured (M6) that this invariant holds on ordinary
         # traffic -- it raises exactly when the cart changed concurrently
         # with this write, which is the case that must be reported as
         # `unverified`, never allowed to escape as an exception that skips

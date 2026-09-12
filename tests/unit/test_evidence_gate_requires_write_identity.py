@@ -1,4 +1,4 @@
-"""G5+G6 (D-G5-03): `resolve_product_id` used to fall back from
+"""`resolve_product_id` used to fall back from
 `externalProductId` to `slug` -- retired now that a live probe (P1)
 confirmed `find_products_batch`'s own `id` field is a required, non-null
 UUID matching the write tool's `productId` argument and the cart's own
@@ -41,7 +41,7 @@ def test_product_uuid_is_the_resolved_identity() -> None:
 
 def test_a_candidate_with_no_product_uuid_is_dropped_not_guessed() -> None:
     """The `externalProductId`/`slug` fallback this module used before
-    D-G5-03 is retired: `find_products_batch`'s own `id` field is
+    an earlier decision is retired: `find_products_batch`'s own `id` field is
     required and non-null, so there is no live case left where falling
     back to `slug` would ever fire -- a missing `product_uuid` is dropped,
     never approximated from a different field."""

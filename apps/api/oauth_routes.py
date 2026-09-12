@@ -100,7 +100,7 @@ def _storage_for(request: Request, session_id: str) -> SessionTokenStorage:
 @router.get("/auth/start")
 async def auth_start(request: Request) -> RedirectResponse:
     """Sends THIS guest to Silpo's own login (phone + OTP). The session
-    comes from the cookie `POST /session` set (G10, A-G10-04) -- never from
+    comes from the cookie `POST /session` set -- never from
     the URL, which the browser records -- because the token that comes
     back belongs to one guest, and the callback has to know whose session
     to store it against."""
@@ -235,8 +235,8 @@ async def auth_callback(
         ) from exc
 
     await storage.set_tokens(token)
-    # G10 (D87): back to the app, on a BARE `/`. The session was resolved
+    # back to the app, on a BARE `/`. The session was resolved
     # from the server-held `state` above, so the id never needed to ride
-    # in the redirect target -- and must not (G10-5: browser history, a
+    # in the redirect target -- and must not (browser history, a
     # projector at a demo). The SPA finds its own copy in `sessionStorage`.
     return RedirectResponse("/", status_code=303)

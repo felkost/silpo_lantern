@@ -58,11 +58,11 @@ def test_explainer_is_decided_by_ua_eval() -> None:
 
 
 def test_eval_judge_is_selected_but_not_yet_calibrated() -> None:
-    """G9 (2026-09-09): `eval_judge.selected` was set from a live smoke
+    """`eval_judge.selected` was set from a live smoke
     test across 5 candidates (3 worked cleanly) -- a real, evidence-based
-    pick, not a placeholder. `calibrated` stays `False` until G9.2's
+    pick, not a placeholder. `calibrated` stays `False`.2's
     golden-case labeled pairs exist to measure real judge agreement
-    against (D-G9-09) -- a smoke test proves callability, not agreement."""
+    against -- a smoke test proves callability, not agreement."""
     data = _load()
     assert data["eval_judge"]["selected"] == "openai/gpt-5.6-luna"
     assert data["eval_judge"]["calibrated"] is False

@@ -1,4 +1,4 @@
-"""T8 and T8b (G5+G6 stage spec), and with them criterion A3.
+"""T8 and T8b, and with them criterion A3.
 
 T8: a proposal built by the real pipeline validates against the write
 tool's own `inputSchema`, taken from the recorded `tools/list` capture
@@ -110,7 +110,7 @@ def test_t8_canonical_args_validate_against_the_recorded_input_schema() -> None:
 def test_t8_a_weighted_proposal_also_validates() -> None:
     """Weighted goods can send a fractional `quantity`; the schema's own
     `quantity: number` accepts it, but a `Decimal` would serialise as a
-    JSON string and fail (D-G5-02c).
+    JSON string and fail (an earlier decision).
 
     A gap of 50.00 against 199.00/kg needs 0.2513 kg, rounded up to the
     0.5 step. A larger gap would round to a whole multiple, which

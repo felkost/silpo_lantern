@@ -1,4 +1,4 @@
-"""G10 delivery A (T6, D89): `POST /session` is unauthenticated and the LLM
+"""`POST /session` is unauthenticated and the LLM
 budget is the author's, so session creation is capped per IP per day and
 live graph starts are capped per day. Both refuse with 429 and a plain
 message before anything reaches the provider.

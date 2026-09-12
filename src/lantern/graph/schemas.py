@@ -16,7 +16,7 @@ class SearchIntent(BaseModel):
     `collect_options` never trusts a price or an id from here, because
     none exists to trust.
 
-    `quantity_hint` was removed at G7 (`planner_v2.md`). It decided how
+    `quantity_hint` was removed (`planner_v2.md`). It decided how
     many units each proposal offered until four live runs showed what that
     meant in practice: the model returned 1 every time, so a 208.10 gap
     was answered with a 9.34 drink and the guest could consent to a write

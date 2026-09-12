@@ -1,4 +1,4 @@
-"""Guest-facing compensation (D51, plan section 11): a controlled,
+"""Guest-facing compensation (an earlier decision, plan section 11): a controlled,
 consent-bound restoration of the cart to what it held before a write this
 project performed. Pure per the "domain core does no I/O" invariant --
 `derive_compensation` and `build_compensation_proposal` take a `Receipt`
@@ -7,7 +7,7 @@ produce, the inverse write. No LLM anywhere on this path: the sentence
 that names an amount of money is rendered here, in code
 (`CLAUDE.md` section 4).
 
-G8 (D-G8-01): compensation is not always the ordinary add tool run
+compensation is not always the ordinary add tool run
 backwards. Candidates come from `silpo_find_products_batch`, so most
 writes ADD A NEW LINE rather than increase an existing one, and the add
 tool's own schema (`quantity: {"type":"number","exclusiveMinimum":0}`)
@@ -16,7 +16,7 @@ no inverse without `silpo_remove_cart_products`. This is a dated
 divergence from plan section 11.1's "hero keeps one write-tool" sentence,
 recorded as amendment A9, not presented as compliance.
 
-G8 (D-G8-02): a receipt is compensable only when the diff it recorded is
+a receipt is compensable only when the diff it recorded is
 KNOWN, never when the state is unknown. `receipt_is_compensable` mirrors
 `write_guard.finalize_write_outcome`'s own branches by their exact
 `reason` text -- a verified write (status="receipt") is compensable
@@ -44,7 +44,7 @@ from src.lantern.domain.models import (
     Receipt,
 )
 
-# D-G8-02: `finalize_write_outcome` reaches these two `reason` strings only
+# `finalize_write_outcome` reaches these two `reason` strings only
 # after its own identity check (`len(matched) == 1 and not other_changes`)
 # already passed -- so a receipt carrying either one means exactly our
 # product changed and nothing else did, the diff is simply not what we
@@ -61,7 +61,7 @@ _COMPENSABLE_UNVERIFIED_REASONS = frozenset(
 
 
 def receipt_is_compensable(receipt: Receipt) -> bool:
-    """D-G8-02's table, as code. A verified write is compensable exactly
+    """the table, as code. A verified write is compensable exactly
     when it did not clear the blocker -- clearing the blocker is a plain
     success, nothing to offer to undo."""
     if receipt.status == "receipt":
@@ -122,7 +122,7 @@ def derive_compensation(
     never a best-guess value: an unrepresentable Decimal round-trip, a
     diff that does not isolate to exactly one product, or a restore-form
     missing `companyId`/`branchId` (optional on `LineItem`, `None` on the
-    tracked replay bundle -- D-G8-12) all refuse rather than guess.
+    tracked replay bundle) all refuse rather than guess.
     """
     if not receipt_is_compensable(receipt):
         return None
@@ -157,8 +157,8 @@ def derive_compensation(
         return None
 
     # The price the CART applied, from after_state -- never the catalogue
-    # price -- so the delta sidesteps the discount problem D40/D48
-    # measured (search reported 9.34, the cart priced it 8.41) entirely:
+    # price -- so the delta sidesteps the discount problem measured live
+    # (search reported 9.34, the cart priced it 8.41) entirely:
     # the number being subtracted is the one the cart itself charged.
     expected_delta: Money = after_item.price * (original_quantity - removed_quantity)
 
@@ -257,7 +257,7 @@ def build_compensation_proposal(
         }
         quantity = -derived.removed_quantity
 
-    # D-G8-13: the compensation's evidence is the read-back call that
+    # the compensation's evidence is the read-back call that
     # produced `after_state` -- not a catalogue lookup, since this
     # proposal is derived from a receipt, not a product search.
     evidence: List[EvidenceTuple] = [
@@ -289,7 +289,7 @@ def compensation_arg_errors(
 ) -> List[str]:
     """The Write Guard's own independent re-derivation, compared field by
     field against `proposal` -- excluding `action_id` (a fresh uuid4 every
-    time, D-G8-14) and `guest_text_uk` (presentation only). One rule, not
+    time) and `guest_text_uk` (presentation only). One rule, not
     two that could drift: this calls the exact same `derive_compensation`
     the builder does.
     """

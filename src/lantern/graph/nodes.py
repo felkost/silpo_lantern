@@ -1,7 +1,7 @@
 """Graph nodes: read -> diagnose -> compare_channels -> plan ->
 collect_and_gate -> rank -> explain -> awaiting_consent -> write_guard ->
 write_and_readback -> persist_receipt. The three write-path nodes were
-added at G5+G6; everything before `awaiting_consent` is unchanged from G4.
+added; everything before `awaiting_consent` is unchanged.
 
 Every MCP/LLM call is dependency-injected as a plain `Callable` — the same
 pattern `ToolRegistry(fetch=...)` already established in this codebase
@@ -107,7 +107,7 @@ def make_read_node(
     parsed response nests the cart under a `cart` key
     (`normalizer.normalize_cart`'s own documented input shape).
 
-    `checkoutWebLink` (G5+G6, D-G5-25) is a sibling of `cart` in the raw
+    `checkoutWebLink` is a sibling of `cart` in the raw
     response, not a field inside it, so it is merged into the dict passed
     to `normalize_cart` here rather than being silently dropped.
     """
@@ -350,7 +350,8 @@ def make_explain_node(explainer_call: Callable[[Any], ExplainerOutput]) -> Node:
     """`explainer_call` is the production `ChatOpenAI` adapter's plug-in
     point, same caveat as `make_plan_node`. Each candidate's rendered
     sentence is attached via `model_copy` — `ActionProposal` is frozen.
-    Ends this slice at `awaiting_consent`, where G4 stopped; G5+G6 resumes
+    Ends this slice at `awaiting_consent`, where the read path stops; the write
+    path resumes
     the graph past this point through `make_write_guard_node` below, after
     an `interrupt_before` pause for the guest's consent.
     """
@@ -431,7 +432,7 @@ def make_write_guard_node(
         )
         quarantined = frozenset({proposal.tool_name}) if is_quarantined else frozenset()
 
-        # G8 (D51/D-G8-12): a compensation's receipt lives in
+        # a compensation's receipt lives in
         # `state["compensable"]` (still present -- `persist_receipt_node`
         # carries it through, never clears it), but the ORIGINAL write's
         # own `canonical_args` do not: `candidates` was already replaced
@@ -473,7 +474,7 @@ def make_write_guard_node(
             written_args=written_args,
         )
         if not decision.authorized:
-            # G8 (D51/D-G8-08): the add path stays fail-closed and
+            # the add path stays fail-closed and
             # terminal, unchanged -- a session that hits this refusal
             # cannot be resurrected (`submit_consent` only accepts a new
             # consent at `awaiting_consent`). A refused COMPENSATION would
@@ -521,7 +522,7 @@ def make_write_and_readback_node(
 ) -> Node:
     """The ONLY node that calls a write tool (`CLAUDE.md` section 4).
     Claims the idempotency journal row and consumes the consent in one
-    transaction immediately before the call (D-G5-07b) -- measured
+    transaction immediately before the call (an earlier decision) -- measured
     (probe M2b against the installed LangGraph SDK) that
     `interrupt_before` protects the write guard node from re-execution on
     resume, but NOT this node: a crash after this node's own side effect
@@ -556,7 +557,7 @@ def make_write_and_readback_node(
         except (CartShapeError, KeyError, McpAdapterError):
             read_back_cart = None
 
-        # G8 (D-G8-04): derived from the proposal's own args shape, on
+        # derived from the proposal's own args shape, on
         # EVERY branch that reaches `_finalize` -- including the
         # `just_claimed=False` reconciliation branch. A remove-form
         # compensation's `canonical_args` has no `quantity` key at all
@@ -565,7 +566,7 @@ def make_write_and_readback_node(
         # and the idempotency row claimed, and BEFORE `mark_action` --
         # stranding the row `in_flight` forever. `abs(proposal.quantity)`
         # is the removed quantity for a remove-form (the ActionProposal's
-        # own `quantity` is signed, D51); the restore-form keeps reading
+        # own `quantity` is signed); the restore-form keeps reading
         # the wire `quantity` directly, since it IS present there.
         expect_absent = "quantity" not in product
         expected_quantity = (
@@ -593,7 +594,7 @@ def make_write_and_readback_node(
         # Recorded here so the receipt can answer the one the guest
         # actually asked -- can I check out now?
         #
-        # G8 (D51): for a COMPENSATION, `state["diagnosis"]` is the
+        # for a COMPENSATION, `state["diagnosis"]` is the
         # PRE-write diagnosis -- undoing a write can drop `productsTotal`
         # below a DIFFERENT threshold than the one that write was closing,
         # and both live order-level codes carry no `productId` for the
@@ -663,7 +664,7 @@ def make_write_and_readback_node(
         )
 
         if not just_claimed:
-            # D-G5-07c: an earlier attempt already claimed this action —
+            # an earlier attempt already claimed this action —
             # this is a resume after a crash, or a genuine duplicate
             # request. NEVER write again; reconcile purely from a
             # read-back, using a synthetic "not actually called this
@@ -696,7 +697,7 @@ def make_write_and_readback_node(
                 proposal.tool_name, dict(proposal.canonical_args)
             )
         except McpAdapterError as exc:
-            # D-G5-07c: an exception from the write call itself means the
+            # an exception from the write call itself means the
             # server MAY have applied it -- never assumed to have failed,
             # never retried blindly. A mandatory read-back still runs.
             write_response = {"success": False, "summary": str(exc), "products": []}
@@ -706,8 +707,8 @@ def make_write_and_readback_node(
     return write_and_readback_node
 
 
-# `make_persist_receipt_node` moved to `graph/compensation_nodes.py` (G8,
-# D-G8-11): `nodes.py` was already past `CLAUDE.md` section 5's file-size
+# `make_persist_receipt_node` moved to `graph/compensation_nodes.py`:
+# `nodes.py` was already past `CLAUDE.md` section 5's file-size
 # ceiling, and that node's own logic grew materially once it had to decide
 # whether to offer a compensation. `call_write_tool` stays a parameter of
 # exactly one factory in exactly this module -- see

@@ -22,7 +22,7 @@ def _candidate(**overrides: object) -> RawCandidate:
         "price_raw": 39.99,
         "available_raw": True,
         "captured_at": datetime.now(timezone.utc),
-        # G5+G6 (D-G5-03): the gate now also requires a UUID-shaped write
+        # the gate now also requires a UUID-shaped write
         # identity -- these tests are about price/availability range
         # checks, not identity, so the fixture carries a valid identity by
         # default and only overrides the field each test actually exercises.

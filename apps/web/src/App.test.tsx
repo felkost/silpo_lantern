@@ -1,4 +1,4 @@
-// B2 (G5+G6 stage spec): the three screens render from real session
+// B2: the three screens render from real session
 // data, the Consent screen's numbers come from the proposal's own typed
 // fields (never from `guest_text_uk`), and the a11y smoke passes.
 //
@@ -48,7 +48,7 @@ const ENVELOPE = { session_id: "s1", trace_id: "t1", version: { schema_hash: "h"
 
 beforeEach(() => {
   vi.restoreAllMocks();
-  // G10: the app resumes a stored session on mount; one test's session
+  // the app resumes a stored session on mount; one test's session
   // must not leak into the next.
   sessionStorage.clear();
 });
@@ -143,8 +143,8 @@ describe("recovery card", () => {
     expect(screen.getByTestId("actual-delta")).toHaveTextContent("39.99");
   });
 
-  it("keeps round 1's receipt visible through a second consent round (D42)", async () => {
-    // G7 (D-G7-05): the exact regression an adversarial audit of this
+  it("keeps round 1's receipt visible through a second consent round", async () => {
+    // the exact regression an adversarial audit of this
     // stage's plan caught -- `persist_receipt` clears `receipt` and
     // routes back to `diagnose` inside the SAME stream when a verified
     // write does not clear the blocker. Naively replacing `receipt`
@@ -306,7 +306,7 @@ describe("receipt screen", () => {
     expect(screen.getByTestId("receipt-unverified")).toBeInTheDocument();
     expect(screen.queryByTestId("receipt-verified")).toBeNull();
     // The raw developer string is translated to Ukrainian for the guest
-    // (D-G7-04) -- it must not appear verbatim on this screen.
+    // -- it must not appear verbatim on this screen.
     expect(screen.getByTestId("receipt-reason")).not.toHaveTextContent(
       "read-back unreachable",
     );
@@ -316,7 +316,7 @@ describe("receipt screen", () => {
   });
 });
 
-describe("compensation offer (G8, D51)", () => {
+describe("compensation offer", () => {
   const COMPENSATION_CANDIDATE: Candidate = {
     action_id: "comp-1",
     product_name: "Молоко «Галичина» 2,5%",
@@ -501,7 +501,7 @@ describe("guest login", () => {
       expect(screen.getByTestId("auth-link")).toBeInTheDocument();
     });
     expect(screen.getByTestId("auth-link")).toHaveAttribute("href", "/auth/start");
-    // G10 (A-G10-04): the id survives the round trip through Silpo's login
+    // the id survives the round trip through Silpo's login
     // page, which reloads this app on a bare `/`.
     expect(sessionStorage.getItem("lantern_session_id")).toBe("s1");
     // The author, walking it live: «Я увійшов — продовжити» did nothing
@@ -539,9 +539,9 @@ describe("guest login", () => {
   });
 });
 
-// G10 delivery A: the callback lands on a bare `/`, so the app must find
+// the callback lands on a bare `/`, so the app must find
 // its own session again; and reachability without logout is not shipped
-// (G10-4).
+//.
 describe("session round trip and logout", () => {
   it("resumes the stored session on load and streams its events", async () => {
     sessionStorage.setItem("lantern_session_id", "s1");
@@ -686,7 +686,7 @@ describe("session round trip and logout", () => {
   });
 });
 
-// G10 delivery C: the console shell. Theme is the one control on the
+// the console shell. Theme is the one control on the
 // shared header; it writes `data-theme` so an explicit choice wins over
 // `prefers-color-scheme` in both directions.
 describe("console shell", () => {
@@ -714,7 +714,7 @@ describe("console shell", () => {
   });
 });
 
-// G10 delivery C: the stage feed is an append-only log of nodes the
+// the stage feed is an append-only log of nodes the
 // stream reported -- repeats shown as repeats, nothing pre-drawn, nothing
 // pending -- because the graph's own paths (retry -> diagnose again, a
 // compensation round entering write_guard directly) make any checklist a
@@ -753,8 +753,8 @@ describe("stage feed", () => {
   });
 });
 
-// G10 delivery C: the claim panel is organised by what a field PROVES,
-// not where it came from (D-G10-03). Live evidence only; anything not seen
+// the claim panel is organised by what a field PROVES,
+// not where it came from. Live evidence only; anything not seen
 // in this session says so.
 describe("claim panel", () => {
   function sessionStream() {
@@ -901,9 +901,10 @@ describe("claim panel", () => {
     // The site's Ukrainian name and meaning sit under the English identifier.
     expect(block).toHaveTextContent("Перечитування після запису");
     expect(block).toHaveTextContent("offline");
-    // claim 1's audited check: which code the app rendered, and which it did not
-    expect(screen.getByTestId("claim-disclosure")).toHaveTextContent("order.payment_types.disabled");
-    expect(screen.getByTestId("claim-disclosure")).toHaveTextContent(/not rendered/i);
+    // the audited disclosure sits with the measured-earlier figures, not
+    // on a live claim: which code the app rendered, and which it did not
+    expect(block).toHaveTextContent("order.payment_types.disabled");
+    expect(block).toHaveTextContent("застосунок не показує");
   });
 
   it("drops the stale diagnosis from the panel on the compensation screen", async () => {
@@ -932,7 +933,7 @@ describe("claim panel", () => {
   });
 });
 
-// G10 step 7b (D90): spend is shown as spend -- tokens, dollars, the
+// spend is shown as spend -- tokens, dollars, the
 // project's ceiling -- never as a remaining balance.
 describe("token economics", () => {
   it("shows the session's cumulative spend from the last stage frame, never a remainder", async () => {
@@ -964,16 +965,18 @@ describe("token economics", () => {
 
 // Author's live feedback after the first console session: the panel, the
 // pile of identical validation lines and the loading state need Ukrainian
-// explanations. Technical identifiers stay English (A-G10-02); the words
+// explanations. Technical identifiers stay English; the words
 // that explain them are for the reader.
 describe("explanations", () => {
   it("every panel block carries a Ukrainian «Що це?» explanation", () => {
     vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("nothing fetches"); }));
     render(<App />);
     const helps = screen.getAllByText(/^Що це\?$/);
-    // Three blocks on the jury panel: observed nodes, claims, measured earlier.
-    expect(helps.length).toBe(3);
-    expect(screen.getByText(/MCP — читання/)).toBeInTheDocument();
+    // Three blocks on the jury panel (observed nodes, claims, measured earlier)
+    // and the cart column's own block.
+    expect(helps.length).toBe(4);
+    // The term sits in its own <i>, so match on the whole line's text.
+    expect(screen.getByText((_, el) => el?.tagName === "P" && /^MCP — читання/.test(el.textContent ?? ""))).toBeInTheDocument();
   });
 
   it("groups identical validation lines with a count and explains an unknown reason", async () => {
@@ -1053,7 +1056,7 @@ describe("claim panel grouping", () => {
 // Seen live after the hero run: the receipt screen dropped claims 1 and 2
 // ("not observed") because the panel reused the card's compensation-only
 // suppression for every non-diagnosis screen. The diagnosis is history the
-// panel keeps; only the undo offer (D51) hides it.
+// panel keeps; only the undo offer hides it.
 describe("claim panel after the receipt", () => {
   it("keeps the diagnosis evidence on the receipt screen", async () => {
     sessionStorage.setItem("lantern_session_id", "s1");
@@ -1127,7 +1130,7 @@ describe("cart column", () => {
     });
     const column = screen.getByTestId("cart-column");
     expect(column).toHaveTextContent("Хліб");
-    expect(column).toHaveTextContent("× 2");
+    expect(column).toHaveTextContent("2 ×");
     expect(column).toHaveTextContent("93.38");
     expect(column).toHaveTextContent("DeliveryHome");
     expect(column).toHaveTextContent("2026-09-11");
@@ -1184,5 +1187,124 @@ describe("cart history", () => {
     expect(second).toHaveTextContent("701.59");
     expect(second).toHaveTextContent("+95.97");
     expect(second.querySelector(".cart-added")).toHaveTextContent("Сир");
+  });
+});
+
+// «Перевірити знову» (the author, live): after a run the only button was
+// «Вийти», so a second check meant a second login. The restart route moves
+// the login to a fresh session; the console clears the old run and streams
+// the new one under the new id.
+describe("restart", () => {
+  it("clears the old run and streams the new session without a new login", async () => {
+    sessionStorage.setItem("lantern_session_id", "s1");
+    const calls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        calls.push(`${init?.method ?? "GET"} ${url}`);
+        if (url === "/session/s1/restart") {
+          return new Response(
+            JSON.stringify({ session_id: "s2", status: "created", authorized: true, auth_url: "" }),
+            { status: 200, headers: { "content-type": "application/json" } },
+          );
+        }
+        return new Response(
+          sseStream([
+            frame("diagnosis", {
+              ...ENVELOPE,
+              primary_code: "order.cost.min",
+              gap: url.includes("/s2/") ? "10.00" : "93.38",
+              gap_is_borderline: false,
+              products_total: "605.62",
+              threshold_source: "validation_context",
+              validations: [{ code: "order.cost.min", level: "error", type: "cost", is_known: true }],
+              channels: [],
+            }),
+            frame("consent_required", ENVELOPE),
+          ]),
+          { status: 200 },
+        );
+      }),
+    );
+
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByTestId("claim-arithmetic")).toHaveTextContent("93.38");
+    });
+
+    await act(async () => {
+      screen.getByTestId("restart").click();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("claim-arithmetic")).toHaveTextContent("10.00");
+    });
+    expect(screen.getByTestId("claim-arithmetic")).not.toHaveTextContent("93.38");
+    expect(calls).toContain("POST /session/s1/restart");
+    expect(calls.some((c) => c.startsWith("GET /session/s2/events"))).toBe(true);
+    expect(sessionStorage.getItem("lantern_session_id")).toBe("s2");
+  });
+});
+
+// «Не додавати нічого» (the author): declining every option is an outcome
+// of its own, not a screen the Customer abandons. Nothing is posted; the
+// diagnosis stays; the summary says so and points at «Перевірити знову».
+describe("decline all options", () => {
+  it("shows the nothing-written summary without any request", async () => {
+    sessionStorage.setItem("lantern_session_id", "s1");
+    const calls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        calls.push(`${init?.method ?? "GET"} ${url}`);
+        return new Response(
+          sseStream([
+            frame("diagnosis", {
+              ...ENVELOPE,
+              primary_code: "order.cost.min",
+              gap: "93.38",
+              gap_is_borderline: false,
+              products_total: "605.62",
+              threshold_source: "validation_context",
+              validations: [{ code: "order.cost.min", level: "error", type: "cost", is_known: true }],
+              channels: [],
+            }),
+            frame("options", {
+              ...ENVELOPE,
+              candidates: [
+                {
+                  action_id: "a1",
+                  product_name: "Сир",
+                  quantity: "1",
+                  expected_delta: "95.97",
+                  guest_text_uk: "Сир закриє недостачу.",
+                  kind: "add",
+                  tool_name: "silpo_add_or_update_cart_products",
+                  args_hash: "abc",
+                  evidence: [],
+                },
+              ],
+            }),
+            frame("consent_required", ENVELOPE),
+          ]),
+          { status: 200 },
+        );
+      }),
+    );
+
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByTestId("decline-all")).toBeInTheDocument();
+    });
+    const before = calls.length;
+
+    await act(async () => {
+      screen.getByTestId("decline-all").click();
+    });
+
+    expect(screen.getByTestId("declined")).toHaveTextContent("Нічого не записано");
+    expect(screen.getByTestId("gap")).toHaveTextContent("93.38");
+    expect(screen.getByTestId("restart")).toBeInTheDocument();
+    expect(calls.length).toBe(before);
   });
 });

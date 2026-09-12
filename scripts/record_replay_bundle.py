@@ -1,4 +1,4 @@
-"""G7 (D-G7-06/D-G7-07): records a LIVE hero run into a tracked replay
+"""records a LIVE hero run into a tracked replay
 bundle at `datasets/fixtures/replay/hero_order_cost_min.json` -- the
 live-recorded upgrade of the synthetic bundle
 `tests/e2e/test_replay_hero_bundle.py` already proves the mechanism
@@ -10,27 +10,27 @@ Two phases, run separately:
   --phase capture   Live: taps every MCP fetcher and the REAL planner/
                      explainer LLM calls around a full hero run, and
                      DRIVES the consent + write round (and any further
-                     D42 round) in this same process. Writes the raw,
+                     an earlier decision round) in this same process. Writes the raw,
                      UNSANITIZED tape to the gitignored
                      `datasets/fixtures/raw/replay_tape_<timestamp>.json`.
                      Costs a live LLM call and a live MCP write --
                      needs the author's explicit go-ahead, shown as the
                      exact command before it runs (CLAUDE.md section 8).
 
-                     G9: it used to stop at the read chain, on the
+                     it used to stop at the read chain, on the
                      reasoning that the author would drive the write
                      through the real API. That API runs in a DIFFERENT
                      process with its own graph, so this script's
                      in-process tape could never see the write or the
                      read-back, and the resulting bundle replayed only to
                      `awaiting_consent` -- never to the verified receipt
-                     GD-01 and G9-7 both require. Found by running the
+                     GD-01 and the replay criterion both require. Found by running the
                      phase for the first time since `tool_view` landed,
                      which also surfaced a stale `make_planner_call`
                      call that had been broken all along.
 
   --phase build      Offline: reads the raw tape, sanitizes every
-                     response through ONE shared alias map (D-G7-07 --
+                     response through ONE shared alias map (an earlier decision --
                      without this, the same real cart id gets a
                      different alias in each response and the replayed
                      graph refuses on "cart id changed since consent was
@@ -48,8 +48,9 @@ Two phases, run separately:
 Reuses `scripts/g4_live_evidence_gate_run.py`'s already-proven live
 MCP-connection pattern (fresh session per call, disk-cached OAuth token,
 `ExceptionGroup` unwrapping) rather than inventing a second one. Unlike
-G4, this script's planner/explainer ARE the real, live-called adapters
-(`graph.llm_adapter.build_planner_llm`/`build_explainer_llm`) -- G7's own
+the earlier evidence-gate script, this script's planner/explainer ARE the real,
+live-called adapters
+(`graph.llm_adapter.build_planner_llm`/`build_explainer_llm`) -- the own
 replay bundle needs the real LLM's own output shape, not a fake one.
 """
 
@@ -128,7 +129,7 @@ SYNTHETIC_LONGITUDE = 30.52
 
 
 class _InProcessWriteStore:
-    """G9 (G9.1): the Postgres side of the write path, in memory.
+    """the Postgres side of the write path, in memory.
 
     The recorder's job is to tape the LIVE MCP traffic and the LIVE LLM
     outputs. Consent records, the idempotency journal and receipts are
@@ -140,7 +141,7 @@ class _InProcessWriteStore:
 
     The CONSENT ITSELF is real: built and hashed exactly as
     `apps/api/routes.py`'s `submit_consent` builds it, including the
-    deadline re-base (D39), so the Write Guard applies every one of its
+    deadline re-base, so the Write Guard applies every one of its
     real checks against it.
     """
 
@@ -199,7 +200,7 @@ class _InProcessWriteStore:
             created_at=now,
             expires_at=now + timedelta(minutes=5),
         )
-        # D39: the deadline is re-based at consent time, exactly as
+        # the deadline is re-based at consent time, exactly as
         # `submit_consent` does -- without it the guard refuses on
         # budget reserve, which a live run already proved once.
         graph.update_state(
@@ -255,7 +256,7 @@ def _sync_call(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         raise cause from None
 
 
-# G9 (D75): the marker a taped entry carries instead of a response body
+# the marker a taped entry carries instead of a response body
 # when the live server REFUSED the call. `compare_channels_node` treats an
 # `McpAdapterError` as "degrade this one channel", so a refusal is part of
 # the recorded traffic and the replay has to reproduce it -- dropping it
@@ -321,7 +322,7 @@ def _build_tapped_fetchers(
         branch_id: str, delivery_type: str, start: str, end: str, names: Sequence[str]
     ) -> Dict[str, Any]:
         wire_args = {
-            # G9: the WIRE names, matching
+            # the WIRE names, matching
             # `mcp/production_fetchers.fetch_find_products_batch`.
             # The recorder was still sending `start`/`end`/`names`,
             # which the live server now rejects with -32602
@@ -364,7 +365,7 @@ def _build_tapped_fetchers(
 
 
 def run_capture() -> None:
-    install_trace_redaction()  # G7 (D-G7-15): every live client, no exceptions
+    install_trace_redaction()  # every live client, no exceptions
     load_env()
 
     tape: List[Tuple[str, Dict[str, Any], Dict[str, Any]]] = []
@@ -385,7 +386,7 @@ def run_capture() -> None:
             "config/models.yaml: explainer.selected is null -- no UA-Eval "
             "run has picked a winner yet"
         )
-    # G9: fetched BEFORE the graph is built, because `make_planner_call`
+    # fetched BEFORE the graph is built, because `make_planner_call`
     # requires the live tool list (it builds the planner's own filtered
     # view from it). Calling it with one argument raised TypeError the
     # first time this phase was actually run since `tool_view` landed --
@@ -408,7 +409,7 @@ def run_capture() -> None:
         explainer_tape.append(output.model_dump(mode="json"))
         return output
 
-    # G9 (G9.1): the capture now drives the CONSENT AND WRITE round in
+    # the capture now drives the CONSENT AND WRITE round in
     # this same process, rather than stopping at the read chain.
     #
     # It used to stop, on the reasoning that the author would drive the
@@ -416,7 +417,7 @@ def run_capture() -> None:
     # with its own graph and its own fetchers, so this script's in-process
     # tape could never see the write or the read-back. A bundle built from
     # a read-only tape replays to `awaiting_consent`, never to a receipt,
-    # which is neither what GD-01 is for nor what G9-7's criterion asks
+    # which is neither what GD-01 is for nor what the replay criterion asks
     # for ("replaying to a VERIFIED receipt"). Found by running the phase.
     #
     # The Postgres side is stood up in-process (plain dicts, the same
@@ -511,7 +512,7 @@ def _sanitize_tape_args(
     args: Dict[str, Any], *, aliases: Dict[str, str]
 ) -> Dict[str, Any]:
     """Pseudonymises a taped call's ARGUMENT VALUES while keeping every
-    key (D73).
+    key.
 
     `sanitize_payload` is the RESPONSE allow-list: it keeps wire names
     (`shoppingCartId`, `branchId`) and drops the rest. The taped args use
@@ -588,7 +589,7 @@ def _build_draft_from_tape(raw: Dict[str, Any]) -> Dict[str, Any]:
     offline against a synthetic tape, with no live call, no replay, and
     no file write (`tests/unit/test_recorder_emits_tool_schema_hashes.py`).
 
-    G8 (D-G8-03/T5): `tool_schema_hashes` and both `schema_hash` fields
+    `tool_schema_hashes` and both `schema_hash` fields
     used to be left empty "for hand-filling" -- `BundlePlayer` then fell
     back to `("reviewed-hash", "reviewed-hash", False)` for every tool,
     making the replayed schema-drift check vacuous. Filled here from the
@@ -599,7 +600,7 @@ def _build_draft_from_tape(raw: Dict[str, Any]) -> Dict[str, Any]:
     """
     shared_aliases: Dict[str, str] = {}
     mcp_queues: Dict[str, List[Dict[str, Any]]] = {}
-    # G9 (D-G9-05): the SAME sanitized responses, grouped by bare tool
+    # the SAME sanitized responses, grouped by bare tool
     # name in call order -- never a second hand-maintained source. Only
     # `BundlePlayer`'s args-keyed lookup misses fall back to this.
     mcp_by_tool: Dict[str, List[Dict[str, Any]]] = {}
@@ -608,7 +609,7 @@ def _build_draft_from_tape(raw: Dict[str, Any]) -> Dict[str, Any]:
         if TAPED_ERROR_KEY in response:
             # A refusal carries no payload to allow-list; running it
             # through `sanitize_payload` would drop the marker and turn
-            # the entry into an empty successful response (D75). The
+            # the entry into an empty successful response. The
             # message itself is pseudonymised through the shared map, so
             # a server error quoting the real cart id cannot be committed.
             sanitized_response = {
@@ -622,7 +623,7 @@ def _build_draft_from_tape(raw: Dict[str, Any]) -> Dict[str, Any]:
             mcp_by_tool.setdefault(tool_name, []).append(sanitized_response)
             continue
         sanitized_response = sanitize_payload(response, aliases=shared_aliases)
-        # D-G7-07: synthetic coordinates substituted AFTER sanitization --
+        # synthetic coordinates substituted AFTER sanitization --
         # `address` is never allow-listed, so the real one is already gone;
         # this restores what `compare_channels_node` needs to run instead
         # of degrading to a no-op (`nodes.py`'s own contract for a cart
@@ -632,7 +633,7 @@ def _build_draft_from_tape(raw: Dict[str, Any]) -> Dict[str, Any]:
         had_coordinates = isinstance(original_cart, dict) and isinstance(
             original_cart.get("address"), dict
         )
-        # G9: conditional on the cart having HAD an address. Restoring what
+        # conditional on the cart having HAD an address. Restoring what
         # the sanitizer stripped is the whole point for a live capture; doing
         # it to a coordinate-less synthetic cart (offline synthesis, GD-02/03/04)
         # instead makes `compare_channels_node` RUN on replay and call
@@ -699,7 +700,7 @@ def _build_draft_from_tape(raw: Dict[str, Any]) -> Dict[str, Any]:
 
 def run_build(tape_path: Path, bundle_id: str) -> None:
     """`bundle_id` names the output file, one per bundle -- it is REQUIRED
-    rather than defaulted (D74).
+    rather than defaulted.
 
     The path used to be a single hardcoded constant, so building a second,
     non-equivalent bundle silently overwrote the tracked synthetic one
@@ -770,7 +771,7 @@ def main() -> None:
         "--bundle-id",
         help=(
             "output bundle id for --phase build; the file is written to "
-            "datasets/fixtures/replay/<bundle-id>.json. REQUIRED (D74): a "
+            "datasets/fixtures/replay/<bundle-id>.json. REQUIRED: a "
             "single hardcoded output path once silently overwrote the "
             "tracked synthetic bundle that two tests assert against."
         ),
@@ -784,7 +785,7 @@ def main() -> None:
             raise SystemExit(
                 "--phase build needs --bundle-id: it names the output file, "
                 "and defaulting it is how a second bundle overwrote the "
-                "tracked one (D74). Use e.g. --bundle-id "
+                "tracked one. Use e.g. --bundle-id "
                 "replay_hero_live_<yyyymmdd>."
             )
         tape_path = args.tape

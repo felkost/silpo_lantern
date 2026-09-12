@@ -1,4 +1,4 @@
-"""T9/T11 (G8 stage spec): `authorize_write`'s compensation branches
+"""T9/T11: `authorize_write`'s compensation branches
 (C1-C9) -- each independently, mirroring `test_write_guard_authorization.py`'s
 own one-baseline-flip-one-thing discipline. A compensation proposal must
 pass every EXISTING branch too (consent binding, schema hash, budget

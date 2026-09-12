@@ -1,4 +1,4 @@
-"""G9 (G9.3): a parametrized fake write backend for `fake_backend`-mode
+"""a parametrized fake write backend for `fake_backend`-mode
 golden cases (GD-11..15, the safety slice) -- genuinely extracted from
 `tests/unit/test_write_path_interrupt_and_resume.py`'s own
 `_FakeWriteBackend`/`_build_graph`, not merely relocated: that original is
@@ -57,9 +57,9 @@ class WriteBackendFixture:
     )
     product_name: str = "Молоко «Галичина» 2,5%"
     product_price: float = 39.99
-    # G9: the fraction of the CATALOGUE price the cart actually applies.
+    # the fraction of the CATALOGUE price the cart actually applies.
     # 1.0 (the default) keeps every existing case unchanged. Lower values
-    # reproduce D68's measured live effect: Silpo's cart applies a
+    # reproduce the measured live effect: Silpo's cart applies a
     # loyalty-card discount of ~10% that `find_products_batch` does not
     # report, so a write lands for less than the planner predicted and a
     # single round can leave a residual gap. This is the only honest way
@@ -67,7 +67,7 @@ class WriteBackendFixture:
     # quantity exceeds stock is DROPPED by the proposal builder, never
     # reduced, so "not enough of one item" cannot produce a partial fix.
     applied_price_ratio: float = 1.0
-    # D83: rounds (1-based) in which the write tool reports success and
+    # rounds (1-based) in which the write tool reports success and
     # the cart does NOT move -- the one case the server's own success flag
     # cannot rule out (CLAUDE.md's fourth invariant), and the only way to
     # reach `unverified` through a read-back that actually COMPLETED
@@ -189,11 +189,11 @@ class FakeWriteBackend:
 
     def call_write_tool(self, tool_name: str, args: Dict[str, Any]) -> Dict[str, Any]:
         product = args["products"][0]
-        # G9: writes ACCUMULATE. Building from the fixture's original
+        # writes ACCUMULATE. Building from the fixture's original
         # snapshot every time made a second round REPLACE the first
         # round's line item instead of adding to it -- the read-back then
         # reported "removed line items, none were consented" for a write
-        # that removed nothing. D42's second round is a real path, so the
+        # that removed nothing. the second round is a real path, so the
         # cart a second write lands on is the one the first write left.
         raw_cart = (
             self.cart_after_write
@@ -202,7 +202,7 @@ class FakeWriteBackend:
         )
         self.write_calls.append((tool_name, args))
         if len(self.write_calls) in self.fixture.silent_write_rounds:
-            # D83: the server says yes and the cart stays put. The write
+            # the server says yes and the cart stays put. The write
             # is still RECORDED -- a silent write is not an absent one,
             # and the journal claim behind it is real, so the metrics'
             # denominators must keep counting it.
@@ -212,7 +212,7 @@ class FakeWriteBackend:
         self.write_side_effect_applied = True
         existing_products = raw_cart["shipments"][0]["products"]
         existing_total = sum(p["price"] * p["quantity"] for p in existing_products)
-        # G9: price and name come from the fixture's OWN catalogue entry
+        # price and name come from the fixture's OWN catalogue entry
         # for the product actually written, falling back to the single
         # `product_price`/`product_name` when the catalogue has no match.
         # With several candidates in `find_products_response`, ranking
@@ -229,7 +229,7 @@ class FakeWriteBackend:
         written_price = round(written_price * self.fixture.applied_price_ratio, 2)
         new_line_total = written_price * product["quantity"]
         new_products_total = round(existing_total + new_line_total, 2)
-        # G9: drop the order.cost.min validation once the new total clears
+        # drop the order.cost.min validation once the new total clears
         # its own threshold -- what the real server does, and without it no
         # offline scenario can ever reach `blocker_cleared: true`: the cart
         # would report a minimum-order block while already being above the
@@ -316,9 +316,9 @@ def grant_matching_consent(backend: FakeWriteBackend, proposal: Any) -> None:
     """Binds consent to the cart AS IT IS NOW, not to the fixture's
     original snapshot.
 
-    G9: after a first write the cart has moved, and a consent whose
+    after a first write the cart has moved, and a consent whose
     `state_hash` was computed against the pre-write snapshot makes the
-    guard refuse D42's second round with "state_hash mismatch" -- correct
+    guard refuse the second round with "state_hash mismatch" -- correct
     behaviour reacting to an incorrect consent. A real `submit_consent`
     hashes whatever the cart is when the guest consents, which after one
     round is the post-write cart.

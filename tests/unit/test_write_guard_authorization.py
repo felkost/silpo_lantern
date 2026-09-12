@@ -1,4 +1,4 @@
-"""T2-T7 (G5+G6 stage spec): `authorize_write` refuses on every declared
+"""T2-T7: `authorize_write` refuses on every declared
 condition, each independently, so a write can never proceed with any one
 of these checks silently missing. Each test starts from a single known-
 authorized baseline and flips exactly one thing, so a green suite means

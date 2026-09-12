@@ -66,7 +66,7 @@ _FIND_PRODUCTS_RESPONSE = {
             "query": "Молоко «Галичина» 2,5%",
             "products": [
                 {
-                    # G5+G6 (D-G5-03): `id`/`companyId`/`branchId` are the
+                    # `id`/`companyId`/`branchId` are the
                     # write tool's own argument fields — required here
                     # since the offline fixture went end-to-end.
                     "id": "11111111-1111-1111-1111-111111111111",

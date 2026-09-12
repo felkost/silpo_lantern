@@ -1,4 +1,4 @@
-"""G10 delivery A (T4, A-G10-04): the session id is an `HttpOnly; Secure;
+"""the session id is an `HttpOnly; Secure;
 SameSite=Lax` cookie, never a URL. Before this the id was a bearer
 capability riding in `/auth/start?session_id=...` -- browser history, a
 projector at a demo -- and the only check on `/events` and `/consent` was
@@ -80,7 +80,7 @@ def test_consent_refuses_without_the_matching_cookie(
 def test_no_route_echoes_the_session_id_into_a_url(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """G10-5: the unauthorized-yet 401 used to spell out
+    """the unauthorized-yet 401 used to spell out
     `/auth/start?session_id=...` in its detail."""
     client = _client(monkeypatch)
     monkeypatch.setattr(
@@ -102,7 +102,7 @@ class _NoToken:
 def test_delete_session_removes_the_credential_and_clears_the_cookie(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """G10-4 (T3): logout deletes the `oauth_tokens` row -- the credential
+    """logout deletes the `oauth_tokens` row -- the credential
     -- and a following `/events` is refused. The `sessions` row stays:
     `consents`/`receipts` reference it WITHOUT cascade (0003, 0005), so
     deleting it would either fail on the FK or destroy the audit trail."""
@@ -141,3 +141,56 @@ def test_delete_session_needs_the_matching_cookie(
     )
 
     assert client.delete("/session/s1").status_code == 401
+
+
+def test_restart_moves_the_credential_to_a_new_session_and_re_points_the_cookie(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """«Перевірити знову»: one run is one session, so a second check is a
+    second session -- with the SAME login. The credential moves, the old
+    session keeps its audit rows, and the cookie now names the new id, so
+    the next `/events` is a fresh graph start for this guest."""
+    created: list = []
+    moved: list = []
+    client = _client(monkeypatch)
+    monkeypatch.setattr(
+        routes_module.repository,
+        "create_session",
+        lambda pool, sid, tid, owner: created.append(sid),
+    )
+    monkeypatch.setattr(
+        routes_module.repository,
+        "move_session_token",
+        lambda pool, old, new: moved.append((old, new)) or True,
+    )
+    client.cookies.set(SESSION_COOKIE, "s1")
+
+    response = client.post("/session/s1/restart")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["authorized"] is True and body["auth_url"] == ""
+    assert created == [body["session_id"]] and body["session_id"] != "s1"
+    assert moved == [("s1", body["session_id"])]
+    assert f"{SESSION_COOKIE}={body['session_id']}" in response.headers["set-cookie"]
+
+
+def test_restart_without_a_live_login_is_401(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = _client(monkeypatch)
+    monkeypatch.setattr(
+        routes_module.repository, "create_session", lambda pool, sid, tid, owner: None
+    )
+    monkeypatch.setattr(
+        routes_module.repository, "move_session_token", lambda pool, old, new: False
+    )
+    client.cookies.set(SESSION_COOKIE, "s1")
+
+    assert client.post("/session/s1/restart").status_code == 401
+    # and without the matching cookie the route never reaches the repository
+    client.cookies.clear()
+    monkeypatch.setattr(
+        routes_module.repository,
+        "move_session_token",
+        lambda pool, old, new: pytest.fail("must not move"),
+    )
+    assert client.post("/session/s1/restart").status_code == 401

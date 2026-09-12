@@ -1,7 +1,7 @@
-"""G10 step 7b (D90): tokens and cost for a LIVE session, from the
+"""tokens and cost for a LIVE session, from the
 provider's own usage block, accumulated per session and shown as SPEND --
 never as "remaining", which only the provider's dashboard knows. Closes
-half of D59: `tokens_used` is now written by the route from measured
+half of `tokens_used` is now written by the route from measured
 usage, not left at 0.
 """
 

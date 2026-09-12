@@ -1,4 +1,4 @@
-"""G10: the pure halves of `scripts/g10_cart_baseline.py` -- deciding
+"""the pure halves of `scripts/g10_cart_baseline.py` -- deciding
 whether the cart needs a slot and which slot to take. The live halves are
 author-run and never part of the gate."""
 

@@ -18,7 +18,7 @@ from typing import Any, Mapping, Optional, Sequence
 
 from src.lantern.domain.models import EvidenceTuple, Money
 
-# G5+G6 (D-G5-03): live probe P1 confirmed `find_products_batch`'s own
+# live probe P1 confirmed `find_products_batch`'s own
 # `id`/`companyId`/`branchId` are UUID-shaped, matching the same pattern
 # `tests/contract/fixtures/tools_list_2026-09-05.json`'s write tool
 # requires -- checked here, not merely presence, so a malformed non-UUID
@@ -44,11 +44,11 @@ class RawCandidate:
     `raw_candidates_from_find_products_batch`.
 
     `product_uuid`/`company_id`/`branch_id`/`stock`/`weighted`/`step`
-    (G5+G6, D-G5-03) are the write tool's own argument fields, confirmed
+    are the write tool's own argument fields, confirmed
     live (probe P1) to be the catalogue product's real UUID -- the SAME
     identifier the cart's own `LineItem.product_id` carries for a product
     already in the cart, not a fourth, separate space. `external_product_id`
-    stays a distinct field: D16 already settled that it is structurally
+    stays a distinct field: an earlier decision already settled that it is structurally
     incompatible with the cart's own id, and `channel_snapshot_builder`
     still matches on it for its own, unrelated purpose (item availability
     per channel).
@@ -108,7 +108,7 @@ def raw_candidates_from_find_products_batch(
 
 
 def resolve_product_id(raw: RawCandidate) -> Optional[str]:
-    """G5+G6 (D-G5-03): resolves to `product_uuid` -- the catalogue
+    """resolves to `product_uuid` -- the catalogue
     product's own UUID, confirmed live (probe P1) to be the exact
     identifier the write tool's `productId` argument expects, and to
     match the cart's own `LineItem.product_id` when the product is
@@ -145,7 +145,7 @@ def gate_candidates(raw_candidates: Sequence[RawCandidate]) -> list[EvidenceTupl
     """A candidate survives only if:
 
     (a) its product id resolves to a UUID-shaped `product_uuid`, and its
-        `company_id`/`branch_id` are also UUID-shaped (G5+G6, D-G5-03) —
+        `company_id`/`branch_id` are also UUID-shaped —
         the three arguments the write tool's own `inputSchema` requires
         per product. A candidate missing any of the three could be shown
         to the guest but never actually written, which is exactly the

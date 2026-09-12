@@ -1,6 +1,6 @@
-"""G10 delivery C (claim 5, and claim 1's delivery path): `GET /evidence`
+"""`GET /evidence`
 serves the console what a jury may be shown -- each metric with its `n`,
-its 95% Wilson interval and its caveat (D81/D82: a proportion without an
+its 95% Wilson interval and its caveat (a proportion without an
 interval is a misreading; `SearchPriceFidelity` is not a rate), and the
 sanitised disclosure observation (the app's own lines, the codes, which
 were rendered) -- never the author's screenshots.

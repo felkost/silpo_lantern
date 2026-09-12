@@ -1,4 +1,4 @@
-"""Three gate tests the G5+G6 stage spec declared (T21, T22, T24), each
+"""Three gate tests one stage spec declared (T21, T22, T24), each
 guarding an artefact that is easy to let drift because nothing executes it.
 
 T21 restores plan section 19's actual guarantee -- the state machine is
@@ -64,7 +64,7 @@ def test_t21b_the_export_carries_the_write_path_and_its_interrupt() -> None:
     assert "write_guard" in topology
     assert "__interrupt = before" in topology
     assert "write_and_readback --> persist_receipt" in topology
-    # The second consent+write round (D42) is part of the topology, not an
+    # The second consent+write round is part of the topology, not an
     # application-level retry loop outside the graph.
     assert "persist_receipt" in topology and "retry" in topology
 

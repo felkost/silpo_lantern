@@ -41,13 +41,13 @@ def test_build_recovery_graph_has_no_generic_call_any_tool_parameter() -> None:
     a `Callable[[str, ...], ...]`-style generic dispatcher that could be
     handed a write tool's name at runtime.
 
-    G5+G6 (D-G5-24 audit finding): this test's own comment used to claim
+    this test's own comment used to claim
     the name-set assertion below would catch a `call_*` parameter too, but
     the filter only ever matched `fetch_*` — a real hole, found before any
     write callable existed to slip through it. Widened to `fetch_`/`call_`
     so the property the comment already claimed is actually enforced.
 
-    G5+G6 (declared this stage): `call_write_tool` is added deliberately —
+    `call_write_tool` is added deliberately —
     it is `Callable[[str, Dict], Dict]`, taking a tool name, which reads
     like the generic dispatcher this test forbids. It is not one: the
     *name* it is called with is fixed by `ActionProposal.tool_name`, which

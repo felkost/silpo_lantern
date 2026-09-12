@@ -1,4 +1,4 @@
-"""G9 (GD-10): the DST-boundary property of the
+"""the DST-boundary property of the
 `timeslot_spans_dst_transition` fixture, pinned at the normalizer level.
 
 GD-10's golden case asserts the end-to-end graph behaviour (the timeslot

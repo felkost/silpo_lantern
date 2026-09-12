@@ -122,7 +122,7 @@ def _continue_or_end(state: RecoveryState) -> str:
 
 
 def _write_guard_outcome(state: RecoveryState) -> str:
-    """G8 (D51/D-G8-08): `write_guard`'s OWN outgoing edge, distinct from
+    """`write_guard`'s OWN outgoing edge, distinct from
     `_continue_or_end` -- a refused COMPENSATION returns `status=
     "awaiting_consent"` with a re-derived offer, and that must route back
     to `write_guard` ITSELF, not fall through to `write_and_readback`
@@ -131,8 +131,8 @@ def _write_guard_outcome(state: RecoveryState) -> str:
     "no_action_available" -- found live in this stage's own test suite:
     the graph proceeded straight into the write node with no consent).
     The self-loop is what makes `interrupt_before=["write_guard"]`
-    re-pause on the retry, the same mechanism D51's compensate branch and
-    D42's second round both already rely on (measured, M1).
+    re-pause on the retry, the same mechanism the compensate branch and
+    the second round both already rely on (measured, M1).
     """
     if state["status"] == "awaiting_consent":
         return "retry_guard"
@@ -143,7 +143,7 @@ def _write_guard_outcome(state: RecoveryState) -> str:
 def _another_round_or_end(state: RecoveryState) -> str:
     """`persist_receipt_node` signals a further add round by clearing the
     spent consent and returning the state to `diagnosed`; a compensation
-    offer is signalled by `awaiting_consent` (G8, D51) -- `interrupt_before`
+    offer is signalled by `awaiting_consent` -- `interrupt_before`
     still applies on every pass, either way, so neither outcome writes
     without a fresh consent. Anything else terminal ends the graph.
     """
@@ -202,7 +202,7 @@ def build_recovery_graph(
     a pause against — measured directly (`.venv` probe): `graph.invoke(...)`
     simply returns the state as it stood right before the interrupted node,
     with no error and no partial execution of it. This is exactly why
-    `explain`'s own `status="awaiting_consent"` is still what every G4-era
+    `explain`'s own `status="awaiting_consent"` is still what every earlier
     test observes: `write_guard` is *reachable* in the topology but never
     *entered* without a real checkpointer to resume from, so the five new
     write-path parameters above default to stubs that raise if actually
@@ -234,7 +234,7 @@ def build_recovery_graph(
     traced_explainer_call = traced_llm_call(
         "explainer", explainer_call, redact_explainer_input, version_tuple, trace_tags
     )
-    # D-G5-13: the write gets a span of its own, through the same wrapper.
+    # the write gets a span of its own, through the same wrapper.
     # Without this the one call that changes a guest's cart was the only
     # step in the graph leaving no trace at all -- found by the pre-merge
     # audit, after the live runs had already happened.
@@ -313,18 +313,18 @@ def build_recovery_graph(
     # `persist_receipt_node`, which is the only thing that decides it.
     # `interrupt_before=["write_guard"]` still applies on every pass, so a
     # further write is impossible without a further consent.
-    # G8 (D51): a compensation offer routes back to `write_guard`, the
+    # a compensation offer routes back to `write_guard`, the
     # same interrupt point every other write proposal must clear --
     # measured (M1): `interrupt_before` re-fires on this second entry
     # within one invocation, so a compensation cannot execute without a
-    # fresh consent, for the same reason D42's second round cannot.
+    # fresh consent, for the same reason the second round cannot.
     graph.add_conditional_edges(
         "persist_receipt",
         _another_round_or_end,
         {"end": END, "retry": "diagnose", "compensate": "write_guard"},
     )
 
-    # D-G5-08: static interrupt before the ONLY node that may authorize a
+    # static interrupt before the ONLY node that may authorize a
     # write (CLAUDE.md section 4). Measured (.venv probe): with no
     # checkpointer this has no effect on `invoke` beyond stopping before
     # `write_guard` runs — see this function's own docstring.

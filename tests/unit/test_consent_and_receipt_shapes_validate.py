@@ -4,7 +4,7 @@ for consents; `0005_receipts.sql` + `0006_...` for receipts) — a model that
 cannot round-trip through those tables is a shape later stages would have
 to break compatibility with.
 
-G5+G6 (D-G5-09 audit finding): the column sets below used to be hand-typed
+the column sets below used to be hand-typed
 literals in this file -- a count or a list typed by hand is a claim like
 any other, and the cheapest way to make it true is to not type it by
 hand. Parsed from the migration files themselves instead, so

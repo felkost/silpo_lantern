@@ -1,7 +1,7 @@
-"""T25 (G9 spec): tokens and cost for a live run come from the provider's
+"""tokens and cost for a live run come from the provider's
 own reported `usage`, never from an estimate.
 
-D59 established that this project has NO other source: `enforce_budget`
+an earlier decision established that this project has NO other source: `enforce_budget`
 is called from nowhere and `cycles_used`/`tokens_used` are never
 incremented, so plan section 13.4's per-run "tokens and cost" would
 otherwise have nothing behind it at all.

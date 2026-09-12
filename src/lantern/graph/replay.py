@@ -1,6 +1,6 @@
-"""G7 (D-G7-06): offline replay of the REAL compiled hero graph against a
+"""offline replay of the REAL compiled hero graph against a
 tracked bundle file -- no MCP network call, no LLM call, no Postgres
-connection. This is the "replay bundle" plan section 14's G7 row asks
+connection. This is the "replay bundle" plan section 14's replay row asks
 for, and the labelled demo fallback the project's Definition of Done
 requires alongside the live proof ("a controlled live proof and an
 explicitly labeled replay fallback both exist").
@@ -10,7 +10,7 @@ injected callable (`build.py:128-161`), so replay needs no cassette layer
 inside `src/lantern/mcp/` and no change to the graph or the safety layer
 -- it is a set of callables built from a file, plus a synthesised consent
 that mirrors `apps/api/routes.py`'s `submit_consent` exactly (including
-the deadline re-base, D39: omitting it makes the guard refuse on budget
+the deadline re-base: omitting it makes the guard refuse on budget
 reserve).
 
 `BundlePlayer`'s four Postgres stand-ins and its MCP/LLM queues are the
@@ -64,7 +64,7 @@ from src.lantern.policies.loader import load_registry
 
 IN_FLIGHT: IdempotencyState = "in_flight"
 
-# G9 (D75): mirrors `scripts/record_replay_bundle.TAPED_ERROR_KEY`.
+# mirrors `scripts/record_replay_bundle.TAPED_ERROR_KEY`.
 # Not imported from there -- `scripts/` is not a package this layer
 # may depend on; the recorder's own test pins the two agree.
 TAPED_ERROR_KEY = "__mcp_error__"
@@ -102,15 +102,15 @@ class ReplayBundle:
     re-read, the read-back) and the third must return the cart AFTER the
     write -- args-only keying cannot distinguish them.
 
-    `mcp_by_tool` (G9, D-G9-05) is a SECOND, tool-name-only queue,
+    `mcp_by_tool` is a SECOND, tool-name-only queue,
     consulted only when `mcp`'s args-keyed lookup misses -- built by
     `record_replay_bundle.py` from the SAME tape, grouped by tool name in
     call order, never hand-written. It exists because the 18 core repeats
-    (G9.6) run the real live planner against replayed MCP, and
+    run the real live planner against replayed MCP, and
     `silpo_find_products_batch`'s args carry that planner's own search
     terms -- which vary run to run and never match the exact-args hash
     recorded at tape time. Optional for backward compatibility with
-    bundles recorded before G9."""
+    bundles recorded."""
 
     fixture_id: str
     recorded_at: datetime
@@ -138,7 +138,7 @@ def load_bundle(path: Path) -> ReplayBundle:
         mcp=payload["mcp"],
         llm=payload["llm"],
         expected_outcome=envelope["expected_outcome"],
-        # G9 (D-G9-05): absent on bundles recorded before G9 -- `.get`
+        # absent on bundles recorded -- `.get`
         # with a `{}` default keeps those bundles loadable unchanged.
         mcp_by_tool=payload.get("mcp_by_tool", {}),
     )
@@ -156,7 +156,7 @@ class BundlePlayer:
         self._by_tool_cursors: Dict[str, int] = {}
         self._planner_cursor = 0
         self._explainer_cursor = 0
-        # G9 (D80): every call this player served, in order. The metrics
+        # every call this player served, in order. The metrics
         # need the args the graph ACTUALLY wrote, to hash independently
         # against the consent's own `args_hash` -- taking the guard's word
         # for that would make ConsentBindingIntegrity a tautology.
@@ -168,7 +168,7 @@ class BundlePlayer:
     def call(self, tool_name: str, args: Mapping[str, Any]) -> Dict[str, Any]:
         self.calls.append((tool_name, dict(args)))
         key = response_key(tool_name, args)
-        # G9 (D79): the fallback queue is the tape's calls to this tool IN
+        # the fallback queue is the tape's calls to this tool IN
         # ORDER, so its position must count EVERY call to the tool, not
         # only the ones it served. `find_products_batch` is called twice
         # per round -- once from the cart's own names (an args hit) and
@@ -186,7 +186,7 @@ class BundlePlayer:
                 return self._serve(queue[cursor])
             raise ReplayMismatch(f"{key} exhausted after {cursor} recorded call(s)")
 
-        # G9 (D-G9-05): the args-keyed lookup missed. Fall back to the
+        # the args-keyed lookup missed. Fall back to the
         # tool-name-only queue, consulted ONLY here -- an exact args match
         # always wins because it is strictly more specific, and a tool
         # with no fallback queue at all raises exactly as before.
@@ -206,7 +206,7 @@ class BundlePlayer:
 
     @staticmethod
     def _serve(entry: Mapping[str, Any]) -> Dict[str, Any]:
-        """A taped REFUSAL is replayed as a refusal (D75). Live, the
+        """A taped REFUSAL is replayed as a refusal. Live, the
         server rejects `get_time_slots` for the two channels that resolve
         no real branch, and `compare_channels_node` degrades those
         channels rather than aborting -- a bundle that served them an
@@ -276,7 +276,7 @@ class BundlePlayer:
         self, graph: Any, config: RunnableConfig, proposal: ActionProposal, cart: Any
     ) -> None:
         """Mirrors `apps/api/routes.py`'s `submit_consent` exactly,
-        including the deadline re-base (D39) -- omitting it makes the
+        including the deadline re-base -- omitting it makes the
         guard refuse on insufficient budget reserve, the way a live run
         did before that fix landed."""
         now = self.bundle.recorded_at
@@ -306,7 +306,7 @@ class ReplayResult:
     final_state: Mapping[str, Any]
     receipts: List[Receipt]
     consented_action_id: str
-    # G9 (D80): the player itself, so a caller can read the journal, the
+    # the player itself, so a caller can read the journal, the
     # consents and the served calls -- the three things the metrics need
     # and none of which survive in `final_state`.
     player: Optional["BundlePlayer"] = None
@@ -323,16 +323,16 @@ def replay(
     """Builds the REAL graph via `build_recovery_graph`, every boundary
     bound to `player`, an `InMemorySaver`, and the bundle's own recorded
     clock; runs to the interrupt, records consent, resumes, and returns
-    the final state and every receipt saved (D42's second consent round
+    the final state and every receipt saved (the second consent round
     can produce more than one).
 
-    `planner_call`/`explainer_call` (G9, D62/D-G9-05): omitted (the
+    `planner_call`/`explainer_call`: omitted (the
     default), MCP AND the planner/explainer both replay from the bundle's
     tape -- today's fully-offline behavior, unchanged. Passed, they let
-    the 18 core repeats (G9.6) wire in the REAL live planner/explainer
+    the 18 core repeats wire in the REAL live planner/explainer
     while MCP still replays from the tape (via `mcp_by_tool`'s fallback
     for the planner's own varying search terms) -- "live LLM against
-    replayed MCP", the configuration the author approved at G8+G9
+    replayed MCP", the configuration the author approved at the kickoff
     kickoff."""
     player = BundlePlayer(bundle)
     planner_call = planner_call or player.next_planner
@@ -397,14 +397,14 @@ def replay(
         tool_schema_hashes=player.tool_schema_hashes,
     )
 
-    # G9 (D78): the caller may name the thread. The 18 core repeats run
+    # the caller may name the thread. The 18 core repeats run
     # the same bundle three times, and a thread id derived from the
     # fixture alone gives all three the same handle -- so a result row
     # could not be matched to the trace it came from, which is the one
     # thing section 13.4's per-run `trace` field exists for.
     # `tags` reach the ROOT run. `traced_llm_call` tags only the spans it
     # wraps, so a project list filtered by tag showed no runs at all even
-    # though every planner/explainer span carried them (D78, second round).
+    # though every planner/explainer span carried them (found on the second round).
     config: RunnableConfig = {
         "configurable": {"thread_id": thread_id or f"replay-{bundle.fixture_id}"},
         "tags": list(tags) if tags else [],
@@ -418,7 +418,7 @@ def replay(
     paused_state = graph.invoke(initial_state, config)
     consented_action_id = ""
 
-    # D42: a verified write that leaves the blocker standing returns the
+    # a verified write that leaves the blocker standing returns the
     # graph to `diagnose` and parks on the interrupt again -- bounded by
     # `MAX_WRITE_ROUNDS`. Every round the bundle has a matching candidate
     # for is replayed; a round the bundle cannot satisfy stops the loop

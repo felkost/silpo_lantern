@@ -5,7 +5,7 @@
 > **Reason:** the author has no access to 5–8 participants. This is a resource
 > constraint stated plainly, not a finding and not a quiet omission.
 >
-> **Owner:** the author, per D63 — recruitment and facilitation were always human work;
+> **Owner:** the author, per an earlier decision — recruitment and facilitation were always human work;
 > the protocol, the instruments and the analysis rules were the assistant's part, and
 > those are below and complete.
 >
@@ -31,7 +31,7 @@ The before/after comparison plan §12.2 asks for: A is the current Silpo app, B 
 within-subject, counterbalanced, n = 5–8, a 4-minute task limit chosen to sit under the
 5-minute consent TTL so a consent cannot expire mid-task.
 
-Design amended by `A-G9-02` (different but comparable carts; the author's account;
+Design amended (different but comparable carts; the author's account;
 sequential sessions).
 
 ---

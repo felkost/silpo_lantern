@@ -1,7 +1,7 @@
-"""T10 (G5+G6 stage spec): `repository.IdempotencyState`'s members must
+"""T10: `repository.IdempotencyState`'s members must
 equal the SQL `CHECK` constraint's own list, parsed from the migration
 file directly -- not re-typed by hand, which is exactly the kind of
-duplicated literal this project's own G3 retrospective flags as a
+duplicated literal an earlier retrospective of this project flags as a
 recurring source of silent drift.
 """
 
