@@ -102,8 +102,8 @@
       <rect x="1112" y="372" width="36" height="16" rx="2" fill="transparent" stroke="#c9ba5e" stroke-width="0.8"/>
       <text x="1130" y="384" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">EXT</text>
       <text x="1215" y="404" fill="#24242e" font-size="14" font-weight="700" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">External Services</text>
-      <text x="1215" y="422" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">Silpo · Neon · OpenRouter</text>
-      <text x="1215" y="438" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">LangSmith</text>
+      <text x="1215" y="422" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">Silpo MCP · Neon · LangSmith</text>
+      <text x="1215" y="438" fill="#24242e" font-size="12" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">OpenRouter · Gemini 3.8 / 3.5 flash</text>
 
       <!-- ============ LEGEND ============ -->
       <line x1="40" y1="500" x2="1340" y2="500" stroke="#d1d5db" stroke-width="0.8"/>

@@ -71,6 +71,24 @@ function writeStoredSession(id: string | null): void {
   }
 }
 
+/** What the open stream is doing right now, from the last stage frame. */
+function workingLabel(rows: StageRow[]): string {
+  const last = rows[rows.length - 1];
+  if (last === undefined) {
+    return "з'єднуємось…";
+  }
+  if (last.io === "llm") {
+    return "мовна модель добирає варіанти…";
+  }
+  if (last.io === "db") {
+    return "зберігаємо…";
+  }
+  if (last.io.startsWith("mcp")) {
+    return "читаємо кошик у Сільпо…";
+  }
+  return "рахуємо…";
+}
+
 function App() {
   const [screen, setScreen] = useState<Screen>("idle");
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -318,7 +336,31 @@ function App() {
         </aside>
 
         <main className="guest">
-          <p className="eyebrow">Клієнт</p>
+          <p className="eyebrow">
+            Клієнт
+            {/* A small spinner beside the column label while the stream is
+                open, with a word about which kind of work is running (the
+                last stage frame says whether it is Silpo, the model or the
+                database) -- so a pause never reads as a hang. */}
+            {busy && (
+              <span className="loader" role="status" aria-live="polite" data-testid="loader">
+                {/* An hourglass in the accent colour (the author's pick): the
+                    caps and the sand are accent, the glass is the hairline
+                    tone; it holds, then turns over, and holds again. */}
+                <svg className="hourglass" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+                  <path
+                    d="M4 3h8v1.2L9.3 8 12 11.8V13H4v-1.2L6.7 8 4 4.2z"
+                    fill="var(--hairline)"
+                  />
+                  <path className="sand-top" d="M5.6 4.3h4.8L8 7.6z" fill="var(--accent)" />
+                  <path className="sand-bottom" d="M5.6 11.7h4.8L8 8.4z" fill="var(--accent)" />
+                  <rect x="3" y="2" width="10" height="1.4" rx="0.7" fill="var(--accent)" />
+                  <rect x="3" y="12.6" width="10" height="1.4" rx="0.7" fill="var(--accent)" />
+                </svg>
+                {workingLabel(stages)}
+              </span>
+            )}
+          </p>
 
           {/* «Вийти» only once there is a login to end; on the login screen
               the same action is a cancel, not an exit (the author, live). */}

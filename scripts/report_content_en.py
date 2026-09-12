@@ -363,36 +363,76 @@ sees is what Lantern exists to show.</p>
 <div class="diagram">{{ domain_activity_svg }}</div>
 
 <h2 id="planner">Planner, evidence gate, ranking</h2>
-<p>After the diagnosis the language model sees what is already in the cart and how much
-is missing, and proposes <b>search terms</b> — product or category names such as "milk",
-"bread", "coffee". That is all it can return: there is no field for a price or a product
-id in the shape it answers with. Its answer is a guess about <i>what to look for</i>,
-and it decides nothing.</p>
-<p>With those words the system queries Silpo's product search — in the same branch and
-for the same delivery slot as the cart. The search returns a structured answer: name,
-price, availability, identifiers. A candidate goes further only if its <b>price and
-availability come from that same answer</b>: one with no confirmed price, or marked
-unavailable, is dropped. Price and availability come from the search answer; the
-language model is not used at this step.</p>
-<p>For each survivor the system computes the smallest quantity that closes the
-shortfall: the shortfall divided by the price, rounded to the catalogue's selling step
-and capped by stock. It then orders the candidates <b>by one thing only — the top-up
-amount, smallest first</b> — and shows the Customer the top two or three.</p>
-<p>It is worth saying plainly what is <b>not</b> used to choose. The search is confined
-to the same branch, delivery type and slot as the cart — otherwise the product found
-could not be ordered at all. After that only the evidence gate filters: a confirmed
-price and availability pass, anything else does not. Customer preferences, food
-restrictions, favourites, promotions or semantic closeness to what is already in the
-cart are <b>not</b> taken into account: Silpo's server offers tools for those, and this
-version does not use them. The reason is plain: every extra signal is one more place to
-be wrong in front of a Customer, and there was no measured way to validate relevance
-within this version. So relevance stays with the model and with the Customer, who picks
-one of two or three offers — or none. In the second case the cart stays exactly as it
-was: nothing added, nothing changed, the block still there. The next decision is the
-Customer's — add something themselves in the Silpo app, choose another delivery
-channel (its minimum may differ, or there may be none; Lantern shows that comparison
-beside the diagnosis) or simply postpone the order. They can come back to the check at
-any time: since nothing was written, a repeated look spoils nothing.</p>
+<p>After the diagnosis, processing takes five steps — exactly the ones on the diagram
+below. Two of them are done by a language model (blue boxes, "Application"), two by the
+core's plain code (purple, "Domain"), one by Silpo's server. On this path the language
+model gets a say twice and the right to decide never.</p>
+<table>
+<tr><th>Step</th><th>Who does it</th><th>Input</th><th>Output</th></tr>
+<tr><td><b>1. Plan</b> — the planner</td><td>language model
+<code>{{ models.planner }}</code>, one call per request</td><td>the diagnosis (what is
+in the cart, how much is missing), the delivery-channel comparison and the list of
+search tools — names and parameters only, no descriptions</td><td>a structured
+<code>SearchIntent</code>: search terms such as "milk", "bread", "coffee". That shape
+has no field for a price or a product id, so the model physically cannot "make them
+up". Its answer is only a guess about <i>what to look for</i></td></tr>
+<tr><td><b>2. Collect options</b></td><td>Silpo's server, the
+<code>find_products_batch</code> tool</td><td>the search terms from step 1; the search
+is confined to the same branch, delivery type and slot as the cart — otherwise the
+product found could not be ordered</td><td>a structured answer per term: name, price,
+availability, identifiers</td></tr>
+<tr><td><b>3. Evidence Gate</b></td><td>core code (<code>gate_candidates</code>, rule
+10)</td><td>the search answer</td><td>only the candidates whose price and availability
+come from that same answer; one with no confirmed price, or marked unavailable, is
+dropped. For each survivor the code computes the smallest quantity that closes the
+shortfall: shortfall ÷ price, rounded to the catalogue's selling step, capped by
+stock</td></tr>
+<tr><td><i>Decision</i> "did anyone survive?"</td><td>code</td><td>the result of step
+3</td><td><b>0 candidates</b> — state <code>Aborted</code>: the Customer is told plainly
+there is nothing to offer (likewise when the call budget is exhausted). <b>1–3
+candidates</b> — onward</td></tr>
+<tr><td><b>4. Rank</b></td><td>core code (<code>rank_candidates</code>)</td><td>the
+candidates with their quantities</td><td>the same candidates ordered <b>by one thing
+only — the top-up amount, smallest first</b>; the top two or three go to the
+Customer</td></tr>
+<tr><td><b>5. Explain</b> — the explainer</td><td>language model
+<code>{{ models.explainer }}</code>, one short call per candidate</td><td>one candidate:
+the product name (passed as data, inside a fenced quote, so text in the name cannot
+become an instruction), the quantity, the top-up amount. It sees neither the other
+candidates, nor the diagnosis, nor the tools</td><td>one Ukrainian sentence for the
+Customer's card (<code>guest_text_uk</code>). The sentence only explains — no number is
+taken from it</td></tr>
+</table>
+<p>The end of the path is the state <code>awaiting_consent</code>: 1–3 proposals, each
+with a confirmed price, availability and an explanation, and a stop until the Customer
+consents.</p>
+<p><b>Why two different models.</b> The planner and the explainer solve different
+problems, and the selection criteria differ. The planner is called once but with a
+large context — about 30 thousand tokens in (diagnosis, comparison, tool list) — and
+must return strict JSON; so a model with a window of at least 64 thousand tokens and
+reliable structured output was chosen, and the language of its answer is invisible to
+the Customer. The explainer is called two or three times per request with a short input
+(about 6 thousand tokens), and the only thing that matters in it is the quality of the
+Ukrainian, because the Customer reads that sentence. It was chosen by a comparison of
+four candidates on 28 test prompts: the only model with no critical language errors
+(Russianisms, surzhyk); two others scored higher on average but with such errors. The
+split buys two more things: the model that writes for the Customer never sees the tool
+list, and either model can be replaced without touching the other. Ids and prices of
+both are in the "Language models" table below.</p>
+<p><b>What is not used to choose.</b> Customer preferences, food restrictions,
+favourites, promotions or semantic closeness to what is already in the cart are
+<b>not</b> taken into account: Silpo's server offers tools for those, and this version
+does not use them. The reason is plain: every extra signal is one more place to be
+wrong in front of a Customer, and there was no measured way to validate relevance within
+this version. So relevance stays with the model and with the Customer, who picks one of
+two or three offers — or none.</p>
+<p><b>If the Customer picks none</b> — the «Не додавати нічого» button — the cart
+stays exactly as it was: nothing added, nothing changed, the block still there. The next
+decision is the Customer's: add something themselves in the Silpo app, choose another
+delivery channel (its minimum may differ, or there may be none; Lantern shows that
+comparison beside the diagnosis) or simply postpone the order. They can come back to
+the check at any time with «Перевірити знову»: since nothing was written, a repeated
+look spoils nothing.</p>
 <div class="diagram">{{ g4_activity_svg }}</div>
 <p>The next diagram shows the two places where a language model is involved at all, and
 what each of them receives. Step by step: the system takes the tool list and keeps from
