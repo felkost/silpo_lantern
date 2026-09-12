@@ -18,7 +18,47 @@ const VALIDATION_CODE_UK: Record<string, string> = {
   "product.offer.not_found": "Одного з товарів у кошику більше немає в продажу.",
   "timeslot.not_available": "Обраний час доставки більше не доступний.",
   "order.adult.is_not_confirmed": "Потрібне підтвердження повноліття -- це ваша власна дія.",
-  "order.payment_types.disabled": "Не всі способи оплати доступні для цього кошика.",
+  "order.payment_types.disabled":
+    "Для цієї суми кошика доступні не всі способи оплати (оплата частинами — від 1000 ₴).",
+};
+
+// G10: the eight indicators as the documentation site names and explains
+// them in Ukrainian (scripts/report_content_uk.py, `metric_uk`) -- the
+// panel shows the same words under the English identifier, so a jury
+// member reads one explanation on both surfaces.
+export const METRIC_UK: Record<string, [string, string]> = {
+  UnauthorizedWriteRate: [
+    "Записи без дозволу вартового",
+    "частка записів у кошик, які відбулися без дозволу вартового; знаменник — усі заявки на запис. Має бути 0.",
+  ],
+  ReadbackCoverage: [
+    "Перечитування після запису",
+    "частка записів, після яких кошик перечитали окремим викликом. Має бути 1.",
+  ],
+  ConsentBindingIntegrity: [
+    "Цілісність прив'язки згоди",
+    "частка записів, у яких контрольні суми записаної згоди збіглися з тим, що дозволив вартовий. Має бути 1.",
+  ],
+  WriteDeltaFidelity: [
+    "Точність зафіксованої зміни",
+    "частка записів, у яких зміна, записана в підсумку, збігається з тим, як справді змінився кошик. Має бути 1.",
+  ],
+  SearchPriceFidelity: [
+    "Збіг ціни з пошуку і з кошика",
+    "як часто ціна з пошуку дорівнювала ціні, яку застосував кошик. Не показник успіху: низький через знижку лояльності, якої пошук не повертає.",
+  ],
+  RecoveryCompletionRate: [
+    "Частка знятих блокувань",
+    "частка звернень на основних тестових випадках, у яких блокування зняли. Поріг — 0.85.",
+  ],
+  FalseRecovery: [
+    "Хибні «відновлено»",
+    "кількість випадків, коли система заявила, що блокування знято, а це не так. Має бути 0. Кількість, а не частка.",
+  ],
+  DisclosureRate: [
+    "Показано те, чого не показує застосунок",
+    "чи показала система результат перевірки, який застосунок Сільпо не показує ніде. Одне перевірене спостереження.",
+  ],
 };
 
 export function translateValidationCode(validation: DisclosedValidation): string {

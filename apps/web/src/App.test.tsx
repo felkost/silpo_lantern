@@ -898,6 +898,8 @@ describe("claim panel", () => {
     expect(block).toHaveTextContent("[0.90, 1.00]");
     expect(block).toHaveTextContent("python -m scripts.compute_metrics --tracked");
     expect(block).toHaveTextContent("2026-09-10");
+    // The site's Ukrainian name and meaning sit under the English identifier.
+    expect(block).toHaveTextContent("Перечитування після запису");
     expect(block).toHaveTextContent("offline");
     // claim 1's audited check: which code the app rendered, and which it did not
     expect(screen.getByTestId("claim-disclosure")).toHaveTextContent("order.payment_types.disabled");
@@ -927,24 +929,6 @@ describe("claim panel", () => {
       expect(screen.getByTestId("compensation-lede")).toBeInTheDocument();
     });
     expect(screen.getByTestId("claim-arithmetic")).not.toHaveTextContent("194.11");
-  });
-});
-
-// G10: the answer rating lives in React state only (author's decision:
-// session state, never Neon). Nothing leaves the browser.
-describe("answer rating", () => {
-  it("records a score and a comment without any request", async () => {
-    const fetchSpy = vi.fn(async () => { throw new Error("nothing fetches"); });
-    vi.stubGlobal("fetch", fetchSpy);
-
-    render(<App />);
-    await act(async () => {
-      screen.getByRole("button", { name: /rate 4 of 5/i }).click();
-    });
-
-    expect(screen.getByTestId("rating-value")).toHaveTextContent("4 / 5");
-    expect(screen.getByRole("button", { name: /rate 4 of 5/i })).toHaveAttribute("aria-pressed", "true");
-    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
 
@@ -987,7 +971,8 @@ describe("explanations", () => {
     vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("nothing fetches"); }));
     render(<App />);
     const helps = screen.getAllByText(/^Що це\?$/);
-    expect(helps.length).toBeGreaterThanOrEqual(4);
+    // Three blocks on the jury panel: observed nodes, claims, measured earlier.
+    expect(helps.length).toBe(3);
     expect(screen.getByText(/MCP — читання/)).toBeInTheDocument();
   });
 

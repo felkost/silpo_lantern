@@ -85,6 +85,7 @@ border-bottom: 1px solid #e3e7f0; } }
 <a href="#mcp">MCP adapter</a>
 <a href="#domain">Domain core</a>
 <a href="#planner">Planner and ranking</a>
+<a href="#models">Language models</a>
 </div>
 
 <p class="lede">The main parts of the system and how a request moves through them. The
@@ -259,7 +260,7 @@ trusts nothing it receives</td></tr>
 explains, never authorises</td></tr>
 <tr><td>Interface</td><td>FastAPI routes, the React Customer card and the jury
 console</td><td>Ukrainian for the Customer; English identifiers for the
-observer</td></tr>
+jury</td></tr>
 </table>
 <p>Layer membership is enforced by a test that walks every import, not by directory
 nesting alone.</p>
@@ -510,7 +511,7 @@ server provides the cart. No state is kept on the service disk.</p>
       <!-- Render (optional) -->
       <rect x="620" y="110" width="500" height="180" rx="8" fill="#f7f7fa" stroke="#9ca3af" stroke-width="1"/>
       <rect x="640" y="100" width="330" height="20" rx="2" fill="#ffffff"/>
-      <text x="805" y="114" fill="#6b7280" font-size="12" font-weight="700" text-anchor="middle">RENDER FRANKFURT · PUBLIC, SINCE G10</text>
+      <text x="805" y="114" fill="#6b7280" font-size="12" font-weight="700" text-anchor="middle">RENDER FRANKFURT · PUBLIC</text>
 
       <!-- ============ ARROWS ============ -->
 
@@ -560,8 +561,8 @@ server provides the cart. No state is kept on the service disk.</p>
       <text x="405" y="228" fill="#24242e" font-size="12" text-anchor="middle">uvicorn · no image yet</text>
 
       <!-- lantern-api (Render): one service, the API and the built web app
-           from one origin (G10, D87); the two-service split §1.6 named
-           collapsed into a single mount (A-G10-02). -->
+           from one origin; the two-service split the plan named
+           collapsed into a single mount. -->
       <rect x="760" y="150" width="220" height="100" rx="6" fill="#91ccf1" stroke="#2e7dbf" stroke-width="1"/>
       <rect x="772" y="162" width="28" height="16" rx="2" fill="transparent" stroke="#2e7dbf" stroke-width="0.8"/>
       <text x="786" y="174" fill="#24242e" font-size="12" text-anchor="middle">IF</text>
@@ -984,7 +985,7 @@ model, not to the database. That is why every rule about them is checked by ordi
 tests, with no network call at all.</p>
 <div class="diagram"><svg viewBox="0 0 1220 760" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="domain-core-class-title domain-core-class-desc">
       <title id="domain-core-class-title">Domain Core class diagram</title>
-      <desc id="domain-core-class-desc">Class diagram of the nine Domain Core models: a Cart carries Validations that wrap into Blockers, both feeding a Diagnosis; a Diagnosis feeds an ActionProposal carrying Evidence tuples, which G5+G6 turns into a ConsentRecord that authorizes a Receipt; a CartDiff compares a before and after Cart.</desc>
+      <desc id="domain-core-class-desc">Class diagram of the nine Domain Core models: a Cart carries Validations that wrap into Blockers, both feeding a Diagnosis; a Diagnosis feeds an ActionProposal carrying Evidence tuples, which the consent step turns into a ConsentRecord that authorizes a Receipt; a CartDiff compares a before and after Cart.</desc>
       <defs><style>text{font-family:Arial,Helvetica,"Liberation Sans","DejaVu Sans",sans-serif;}</style>
         <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6440c9"/></marker>
         <marker id="arrow-ink" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#24242e"/></marker>
@@ -1023,22 +1024,22 @@ tests, with no network call at all.</p>
       <rect x="440" y="284" width="88" height="16" rx="2" fill="#f7f7fa"/>
       <text x="484" y="296" fill="#24242e" font-size="12" text-anchor="middle">diagnose()</text>
 
-      <!-- Diagnosis -> ActionProposal (dashed, G4): row2, right-to-left -->
+      <!-- Diagnosis -> ActionProposal (dashed): row2, right-to-left -->
       <line x1="800" y1="380" x2="720" y2="380" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
       <rect x="734" y="364" width="76" height="16" rx="2" fill="#f7f7fa"/>
-      <text x="772" y="376" fill="#6b7280" font-size="12" text-anchor="middle">plan, G4</text>
+      <text x="772" y="376" fill="#6b7280" font-size="12" text-anchor="middle">plan</text>
 
       <!-- ActionProposal -> EvidenceTuple: row2, right-to-left -->
       <line x1="440" y1="380" x2="360" y2="380" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
       <rect x="374" y="364" width="52" height="16" rx="2" fill="#f7f7fa"/>
       <text x="400" y="376" fill="#24242e" font-size="12" text-anchor="middle">1..*</text>
 
-      <!-- ActionProposal -> ConsentRecord: straight vertical, same column (dashed, G5+G6) -->
+      <!-- ActionProposal -> ConsentRecord: straight vertical, same column (dashed) -->
       <line x1="580" y1="430" x2="580" y2="520" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
       <rect x="592" y="467" width="112" height="16" rx="2" fill="#f7f7fa"/>
-      <text x="648" y="479" fill="#6b7280" font-size="12" text-anchor="middle">consent, G5+G6</text>
+      <text x="648" y="479" fill="#6b7280" font-size="12" text-anchor="middle">consent</text>
 
-      <!-- ConsentRecord -> Receipt (dashed, G5+G6): row3 -->
+      <!-- ConsentRecord -> Receipt (dashed): row3 -->
       <line x1="720" y1="570" x2="800" y2="570" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
       <rect x="734" y="554" width="52" height="16" rx="2" fill="#f7f7fa"/>
       <text x="760" y="566" fill="#6b7280" font-size="12" text-anchor="middle">writes</text>
@@ -1104,7 +1105,7 @@ tests, with no network call at all.</p>
       <text x="220" y="583" fill="#24242e" font-size="12" text-anchor="middle">canonical_diff()</text>
       <text x="220" y="601" fill="#24242e" font-size="12" text-anchor="middle">asserts its own total delta</text>
 
-      <!-- ConsentRecord (dashed = shape built at G3, behavior at G5+G6) -->
+      <!-- ConsentRecord (dashed = shape first, behaviour added later) -->
       <rect x="440" y="520" width="280" height="100" rx="6" fill="#9a85e1" stroke="#6440c9" stroke-width="1" stroke-dasharray="5,4"/>
       <rect x="452" y="532" width="60" height="16" rx="2" fill="transparent" stroke="#6440c9" stroke-width="0.8"/>
       <text x="482" y="544" fill="#24242e" font-size="12" text-anchor="middle">DOMAIN</text>
@@ -1125,17 +1126,18 @@ tests, with no network call at all.</p>
       <text x="40" y="722" fill="#6b7280" font-size="12" font-weight="700" letter-spacing="0.10em">LEGEND</text>
 
       <rect x="40" y="740" width="18" height="14" rx="2" fill="#9a85e1" stroke="#6440c9" stroke-width="1"/>
-      <text x="66" y="751" fill="#24242e" font-size="12">Domain model, built at G3</text>
+      <text x="66" y="751" fill="#24242e" font-size="12">Domain model</text>
 
       <rect x="330" y="740" width="18" height="14" rx="2" fill="#9a85e1" stroke="#6440c9" stroke-width="1" stroke-dasharray="4,3"/>
-      <text x="356" y="751" fill="#24242e" font-size="12">Shape built at G3, behavior at G5+G6</text>
+      <text x="356" y="751" fill="#24242e" font-size="12">Shape first, behaviour added later</text>
 
       <line x1="700" y1="747" x2="740" y2="747" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
-      <text x="750" y="751" fill="#24242e" font-size="12">Used by, at G3</text>
+      <text x="750" y="751" fill="#24242e" font-size="12">Used by</text>
 
       <line x1="940" y1="747" x2="980" y2="747" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
       <text x="990" y="751" fill="#24242e" font-size="12">Used by, at a later stage</text>
-    </svg></div>
+    </svg>
+</div>
 <p>The next diagram follows one cart from the server's answer to the message the
 Customer sees. First the answer is unpacked into known fields: totals, products,
 validations. If its shape is unexpected — a required field missing, a type that does not
@@ -1251,7 +1253,7 @@ sees is what Lantern exists to show.</p>
       <text x="560" y="508" fill="#24242e" font-size="12" text-anchor="middle">threshold</text>
       <text x="560" y="524" fill="#24242e" font-size="12" text-anchor="middle">resolvable?</text>
 
-      <!-- Unverified state (exception/abnormal, dashed border, hangs off the flow — G3-F2/F2b) -->
+      <!-- Unverified state (exception/abnormal, dashed border, hangs off the flow) -->
       <rect x="240" y="550" width="200" height="60" rx="14" fill="#9a85e1" stroke="#6440c9" stroke-width="1.2" stroke-dasharray="5,4"/>
       <text x="340" y="576" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Unverified</text>
       <text x="340" y="596" fill="#24242e" font-size="12" text-anchor="middle">threshold_source</text>
@@ -1286,7 +1288,8 @@ sees is what Lantern exists to show.</p>
       <circle cx="800" cy="897" r="10" fill="none" stroke="#24242e" stroke-width="1.5"/>
       <circle cx="800" cy="897" r="5" fill="#24242e"/>
       <text x="818" y="901" fill="#24242e" font-size="12">Final</text>
-    </svg></div>
+    </svg>
+</div>
 
 <h2 id="planner">Planner, evidence gate, ranking</h2>
 <p>After the diagnosis the language model sees what is already in the cart and how much
@@ -1320,7 +1323,7 @@ channel (its minimum may differ, or there may be none; Lantern shows that compar
 beside the diagnosis) or simply postpone the order. They can come back to the check at
 any time: since nothing was written, a repeated look spoils nothing.</p>
 <div class="diagram"><svg viewBox="0 0 900 1120" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g4-activity-title g4-activity-desc">
-      <title id="g4-activity-title">G4 planner-to-ranking activity diagram</title>
+      <title id="g4-activity-title">Planner-to-ranking activity diagram</title>
       <desc id="g4-activity-desc">Activity diagram from a completed diagnosis through the planner, the deterministic product search, the Evidence Gate, and ranking to the explainer, ending in awaiting_consent. The candidates-empty branch and a budget-exceeded condition both exit to an explicit Aborted state rather than a successful outcome.</desc>
       <defs><style>text{font-family:Arial,Helvetica,"Liberation Sans","DejaVu Sans",sans-serif;}</style>
         <marker id="arrow-ink" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#24242e"/></marker>
@@ -1331,7 +1334,7 @@ any time: since nothing was written, a repeated look spoils nothing.</p>
       <!-- ============ ZONE ============ -->
       <rect x="40" y="40" width="820" height="940" rx="8" fill="#f7f7fa" stroke="#9ca3af" stroke-width="1"/>
       <rect x="60" y="28" width="360" height="20" rx="2" fill="#ffffff"/>
-      <text x="240" y="42" fill="#6b7280" font-size="12" font-weight="700" text-anchor="middle">src/lantern/graph/ + domain/ &middot; G4 READ-PATH</text>
+      <text x="240" y="42" fill="#6b7280" font-size="12" font-weight="700" text-anchor="middle">src/lantern/graph/ + domain/ &middot; READ PATH</text>
 
       <!-- ============ ARROWS ============ -->
 
@@ -1440,7 +1443,7 @@ write one Ukrainian sentence about that product; the product name is passed as p
 data, so no text inside it can become an instruction. Neither call ever sees the raw
 tool descriptions, or the write tool.</p>
 <div class="diagram"><svg viewBox="0 0 1160 1060" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g4-seq-title g4-seq-desc">
-      <title id="g4-seq-title">G4 LLM tool-choice sequence</title>
+      <title id="g4-seq-title">LLM tool-choice sequence</title>
       <desc id="g4-seq-desc">Sequence diagram drawn from a real captured LangGraph trace (2026-09-06, session g4-live): the Recovery Agent reads the cart and compares delivery channels through Silpo MCP, asks the domain core to diagnose the block, calls the planner LLM with a reviewed tool view (name and JSON Schema only, never a raw tool description) to get a SearchIntent carrying no price or product id, searches the live catalogue through Silpo MCP, runs the result through the Evidence Gate and ranking in the domain core, and finally calls the explainer LLM once per surviving ActionProposal inside a loop, with the product name quoted as inert data, to produce the guest-facing sentence.</desc>
       <defs>
         <marker id="arrow-filled" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#24242e"/></marker>
@@ -1580,9 +1583,46 @@ tool descriptions, or the write tool.</p>
       <text x="972" y="971" fill="#24242e" font-size="12">Reply (UML)</text>
 
       <text x="20" y="1000" fill="#6b7280" font-size="12">Drawn from a captured trace: LangSmith session "lantern", trace id starting 01a077e4, 2026-09-06T18:13Z (tags: g4-live-evidence-gate, criterion-8).</text>
-    </svg></div>
+    </svg>
+</div>
+
+<h2 id="models">Language models: which, where and for what</h2>
+<p>The system has three roles for a language model, and each is assigned its own model.
+All three are called through one provider (OpenRouter); the model ids and prices in the
+table come from the settings file <code>config/models.yaml</code>, verified against the
+provider's catalogue on 2026-09-06. Prices are dollars per million tokens,
+input / output.</p>
+<table>
+<tr><th>Role</th><th>Where in the code</th><th>Model</th><th>Price, $/M</th><th>How
+chosen and what it does</th></tr>
+<tr><td>Planner</td><td><code>graph/llm_adapter.py</code>, step
+<code>plan</code></td><td><code>google/gemini-3.8-flash</code><br>fallback:
+<code>z-ai/glm-5.3-flash</code></td><td>0.75 /
+3.75</td><td>receives the diagnosis, the delivery-channel
+comparison and the tool list without descriptions; returns only search terms. One call
+per request with a large context (~30k tokens in), so a model with a window of at least
+64k was chosen.</td></tr>
+<tr><td>Explainer</td><td><code>graph/llm_adapter.py</code>, step
+<code>explain</code></td><td><code>google/gemini-3.5-flash-lite</code></td>
+<td>0.3 / 2.5</td>
+<td>writes one Ukrainian sentence about one option; the Customer sees exactly that text.
+Chosen by a comparison of 4 candidates on 28 test
+prompts: the only model with no critical language errors (Russianisms, surzhyk); two
+others scored higher on average but with such errors</td></tr>
+<tr><td>Evaluation judge</td><td><code>evals/openrouter_judge.py</code> (the DeepEval
+library, <code>GEval</code> criteria)</td><td><code>openai/gpt-5.6-luna</code></td>
+<td>0.2 / 1.2</td><td>scores the
+explainer's answers in a separate test suite, never while serving a Customer. Checked on
+23 pairs labelled by the author: it reliably catches structural defects and is not used
+as a measure of language quality (the "Not measured" section on the Measurements
+page)</td></tr>
+</table>
+<p>What the model does in no role: it does not compute sums, does not choose the
+product,
+does not call the write tool and does not see it in the list. The ceiling on all model
+calls is $20 for the whole project, from the same settings file.</p>
 <div class="next"><a href="index.html">← Start here</a>
 
 <a href="recovery.html">Hero recovery →</a></div>
-<p class="meta">Regenerated 2026-09-12T00:07:34+00:00. No external network resources.</p>
+<p class="meta">Regenerated 2026-09-12T00:44:28+00:00. No external network resources.</p>
 </main></div></body></html>

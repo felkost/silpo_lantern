@@ -17,7 +17,6 @@ import {
   streamSessionEvents,
   submitConsent,
 } from "./api";
-import { AnswerRating } from "./components/AnswerRating";
 import { CartColumn, type CartState } from "./components/CartColumn";
 import { ClaimPanel } from "./components/ClaimPanel";
 import { ConsentScreen } from "./components/ConsentScreen";
@@ -256,8 +255,8 @@ function App() {
         {/* G10 (A-G10-02): the left third is an English technical surface
             for a jury; the guest card on the right stays Ukrainian and is
             not edited beyond classNames. */}
-        <aside className="panel" aria-label="Observer panel">
-          <p className="eyebrow">Спостерігач</p>
+        <aside className="panel" aria-label="Jury panel">
+          <p className="eyebrow">Журі</p>
           <StageFeed rows={stages} streaming={busy} />
           <ClaimPanel
             diagnosis={screen === "consent" && compensationOffer ? null : diagnosis}
@@ -268,11 +267,10 @@ function App() {
             evidence={evidence}
           />
           <MeasuredEarlier evidence={evidence} onLoaded={setEvidence} />
-          <AnswerRating />
         </aside>
 
         <main className="guest">
-          <p className="eyebrow">Гість</p>
+          <p className="eyebrow">Клієнт</p>
 
           {/* «Вийти» only once there is a login to end; on the login screen
               the same action is a cancel, not an exit (the author, live). */}

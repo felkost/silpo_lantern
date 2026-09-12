@@ -7,6 +7,7 @@
 import { useState } from "react";
 
 import { getEvidence } from "../api";
+import { METRIC_UK } from "../copy";
 import type { EvidenceResponse } from "../types";
 import { Help } from "./Help";
 
@@ -35,8 +36,11 @@ export function MeasuredEarlier({ evidence, onLoaded }: Props) {
     <section className="panel-block" aria-labelledby="measured-heading" data-testid="measured-earlier">
       <h2 id="measured-heading">Measured earlier — not this session</h2>
       <Help>
-        Метрики, виміряні раніше на офлайн-прогонах — не в цій сесії. n — розмір
-        вибірки, у дужках — 95% інтервал Вілсона; команда поруч відтворює файл із нуля.
+        Вісім показників проєкту, виміряних раніше на збережених записах 18 прогонів —
+        не в цій сесії. n — розмір вибірки (33 — кількість записів у кошик за ці
+        прогони), у дужках — 95% інтервал за методом Вілсона. Під кожним показником —
+        його значення українською і застереження з файла metrics.json; команда поруч
+        відтворює цей файл із нуля.
       </Help>
       {evidence === null ? (
         <p>
@@ -63,6 +67,11 @@ export function MeasuredEarlier({ evidence, onLoaded }: Props) {
                     {m.interval !== null && ` · 95% [${m.interval[0].toFixed(2)}, ${m.interval[1].toFixed(2)}]`}
                   </span>
                 </div>
+                {METRIC_UK[m.name] && (
+                  <div className="uk">
+                    <b>{METRIC_UK[m.name][0]}</b> — {METRIC_UK[m.name][1]}
+                  </div>
+                )}
                 <div className="muted caveat">{m.caveat}</div>
               </li>
             ))}

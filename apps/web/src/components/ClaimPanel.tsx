@@ -50,16 +50,19 @@ export function ClaimPanel({ diagnosis, candidates, consent, receipts, refusal, 
     <section className="panel-block" aria-labelledby="claims-heading">
       <h2 id="claims-heading">What this run shows</h2>
       <Help>
-        Чотири твердження про те, як працює система, і живі докази під кожним — лише з
-        цієї сесії. Назви полів (args_hash, products_total) навмисно ті самі, що в коді,
-        щоб їх можна було звірити.
+        Чотири твердження проєкту про те, як працює система; під кожним — дані з
+        поточної сесії, які його доводять. Назви полів (args_hash, products_total)
+        навмисно ті самі, що в коді, щоб їх можна було звірити.
       </Help>
 
       <details open data-testid="claim-disclosure">
         <summary>The server returns more than the app shows</summary>
         <p className="muted uk">
-          Доводить: сервер повертає всі позначки кошика з рівнями; позначені «unknown
-          code» — ті, яких система свідомо не тлумачить.
+          Доводить: сервер повертає разом із кошиком усі результати перевірок, з
+          рівнями, а застосунок Сільпо показує не всі. «unknown code» — коду немає в
+          реєстрі правил, і система свідомо його не тлумачить. Рядок «Audited» —
+          перевірене раніше спостереження: який із результатів застосунок показує, а
+          який ні.
         </p>
         {diagnosis === null ? (
           <p className="muted">{NOT_OBSERVED}</p>
@@ -90,8 +93,10 @@ export function ClaimPanel({ diagnosis, candidates, consent, receipts, refusal, 
       <details open data-testid="claim-arithmetic">
         <summary>Money is computed by code, never by the model</summary>
         <p className="muted uk">
-          Доводить: сума й недостача — арифметика в коді з наведених вхідних даних;
-          речення моделі на картці лише пояснює, а не рахує.
+          Доводить: вартість товарів (products_total) узято з кошика, поріг — з даних
+          самої перевірки, недостача (gap) — їхня різниця, порахована кодом. Ціна
+          кожного варіанта — з відповіді інструмента пошуку, названого поруч. Речення
+          моделі на картці лише пояснює, а не рахує.
         </p>
         {diagnosis === null ? (
           <p className="muted">{NOT_OBSERVED}</p>
@@ -122,8 +127,10 @@ export function ClaimPanel({ diagnosis, candidates, consent, receipts, refusal, 
       <details open data-testid="claim-consent">
         <summary>Nothing is written without item-bound consent</summary>
         <p className="muted uk">
-          Доводить: згода прив'язана до конкретної дії хешем аргументів і стану кошика;
-          відмова захисного шару показана його власними словами.
+          Доводить: «записується» — у кошик клієнта на сервері Сільпо. Згода прив'язана
+          до конкретної дії контрольною сумою дії (args_hash: кошик, товар, кількість) і
+          контрольною сумою стану кошика (state_hash), з терміном дії. Якщо вартовий
+          запису відмовив — його відмова показана його власними словами.
         </p>
         {candidates.length === 0 && consent === null ? (
           <p className="muted">{NOT_OBSERVED}</p>
@@ -152,8 +159,9 @@ export function ClaimPanel({ diagnosis, candidates, consent, receipts, refusal, 
       <details open data-testid="claim-readback">
         <summary>Success is never asserted, only read back</summary>
         <p className="muted uk">
-          Доводить: після запису кошик перечитується; «verified» — збіг очікуваного з
-          прочитаним, «unverified» — не підтверджено.
+          Доводить: сервер Сільпо відповідає на запис лише «успішно», без сум, тому
+          після запису кошик перечитується окремо. «verified» — зміна з перечитування
+          збіглася з очікуваною; «unverified» — не збіглася або перечитати не вдалося.
         </p>
         {receipts.length === 0 ? (
           <p className="muted">{NOT_OBSERVED}</p>

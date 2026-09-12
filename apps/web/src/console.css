@@ -399,39 +399,6 @@ code,
   margin: 4px 0 6px;
 }
 
-/* rating: five quiet buttons, the chosen one filled */
-
-.rating-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.rate {
-  min-width: 36px;
-  padding: 6px 0;
-  font-family: var(--font-data);
-}
-
-.rate.on {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-}
-
-.panel textarea {
-  width: 100%;
-  margin-top: 8px;
-  font: inherit;
-  font-size: 14px;
-  padding: 8px 10px;
-  border: 1px solid var(--hairline);
-  border-radius: 8px;
-  background: var(--ground);
-  color: var(--ink);
-  resize: vertical;
-}
-
 /* the stage feed: one row per observed node, io as a coloured badge */
 
 .stage-list {

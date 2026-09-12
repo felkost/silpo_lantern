@@ -461,7 +461,7 @@ that case has its own state, <code>Unverified</code>.</p>
 <p>A refusal by the guard ends the request: nothing is written to the cart, and the
 system does not retry the write on its own. The guard returns the reason in its own
 words — short English strings as written in the code, for instance <code>consent has
-expired</code>. That string is what is stored in the database and shown on the observer
+expired</code>. That string is what is stored in the database and shown on the jury
 panel, so it can be checked against the code. The Customer, on the card, sees a
 translation of that string from a fixed dictionary — for the same example: «Час на
 підтвердження минув — почніть спочатку» ("the time to confirm has passed — start
@@ -886,8 +886,8 @@ refused the undo because the cart moved meanwhile; it then builds one new undo o
 the cart as it is now and waits for consent again. One such attempt — then a
 refusal</td></tr>
 </table>
-<p>"NEW EDGE (G8)" beside two transitions means they were added at development stage
-G8, when the undo appeared; the other transitions existed before.</p>
+<p>"ADDED FOR THE UNDO" beside two transitions means they were added together with
+the undo; the other transitions existed before.</p>
 <div class="diagram"><svg viewBox="0 0 980 780" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="g8-topo-title g8-topo-desc">
       <title id="g8-topo-title">Write segment with compensation</title>
       <desc id="g8-topo-desc">State machine of the write segment of the recovery graph, from the code exported at tests/unit/fixtures/graph_topology.mermaid. Consent pauses at the Write Guard's own interrupt point. A refusal there ends the graph directly -- Write and Read-back is never entered. An authorized write always reaches Persist Receipt, which decides what happens next: end the graph if the blocker cleared or nothing more can be done, loop back to Diagnose for another add round if rounds remain, or, once no further round remains and the write was compensable, send the graph back to the Write Guard through a NEW edge carrying a compensation offer -- the guard's own interrupt is what pauses the graph for the guest's fresh consent, there is no separate offer-holding node. A refused compensation is the one refusal that is not permanently terminal: the guard re-derives one fresh offer and routes back to itself through a second new edge, a self-loop on the same node, bounded by a session counter so a second refusal in a row still ends the graph exactly like any other refusal.</desc>
@@ -908,7 +908,7 @@ G8, when the undo appeared; the other transitions existed before.</p>
       <rect x="188" y="88" width="184" height="16" rx="2" fill="#ffffff"/>
       <text x="280" y="100" fill="#24242e" font-size="12" text-anchor="middle">RETRY_GUARD · self-loop</text>
       <rect x="188" y="104" width="184" height="16" rx="2" fill="#ffffff"/>
-      <text x="280" y="116" fill="#24242e" font-size="12" font-weight="700" text-anchor="middle">NEW EDGE (G8)</text>
+      <text x="280" y="116" fill="#24242e" font-size="12" font-weight="700" text-anchor="middle">ADDED FOR THE UNDO</text>
 
       <!-- Write Guard -> Write & Read-back -->
       <line x1="260" y1="220" x2="360" y2="220" stroke="#24242e" stroke-width="1.2" marker-end="url(#arrow-ink)"/>
@@ -942,7 +942,7 @@ G8, when the undo appeared; the other transitions existed before.</p>
       <rect x="500" y="60" width="240" height="16" rx="2" fill="#ffffff"/>
       <text x="620" y="72" fill="#24242e" font-size="12" text-anchor="middle">COMPENSATE · rounds spent, compensable</text>
       <rect x="500" y="24" width="240" height="16" rx="2" fill="#ffffff"/>
-      <text x="620" y="36" fill="#24242e" font-size="12" font-weight="700" text-anchor="middle">NEW EDGE (G8)</text>
+      <text x="620" y="36" fill="#24242e" font-size="12" font-weight="700" text-anchor="middle">ADDED FOR THE UNDO</text>
 
       <!-- ============ STATES ============ -->
       <circle cx="10" cy="220" r="6" fill="#24242e"/>
@@ -966,7 +966,7 @@ G8, when the undo appeared; the other transitions existed before.</p>
       <text x="790" y="228" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Persist Receipt</text>
       <text x="790" y="248" fill="#24242e" font-size="12" text-anchor="middle">decides retry vs. compensate</text>
 
-      <!-- Row 2: only Diagnose is a real node here; it exits this diagram (unchanged since G4) -->
+      <!-- Row 2: only Diagnose is a real node here; it exits this diagram (unchanged) -->
       <rect x="360" y="380" width="220" height="80" rx="8" fill="#9a85e1" stroke="#6440c9" stroke-width="1.4" stroke-dasharray="6,3"/>
       <text x="470" y="416" fill="#24242e" font-size="14" font-weight="700" text-anchor="middle">Diagnose</text>
       <text x="470" y="436" fill="#24242e" font-size="12" text-anchor="middle">re-plans, exits this diagram</text>
@@ -990,13 +990,14 @@ G8, when the undo appeared; the other transitions existed before.</p>
       <rect x="400" y="666" width="16" height="16" rx="8" fill="#6ca2ee" stroke="#2c5fc9" stroke-width="1"/>
       <text x="426" y="678" fill="#24242e" font-size="12">Application (graph)</text>
       <line x1="600" y1="674" x2="632" y2="674" stroke="#24242e" stroke-width="1.6" marker-end="url(#arrow-ink)"/>
-      <text x="644" y="678" fill="#24242e" font-size="12">New edge, G8</text>
+      <text x="644" y="678" fill="#24242e" font-size="12">Added for the undo</text>
       <line x1="780" y1="674" x2="812" y2="674" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
       <text x="824" y="678" fill="#24242e" font-size="12">Pre-existing</text>
 
-      <text x="40" y="712" fill="#6b7280" font-size="12" font-style="italic">Read → Diagnose → Compare Channels → Plan → Collect &amp; Gate → Rank → Explain precede this segment unchanged; see graph_state.html.</text>
+      <text x="40" y="712" fill="#6b7280" font-size="12" font-style="italic">Read → Diagnose → Compare Channels → Plan → Collect &amp; Gate → Rank → Explain precede this segment unchanged; see the whole-request state diagram.</text>
       <text x="40" y="732" fill="#6b7280" font-size="12" font-style="italic">A "compensation offer" is not a separate node — it is Persist Receipt's own compensate edge back into Write Guard's interrupt.</text>
-    </svg></div>
+    </svg>
+</div>
 
 <h2 id="rg">Resilience checks</h2>
 <p>The project brief names seven situations in which the system must behave
@@ -1029,5 +1030,5 @@ brief itself leaves outside this version.</p>
 <div class="next"><a href="recovery.html">← Hero recovery</a>
 
 <a href="evidence.html">Measurements →</a></div>
-<p class="meta">Regenerated 2026-09-12T00:07:34+00:00. No external network resources.</p>
+<p class="meta">Regenerated 2026-09-12T00:44:28+00:00. No external network resources.</p>
 </main></div></body></html>

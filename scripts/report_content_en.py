@@ -50,6 +50,7 @@ SECTIONS = {
         ("mcp", "MCP adapter"),
         ("domain", "Domain core"),
         ("planner", "Planner and ranking"),
+        ("models", "Language models"),
     ],
     "recovery.html": [
         ("flow", "The flow"),
@@ -168,7 +169,7 @@ trusts nothing it receives</td></tr>
 explains, never authorises</td></tr>
 <tr><td>Interface</td><td>FastAPI routes, the React Customer card and the jury
 console</td><td>Ukrainian for the Customer; English identifiers for the
-observer</td></tr>
+jury</td></tr>
 </table>
 <p>Layer membership is enforced by a test that walks every import, not by directory
 nesting alone.</p>
@@ -405,6 +406,42 @@ write one Ukrainian sentence about that product; the product name is passed as p
 data, so no text inside it can become an instruction. Neither call ever sees the raw
 tool descriptions, or the write tool.</p>
 <div class="diagram">{{ g4_sequence_svg }}</div>
+
+<h2 id="models">Language models: which, where and for what</h2>
+<p>The system has three roles for a language model, and each is assigned its own model.
+All three are called through one provider (OpenRouter); the model ids and prices in the
+table come from the settings file <code>config/models.yaml</code>, verified against the
+provider's catalogue on {{ models.verified_at }}. Prices are dollars per million tokens,
+input / output.</p>
+<table>
+<tr><th>Role</th><th>Where in the code</th><th>Model</th><th>Price, $/M</th><th>How
+chosen and what it does</th></tr>
+<tr><td>Planner</td><td><code>graph/llm_adapter.py</code>, step
+<code>plan</code></td><td><code>{{ models.planner }}</code><br>fallback:
+<code>{{ models.planner_fallback }}</code></td><td>{{ models.planner_price.input }} /
+{{ models.planner_price.output }}</td><td>receives the diagnosis, the delivery-channel
+comparison and the tool list without descriptions; returns only search terms. One call
+per request with a large context (~30k tokens in), so a model with a window of at least
+64k was chosen.</td></tr>
+<tr><td>Explainer</td><td><code>graph/llm_adapter.py</code>, step
+<code>explain</code></td><td><code>{{ models.explainer }}</code></td>
+<td>{{ models.explainer_price.input }} / {{ models.explainer_price.output }}</td>
+<td>writes one Ukrainian sentence about one option; the Customer sees exactly that text.
+Chosen by a comparison of {{ models.explainer_candidates }} candidates on 28 test
+prompts: the only model with no critical language errors (Russianisms, surzhyk); two
+others scored higher on average but with such errors</td></tr>
+<tr><td>Evaluation judge</td><td><code>evals/openrouter_judge.py</code> (the DeepEval
+library, <code>GEval</code> criteria)</td><td><code>{{ models.judge }}</code></td>
+<td>{{ models.judge_price.input }} / {{ models.judge_price.output }}</td><td>scores the
+explainer's answers in a separate test suite, never while serving a Customer. Checked on
+23 pairs labelled by the author: it reliably catches structural defects and is not used
+as a measure of language quality (the "Not measured" section on the Measurements
+page)</td></tr>
+</table>
+<p>What the model does in no role: it does not compute sums, does not choose the
+product,
+does not call the write tool and does not see it in the list. The ceiling on all model
+calls is ${{ models.ceiling }} for the whole project, from the same settings file.</p>
 """
 
 RECOVERY = """
@@ -518,7 +555,8 @@ one the Customer sees, in Ukrainian. <b>On the right</b> — the cart as Silpo's
 returned it: one column with the state at the first read and one more after each
 read-back; the line the write added is highlighted, and the totals stand side by side
 so they can be compared.</p>
-<p><b>On the left</b> — two blocks for the observer. The first is a log of the steps
+<p><b>On the left</b> — three blocks for the jury (the column is labelled so on the
+console: «Журі»). The first, <code>Observed nodes</code>, is a log of the steps
 the agent actually ran in this session, in execution order; beside each step, what it
 touched: Silpo's server, the language model, the database, or nothing (computation in
 code). Under the log, the session's spend on the language model: how many tokens were
@@ -527,7 +565,8 @@ own usage data. Beside it, the <b>project ceiling</b> — $20: the limit on lang
 spend for the whole project, from the first test to today, set by the author and
 recorded in the settings file (<code>config/models.yaml</code>). It is shown so the
 session's spend has something to be compared with.</p>
-<p>The second block on the left is four claims about how the system works. They are
+<p>The second block, <code>What this run shows</code>, is four claims about how the
+system works. They are
 the project's own claims, and under each one the console shows the data from the
 current session that proves it; the field names are deliberately the same as in the
 code, so they can be checked against it.</p>
@@ -552,6 +591,12 @@ write with only "success", no totals. So the system reads the cart again and sho
 the expected change beside the one read back: equal — "verified"; not equal, or the
 read-back failed — "unverified"</td></tr>
 </table>
+<p>The third block, <code>Measured earlier — not this session</code>, shows on request
+the eight indicators from the Measurements page — with <code>n</code>, interval,
+caveat, and the same Ukrainian name and meaning as on that page. The heading says
+deliberately that these were measured earlier, on recorded
+runs, and not in this session: so the jury does not confuse the project's indicators
+with what is happening on screen now.</p>
 
 <h2 id="scenarios">The other scenarios</h2>
 <table>
@@ -710,7 +755,7 @@ that case has its own state, <code>Unverified</code>.</p>
 <p>A refusal by the guard ends the request: nothing is written to the cart, and the
 system does not retry the write on its own. The guard returns the reason in its own
 words — short English strings as written in the code, for instance <code>consent has
-expired</code>. That string is what is stored in the database and shown on the observer
+expired</code>. That string is what is stored in the database and shown on the jury
 panel, so it can be checked against the code. The Customer, on the card, sees a
 translation of that string from a fixed dictionary — for the same example: «Час на
 підтвердження минув — почніть спочатку» ("the time to confirm has passed — start
@@ -772,8 +817,8 @@ refused the undo because the cart moved meanwhile; it then builds one new undo o
 the cart as it is now and waits for consent again. One such attempt — then a
 refusal</td></tr>
 </table>
-<p>"NEW EDGE (G8)" beside two transitions means they were added at development stage
-G8, when the undo appeared; the other transitions existed before.</p>
+<p>"ADDED FOR THE UNDO" beside two transitions means they were added together with
+the undo; the other transitions existed before.</p>
 <div class="diagram">{{ g8_topology_svg }}</div>
 
 <h2 id="rg">Resilience checks</h2>
@@ -960,7 +1005,7 @@ every hundred requests it adds one purchase with more than one dollar of margin.
 <p>Three things from the project brief were not measured, and here is why.</p>
 <p><b>A before/after comparison in sessions with Customers.</b> The brief provides for
 moderated sessions: a Customer works through a blocked cart first without the agent,
-then with it, and an observer records the time, the number of actions and the outcome.
+then with it, and a moderator records the time, the number of actions and the outcome.
 The protocol for those sessions is written. No sessions were held, because the project
 had no access to participants; <code>n</code> = 0. Consequence: everything these pages
 say about clarity and convenience for the Customer rests on the author's own runs, not
@@ -974,7 +1019,9 @@ paying for itself on these pages is conditional ("provided p₁ − p₀ &gt; 0"
 result. The measured indicators show that the agent works safely and correctly; they do
 not show that it increases sales.</p>
 <p><b>The language quality of the explanations.</b> The project has automatic answer
-evaluators (one language model scoring another's text). They were checked against
+evaluators (one language model scoring another's text; the DeepEval library, judge model
+<code>openai/gpt-5.6-luna</code> — see "Language models" on the Architecture page).
+They were checked against
 labelled examples, and that check showed: they reliably detect structural defects — a
 mixed-up sum, an extra product, a missing warning — and do not reliably judge the
 quality of the Ukrainian. So they are used only to find defects, and their quality
@@ -1049,7 +1096,7 @@ Customer's address, phone or coordinates. However, in <code>receipts</code> the 
 returned it — with all its fields, delivery coordinates included; and in
 <code>oauth_tokens</code> the access token is stored unencrypted. The protection of that
 data is access to the database itself (Neon); encryption at rest is deferred in this
-version. The Customer's browser and the observer panel never receive the whole cart:
+version. The Customer's browser and the jury panel never receive the whole cart:
 the service sends only the delivery type, the slot, the products total and the lines
 (name, quantity, price).</p>
 

@@ -89,3 +89,43 @@ def test_no_tracked_file_references_a_gitignored_docs_path() -> None:
             violations.append(f"{rel_path}: references {match.group(0)!r}")
 
     assert not violations, "\n".join(violations)
+
+
+# A reader of the public surfaces -- the documentation site, the README, the
+# console's own text and the diagrams inlined into the site -- has no
+# decision log or stage plan to look ids up in, so a bare `D42`, `D-G10-03`
+# or `G8` there is a dangling reference. Code comments are policed by review
+# (the docstring above says why a blanket rule is unreliable); these
+# surfaces are scanned because a reader cannot skip them.
+_STAGE_OR_DECISION_ID = re.compile(
+    r"\b(?:D-?G?\d{1,3}|G\d{1,2}(?:\+G\d{1,2})?|A-G\d+)\b"
+)
+_JS_COMMENTS = re.compile(r"//[^\n]*|/\*.*?\*/", re.S)
+
+
+def _reader_facing_files() -> list[str]:
+    files = []
+    for rel_path in _tracked_files():
+        if rel_path == "README.md" or rel_path.startswith("scripts/report_content_"):
+            files.append(rel_path)
+        elif rel_path.startswith("docs/reports/") and rel_path.endswith(".html"):
+            files.append(rel_path)
+        elif (
+            rel_path.startswith("apps/web/src/")
+            and rel_path.endswith((".ts", ".tsx"))
+            and ".test." not in rel_path
+        ):
+            files.append(rel_path)
+    return files
+
+
+def test_reader_facing_surfaces_carry_no_stage_or_decision_ids() -> None:
+    violations: list[str] = []
+    for rel_path in _reader_facing_files():
+        text = (PROJECT_ROOT / rel_path).read_text(encoding="utf-8")
+        if rel_path.endswith((".ts", ".tsx")):
+            text = _JS_COMMENTS.sub("", text)
+        for match in _STAGE_OR_DECISION_ID.finditer(text):
+            line = text.count("\n", 0, match.start()) + 1
+            violations.append(f"{rel_path}:{line}: {match.group(0)!r}")
+    assert not violations, "\n".join(violations)
