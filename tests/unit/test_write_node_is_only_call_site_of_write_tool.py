@@ -2,13 +2,13 @@
 write-capable callable is referenced in exactly one node factory
 (`make_write_and_readback_node`), invoked exactly once, and is not a
 parameter of the Write Guard node -- the guard authorizes, it does not
-write (`CLAUDE.md` section 4).
+write (the project invariants).
 
 The undo widened the scan from `nodes.py` alone to all of `src/lantern/graph/**`:
 the compensation split added `compensation_nodes.py` to the
 same package, and the ORIGINAL scan (parsing only `nodes.py`'s own source)
 would not have seen a second write call site added in that new module at
-all -- a real hole, found at this stage's kickoff, independent of
+all -- a real hole, found at the start of this work, independent of
 compensation itself. `test_synthetic_second_module_violation_is_detected`
 below proves the widened scan actually catches it, not merely that no
 real file currently violates it.

@@ -1,10 +1,10 @@
 """Silpo MCP OAuth: persistent token storage and the manual-login contract.
-Ported from the donor project's `silpo_mcp_auth.py` — SDK reconnaissance
+Ported from the author's earlier project's `silpo_mcp_auth.py` — SDK reconnaissance
 confirmed `TokenStorage` is still a structural `typing.Protocol` with the
 same four async methods in the installed `mcp==1.29.0`, no adaptation
 needed on the port itself.
 
-`build_redirect_handler` is new: the donor's `redirect_handler` always
+`build_redirect_handler` is new: that earlier project's `redirect_handler` always
 raised the same `SilpoMcpAuthRequiredError`, whether or not a token had
 ever existed. A previously-valid token being rejected mid-session is a
 different, previously-unflagged failure — it must surface distinctly

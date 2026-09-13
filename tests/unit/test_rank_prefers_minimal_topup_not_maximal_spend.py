@@ -70,7 +70,7 @@ def test_ranking_never_mutates_the_input_list_order() -> None:
 
 
 def test_top_n_truncates_to_the_requested_count_after_ranking() -> None:
-    """Plan section 5.1: "2-3 доречні товари" — the graph shows a small,
+    """the brief: "2-3 доречні товари" — the graph shows a small,
     curated set, not every surviving candidate."""
     candidates = [
         _proposal("d", "40.00"),

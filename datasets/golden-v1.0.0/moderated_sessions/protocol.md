@@ -1,4 +1,4 @@
-# Moderated sessions — protocol (§12.2)
+# Moderated sessions — protocol
 
 > **DEFERRED, 2026-09-10. Not run, and n = 0.**
 >
@@ -19,15 +19,15 @@
 > cannot be answered by someone who already knows. Substituting the author would report
 > familiarity as comprehension.
 >
-> **§14's criterion is still met, by its own terms:** it asks that «n і coverage явні» —
+> **The brief's criterion is still met, by its own terms:** it asks that «n і coverage явні» —
 > that n and coverage be *explicit* — not that n be large. n = 0 is reported as N/A per
-> §13.1's rule, never as 0%. The §15 video script is written from measurements that do
-> exist, and is delivered with the stage reports.
+> the brief's rule, never as 0%. The video script is written from measurements that do
+> exist, and is delivered with the review notes.
 >
 > The protocol below is kept in full, unchanged. It is what to follow if participants
 > become available.
 
-The before/after comparison plan §12.2 asks for: A is the current Silpo app, B is Lantern,
+The before/after comparison the brief asks for: A is the current Silpo app, B is Lantern,
 within-subject, counterbalanced, n = 5–8, a 4-minute task limit chosen to sit under the
 5-minute consent TTL so a consent cannot expire mid-task.
 
@@ -46,19 +46,19 @@ condition is faster or takes fewer actions: any interval will cover any plausibl
 Designing these sessions as proof of an advantage would guarantee an honest answer of "we
 cannot tell", after spending eight people's time to get it.
 
-**What six people reliably do show**, and what §12.2 itself asks for under «переказ
+**What six people reliably do show**, and what the brief itself asks for under «переказ
 блокера» and «зрозумілість, контроль і довіра»:
 
 - whether a person understands **what they are approving** before they approve it — the
   question no automated instrument in this project has been able to answer, and the one
   with safety consequences;
 - whether they can **restate the blocker** in their own words afterwards, per condition;
-- **where they get stuck**, which is qualitative and is what the §15 video needs;
+- **where they get stuck**, which is qualitative and is what the video needs;
 - discrete failures — if five of six cannot finish in A and six of six finish in B, that is
   visible without statistics.
 
 So: time and actions are **recorded and reported per participant as paired differences**,
-never averaged into a claim of time saved. §13.4's rule applies unchanged — an unfinished
+never averaged into a claim of time saved. The brief's rule applies unchanged — an unfinished
 task stays in the completion count with its time marked censored, and paired differences
 are computed only over pairs completed in **both** conditions, with the number of such
 pairs stated.
@@ -87,7 +87,7 @@ themselves appear as a difference between the conditions.
 
 ## 3. Session logistics
 
-Sessions run **strictly sequentially** on the **author's** account. §12.2 forbids two
+Sessions run **strictly sequentially** on the **author's** account. The brief forbids two
 simultaneous write clients on one cart, so an overlap is not untidy but unsafe — the second
 session would be writing to a cart the first is mid-way through.
 
@@ -150,12 +150,12 @@ reconstructed rather than recalled.
    than a number out of five.
 6. **Ratings**: report the distribution, not the mean of a 1–5 scale at n = 6.
 
-If n < 5 materialises, §14's own fallback applies: report the honest n. §13.1's rule holds
+If n < 5 materialises, the brief's own fallback applies: report the honest n. The brief's rule holds
 throughout — `n == 0` is N/A, never 0%.
 
 ## 7. What will be written up
 
-Per §14's pass criterion — «n і coverage явні; сценарій відео написаний» — the deliverable
-is an honest n with explicit coverage, plus the §15 video script fed by whatever the
+Per the brief's pass criterion — «n і coverage явні; сценарій відео написаний» — the deliverable
+is an honest n with explicit coverage, plus the video script fed by whatever the
 sessions actually produced. A significant result is not required and will not be
 manufactured.

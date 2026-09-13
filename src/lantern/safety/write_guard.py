@@ -1,5 +1,5 @@
 """The Write Guard: the single point of write authorization
-(`CLAUDE.md` section 4 -- "only one node may call a write tool"). Pure per
+(the project invariants -- "only one node may call a write tool"). Pure per
 this project's "domain core does no I/O" invariant extended to safety: this
 module never calls MCP, Neon, or an LLM. It decides whether a write may
 happen and, separately, whether one that already happened produced a
@@ -36,8 +36,8 @@ from src.lantern.domain.models import (
 )
 
 # never derived from a live `tools/list` annotation --
-# `readOnlyHint`/`destructiveHint`/`idempotentHint` are, per plan section
-# 1.2, "not a guarantee of authorization." A tool earns a place here only
+# `readOnlyHint`/`destructiveHint`/`idempotentHint` are, by design,
+# "not a guarantee of authorization." A tool earns a place here only
 # by an explicit, reviewed decision, never by virtue of appearing in a
 # schema fetch.
 WRITE_TOOL_ALLOWLIST: Final[frozenset[str]] = frozenset(
@@ -45,8 +45,8 @@ WRITE_TOOL_ALLOWLIST: Final[frozenset[str]] = frozenset(
 )
 
 # the compensation kind's own allowlist -- a dated
-# divergence from plan section 11.1's "hero keeps one write-tool" sentence
-# (amendment A9), not silent scope creep.
+# divergence from the brief's "hero keeps one write-tool" sentence
+# (a recorded divergence), not silent scope creep.
 # `silpo_remove_cart_products` is needed because the add tool's own schema
 # (`quantity: exclusiveMinimum 0`) cannot express "set this line to zero"
 # -- a write that ADDED a line (the common case, since candidates come
@@ -83,7 +83,7 @@ class WriteOutcome(BaseModel):
     reachable only through a verified read-back -- never through the MCP
     response's own `success` field, which the tool's own schema documents
     as proving only that the request was accepted, not that it was
-    correct (plan section 11: "success from MCP is not proof of
+    correct (the brief: "success from MCP is not proof of
     anything")."""
 
     model_config = ConfigDict(frozen=True)
@@ -324,7 +324,7 @@ def authorize_write(
                 reason="receipt belongs to a different owner or session",
                 canonical_args=canonical_args,
             )
-        # plan section 11: "жодної автокомпенсації при паралельній зміні
+        # The brief: "жодної автокомпенсації при паралельній зміні
         # кошика" -- binds the compensation to the RECEIPT's own
         # after_state, not merely the consent's state_hash above (which
         # binds to the state at CONSENT time, a different window). Either
@@ -372,7 +372,7 @@ def finalize_write_outcome(
 ) -> WriteOutcome:
     """`mcp_write_response["success"]` is recorded nowhere in this
     function's decision -- the tool's own schema documents it as proof
-    only that the request was accepted (plan section 11, DR-12). The
+    only that the request was accepted (the brief, DR-12). The
     only thing that can produce `status="receipt"` is an independent
     read-back whose diff matches the consented action by *identity*, not
     merely by total: a coincidentally equal total from an

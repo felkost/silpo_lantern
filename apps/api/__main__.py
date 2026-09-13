@@ -1,7 +1,7 @@
 """Process entry point: `python -m apps.api` (what `make run` invokes).
 
 Windows needs this launcher rather than a plain `uvicorn apps.api.main:app`.
-Measured stage close, against the installed uvicorn 0.52:
+Measured, against the installed uvicorn 0.52:
 
 - `uvicorn.Server.run()` calls `asyncio_run(...)` with the loop factory from
   `config.get_loop_factory()`, and `uvicorn/loops/asyncio.py` returns

@@ -1,7 +1,7 @@
 """`ConsentRecord` and `Receipt` mirror the already-merged migration
 columns exactly (`0003_consents.sql` + `0006_consent_receipt_versioning.sql`
 for consents; `0005_receipts.sql` + `0006_...` for receipts) — a model that
-cannot round-trip through those tables is a shape later stages would have
+cannot round-trip through those tables is a shape later work would have
 to break compatibility with.
 
 the column sets below used to be hand-typed

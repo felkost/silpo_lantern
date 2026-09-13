@@ -1,11 +1,11 @@
-"""IV-06 (plan section 8.3 stage plan section 5): does Render's own
+"""Render egress probe: does Render's own
 network egress reach `https://mcp.silpo.ua/mcp` at all? Cloudflare has
-blocked at least one US-cloud egress before (plan section 17's risk
+blocked at least one US-cloud egress before (the brief's risk
 table), so this is checked BEFORE any deploy, not assumed.
 
 One JSON-RPC call — `initialize` -- is enough to answer the question: a
 valid JSON-RPC response means Render's egress reaches the server; a 403
-or a timeout means it does not, and the plan's own rule applies without
+or a timeout means it does not, and the brief's own rule applies without
 regret: Render is struck out, the demo stays local (an earlier decision already
 chose not to need Dockerfiles for this). Deliberately NOT `tools/list`:
 that call needs a completed OAuth exchange this probe has no reason to
@@ -51,7 +51,7 @@ async def _probe_once(mcp_url: str, timeout_seconds: float) -> Dict[str, Any]:
     provider. Measured directly against the live server: an unauthenticated
     `initialize` gets HTTP 401 from `mcp.silpo.ua` itself, at the HTTP
     layer, before any JSON-RPC content is even parsed. That is exactly
-    the evidence IV-06 needs -- 401 proves the TCP/TLS handshake AND the
+    the evidence the egress probe needs -- 401 proves the TCP/TLS handshake AND the
     HTTP round trip both reached the real server; only a genuine
     egress block (Cloudflare 403, or a timeout/DNS/connection failure)
     means Render's network cannot reach it. PASS is therefore "the
@@ -82,7 +82,7 @@ async def _probe_once(mcp_url: str, timeout_seconds: float) -> Dict[str, Any]:
                             "version": result.serverInfo.version,
                         },
                     }
-    except Exception as exc:  # noqa: BLE001 -- IV-06's job is "did anything go wrong"
+    except Exception as exc:  # noqa: BLE001 -- "did anything go wrong" is the job
         # `anyio`'s own task groups (streamable-HTTP transport, then the
         # session's own group) wrap the real cause in one or more layers
         # of `ExceptionGroup` -- same unwrap as `scripts/g4_live_evidence_gate_run.py`
@@ -97,7 +97,7 @@ async def _probe_once(mcp_url: str, timeout_seconds: float) -> Dict[str, Any]:
             if isinstance(cause, httpx.HTTPStatusError)
             else None
         )
-        # Plan section 8.3's own criterion: 403 (Cloudflare's block page)
+        # The brief's own criterion: 403 (Cloudflare's block page)
         # or a timeout/connection failure means the egress is blocked.
         # Any OTHER HTTP status (401 included) means a real server
         # answered a real HTTP request -- the network path works.
@@ -149,7 +149,7 @@ def main() -> None:
     if args.serve:
         port = int(os.environ.get("PORT", "8000"))
         server = ThreadingHTTPServer(("0.0.0.0", port), _ProbeHandler)
-        print(f"IV-06 probe serving on 0.0.0.0:{port} -- GET / to re-run the probe")
+        print(f"egress probe serving on 0.0.0.0:{port} -- GET / to re-run the probe")
         server.serve_forever()
         return
 

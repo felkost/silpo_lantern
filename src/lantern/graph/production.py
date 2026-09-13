@@ -2,7 +2,7 @@
 fetchers (`mcp.production_fetchers`), real LLM clients (`graph.
 llm_adapter`), the Neon repository, and a shared `ToolRegistry`
 for schema-hash lookups. Closes the own carried risk, repeated
-in its stage report twice: these callables were each proven live by a
+twice in review: these callables were each proven live by a
 one-off script, but never assembled into something `apps/api` could
 actually call.
 
@@ -64,7 +64,7 @@ def _load_models_config() -> Dict[str, Any]:
 # Every production run carries these. Without them a trace in the LangSmith
 # UI is indistinguishable from any other -- which is the lesson,
 # repeated here because this module was written without them and every live
-# write in this stage went out untagged.
+# write in this change went out untagged.
 PRODUCTION_TRACE_TAGS = ("lantern", "production", "write-path")
 
 
@@ -75,7 +75,7 @@ def build_production_graph(
 ) -> Tuple[Any, Dict[str, str]]:
     """Builds one compiled graph, wired to real adapters, and returns
     `(graph, version_tuple)` -- the same version tuple threaded into every
-    trace, exposed here too so `apps/api`'s SSE events (plan section 1.5:
+    trace, exposed here too so `apps/api`'s SSE events (the brief:
     "кожна з session_id, trace_id, version tuple") can carry it without
     recomputing it a second, possibly-divergent way. `pool` is the app's
     own sync repository pool; `checkpointer` is the app's async

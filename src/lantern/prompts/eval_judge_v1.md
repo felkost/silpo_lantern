@@ -12,22 +12,22 @@ critical-error flag for surzhyk/Russianisms) is written into this prompt
 BEFORE any model is scored, so the rubric cannot be shaped by having
 already seen one candidate's output.
 
-**Scope, stated honestly (this stage's own limitation):** this prompt is
+**Scope, stated honestly (this change's own limitation):** this prompt is
 used ONLY for UA-Eval candidate selection — picking which model becomes
 `explainer`. It is explicitly **not calibrated** against a labelled set
-this stage (`config/models.yaml`'s `eval_judge.calibrated: false`) —
+this change (`config/models.yaml`'s `eval_judge.calibrated: false`) —
 judge agreement metrics (Cohen's kappa and the paradox under skew) are a
-later stage's job. A judge score from this prompt should not be read as
+later work. A judge score from this prompt should not be read as
 more authoritative than what it actually is: one model's rubric-guided
 opinion, cross-checked by the mandatory manual review of 10 responses per
-candidate that this stage does not skip in favor of trusting the judge
+candidate that this change does not skip in favor of trusting the judge
 alone.
 
 ## Unit economics (author-requested design constraint, not in the plan text)
 
 Called once per (explainer-candidate × UA-Eval prompt) pair — up to
 4 candidates × 25-30 prompts = up to 120 calls, the largest call VOLUME in
-this stage even though each individual call is small (one explainer
+this change even though each individual call is small (one explainer
 response to score, not a whole session). The cost estimate ($1.3/$4.4
 depending on Grok vs. Opus) is dominated by this multiplication, not by
 any single call's size — which is exactly why the manual-review step is

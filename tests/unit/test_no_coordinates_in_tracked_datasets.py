@@ -1,5 +1,5 @@
 """a gate test guarding against the exact leak the
-stage plan's own adversarial audit found in its first revision -- a
+design plan's own adversarial audit found in its first revision -- a
 committed `Receipt.before_state`/`after_state` (full `Cart.model_dump()`
 dumps, `domain/models.py`) or a raw MCP capture carries `latitude`/
 `longitude`/`address`, the guest's real delivery location. `make secret-scan`

@@ -44,7 +44,7 @@ The node receives (never raw MCP responses, never a tool description):
 - `DisclosureReport` — all validations, including UI-invisible ones
 - `list[ChannelComparisonRow]` — the 3-channel comparison (A7)
 - `list[PlannerVisibleTool]` (`tool_view.build_planner_tool_view`) — name +
-  reviewed paraphrase + JSON Schema only, for the 7 tools this stage uses
+  reviewed paraphrase + JSON Schema only, for the 7 tools this change uses
 
 ## Output contract
 
@@ -66,7 +66,7 @@ fact from a live catalogue lookup, not something to guess at here).
 
 **v2 drops `quantity_hint`.** How many units close a gap is arithmetic
 (gap divided by price, rounded to catalogue `step`, bounded by stock), and
-`CLAUDE.md` reserves arithmetic for code — `build_action_proposals` has
+the project rules reserves arithmetic for code — `build_action_proposals` has
 derived quantity this way, ignoring `quantity_hint`, (four live
 runs showed the model always returned 1, which under-proposed against a
 real gap). `SearchIntent.quantity_hint` carried the field and the note

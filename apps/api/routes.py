@@ -1,10 +1,10 @@
-"""Plan section 1.5's HTTP contract: `POST /session`, `GET /session/{id}/
+"""The HTTP contract: `POST /session`, `GET /session/{id}/
 events` (SSE), `POST /session/{id}/consent`, `GET /auth/start`,
 `GET /auth/callback`. `/health` stays in `main.py` -- it predates this
 module and its own docstring's "no I/O" contract is unrelated to session
 state.
 
-Live per-node push (revised from the an earlier decision replay-only draft, on the
+Live per-node push (revised from the replay-only draft, on the
 author's request): `GET /session/{id}/events` is what actually DRIVES the
 graph, via `graph.astream(..., stream_mode="updates")` -- measured
 (`.venv` probe) to yield one `{node_name: partial_state}` chunk per
@@ -60,7 +60,7 @@ from src.lantern.policies.loader import PolicyRegistry, load_registry
 
 router = APIRouter()
 
-CONSENT_TTL = timedelta(minutes=5)  # plan section 11.1
+CONSENT_TTL = timedelta(minutes=5)  # five minutes, per the brief
 
 # what kind of I/O each graph node does, for the `stage`
 # event -- so the console's loader can say "MCP" / "model" / "database"
@@ -204,7 +204,7 @@ async def restart_session(
 @router.get("/session/{session_id}/events")
 async def session_events(session_id: str, request: Request) -> StreamingResponse:
     """Drives the graph one segment further and streams each completed
-    node as one of plan section 1.5's five SSE events. Called twice by a
+    node as one of the brief's five SSE events. Called twice by a
     real client: once right after `POST /session` (runs the read
     pipeline to its `awaiting_consent` pause), and once again after
     `POST /session/{id}/consent` (resumes into the write pipeline to a
@@ -264,7 +264,7 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
     # a browser refresh, a double-clicked button or a retried request
     # resumes past the consent pause into `write_guard` with no consent
     # recorded -- which aborts the session permanently. Measured, not
-    # hypothetical: it destroyed a live session during this stage's own
+    # hypothetical: it destroyed a live session during this change's own
     # verification run. When the graph should not move, the current state
     # is replayed instead.
     status = existing_state.get("status") if existing_state else None
@@ -460,7 +460,7 @@ async def session_events(session_id: str, request: Request) -> StreamingResponse
             # point. Held here until both have arrived, then emitted once
             # on the LATER (`compare_channels`) chunk -- never on
             # `diagnose` alone, which is the exact bug an adversarial
-            # audit of this stage's own plan caught: emitting on
+            # audit of this change's own plan caught: emitting on
             # `diagnose` shipped `channels: []` on every live run, while
             # only the (never-advancing) replay branch below -- which
             # reads the merged checkpoint -- would have shown it working.

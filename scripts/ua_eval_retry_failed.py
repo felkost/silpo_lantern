@@ -6,7 +6,7 @@ indistinguishable from a normal run except for a `retried: true` marker and
 a short backoff between attempts (the failure was rate-limiting, not a bad
 prompt, so an immediate retry without backoff would likely repeat it).
 
-Never run by the offline gate or any automated test — same IV-05/UA-Eval
+Never run by the offline gate or any automated test — same model-smoke / UA-Eval
 territory as `ua_eval_run.py`. Merges retried results into a COPY of the
 input file (never overwrites the original run's own evidence record).
 """

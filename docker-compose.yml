@@ -1,13 +1,13 @@
-# Services declared per plan section 8.2. No build context yet.
+# Services declared by design No build context yet.
 #
 # an earlier decision supersedes this comment's original
 # trigger condition ("Dockerfiles land, when there is application code
 # to containerize"): the first stages do add apps/api application code, but plan
-# section 14's own scaffold row does not name containerization as this stage's
+# section 14's own scaffold row does not name containerization as this change's
 # scope, and an earlier decision verifies "App starts" via `uvicorn apps.api.main:app`
 # directly instead. Dockerfiles are deferred to whichever stage first needs
 # a deployed container — the Render probe, at the latest. Declared now so
-# the compose topology is reviewable at kickoff, matching plan section 1.6's
+# the compose topology is reviewable at the start, matching the brief's
 # naming rule (same names locally and in the cloud).
 services:
   lantern-api:

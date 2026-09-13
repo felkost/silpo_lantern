@@ -17,7 +17,7 @@ constructed. Agreement is how often the two picked the same member.
 * NATURAL pairs (16) are two different models answering the same UA-Eval
   prompt. Nobody knows the better one in advance -- which is what makes
   agreement here informative, and also why it carries NO threshold on the
-  first run. Plan §14's rule is that a threshold starts from the measured
+  first run. The brief's rule is that a threshold starts from the measured
   baseline and may afterwards only be raised; inventing one now, after
   seeing the number, would be the opposite.
 
@@ -172,7 +172,7 @@ def test_the_labelled_set_is_the_tracked_one(calibration: Dict[str, Any]) -> Non
     anyone, and the human labels behind it cannot be regenerated."""
     assert PAIRS_PATH.is_file() and LABELS_PATH.is_file()
     total = calibration["constructed"]["pairs"] + calibration["natural"]["pairs"]
-    assert 20 <= total <= 30, f"plan §13.3 asks for 20-30 labelled pairs, got {total}"
+    assert 20 <= total <= 30, f"the brief asks for 20-30 labelled pairs, got {total}"
 
 
 def test_the_judge_passes_the_pairs_whose_answer_is_not_a_matter_of_taste(
@@ -190,7 +190,7 @@ def test_the_judge_passes_the_pairs_whose_answer_is_not_a_matter_of_taste(
 
 
 def test_the_natural_agreement_is_reported(calibration: Dict[str, Any]) -> None:
-    """No threshold on the first run, deliberately -- §14's revision rule
+    """No threshold on the first run, deliberately -- the threshold rule
     is that a threshold starts from the measured baseline. What this test
     enforces is that the number EXISTS and rests on real comparisons, so
     it can never be quoted without one."""

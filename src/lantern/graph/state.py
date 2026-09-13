@@ -1,6 +1,6 @@
 """`RecoveryState`: the LangGraph `StateGraph`'s shared state for the
-read → diagnose → plan → rank slice. A later stage extends this for
-consent/write; this stage does not pre-build fields nothing here yet
+read → diagnose → plan → rank slice. Later work extends this for
+consent/write; this change does not pre-build fields nothing here yet
 produces (`ChannelSnapshot.item_availability`'s producer, consent binding,
 etc. stay their own stage's job).
 
@@ -58,10 +58,10 @@ RecoveryStatus = Literal[
     "planned",
     "awaiting_consent",
     "aborted",
-    # an earlier stage additions: "consented" is set once the write guard authorizes
+    # earlier work additions: "consented" is set once the write guard authorizes
     # (never before -- an LLM never sets this), "written" once the write
     # call itself returns, "verified"/"unverified" once the independent
-    # read-back settles the outcome (plan section 11: success from MCP is
+    # read-back settles the outcome (the brief: success from MCP is
     # never treated as proof by itself).
     "consented",
     "written",
@@ -101,7 +101,7 @@ class RecoveryState(TypedDict):
     # provider's own usage block -- never estimated.
     llm_cost_usd: float
     deadline: datetime
-    # an earlier stage additions. `consent_action_id` is the ONLY thing the API sets
+    # earlier work additions. `consent_action_id` is the ONLY thing the API sets
     # before resuming the graph (via `graph.update_state`, never via the
     # interrupt's own resume payload requires the guard to
     # trust nothing from the resume path). It is a bare pointer; the
@@ -183,7 +183,7 @@ def has_write_reserve(
     mcp_reads_needed: int = 2,
     mcp_read_timeout_seconds: int = 10,
 ) -> bool:
-    """plan section 6.3 -- "before write, a reserve of
+    """the brief -- "before write, a reserve of
     20s and two reads must remain; otherwise do not start the write." This
     is a distinct check from `enforce_budget`: it looks *forward* at what
     the write path is about to need (the write call itself plus the
@@ -249,7 +249,7 @@ _RECOVERY_STATE_MSGPACK_MODULES = [
     (ChannelSnapshot.__module__, ChannelSnapshot.__name__),
     (ChannelComparisonRow.__module__, ChannelComparisonRow.__name__),
     (SearchIntent.__module__, SearchIntent.__name__),
-    # an earlier stage additions -- without these, the checkpointer's default
+    # earlier work additions -- without these, the checkpointer's default
     # serializer degrades a consent/receipt/diff crossing the interrupt
     # boundary exactly as it did for ActionProposal before it was listed
     # here (measured live, see this list's own header comment).

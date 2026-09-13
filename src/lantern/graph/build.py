@@ -87,7 +87,7 @@ def policy_registry_version() -> str:
     the tracked file rather than adding a new field to it, since the
     registry/schema files are already closed and tested and
     `registry.schema.json` has `additionalProperties: false` at the top
-    level (a new field would need a schema change this stage does not own).
+    level (a new field would need a schema change this change does not own).
     """
     return hashlib.sha256(DEFAULT_REGISTRY_PATH.read_bytes()).hexdigest()[:12]
 
@@ -128,7 +128,7 @@ def _write_guard_outcome(state: RecoveryState) -> str:
     to `write_guard` ITSELF, not fall through to `write_and_readback`
     (which `_continue_or_end`'s plain "continue"/"end" menu would have
     done, since "awaiting_consent" is neither "aborted" nor
-    "no_action_available" -- found live in this stage's own test suite:
+    "no_action_available" -- found live in this change's own test suite:
     the graph proceeded straight into the write node with no consent).
     The self-loop is what makes `interrupt_before=["write_guard"]`
     re-pause on the retry, the same mechanism the compensate branch and
@@ -325,7 +325,7 @@ def build_recovery_graph(
     )
 
     # static interrupt before the ONLY node that may authorize a
-    # write (CLAUDE.md section 4). Measured (.venv probe): with no
+    # write (the project invariants). Measured (.venv probe): with no
     # checkpointer this has no effect on `invoke` beyond stopping before
     # `write_guard` runs — see this function's own docstring.
     return graph.compile(checkpointer=checkpointer, interrupt_before=["write_guard"])

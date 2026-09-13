@@ -1,5 +1,5 @@
 // Mirrors apps/api's own response shapes and the five SSE event names
-// plan section 1.5 declares (and apps/api/sse-events.schema.json now
+// The brief declares (and apps/api/sse-events.schema.json now
 // enforces as a closed enum, with per-event `data` shapes for
 // `diagnosis` and `receipt`).
 
@@ -82,7 +82,7 @@ export interface EventEnvelope {
 }
 
 /** One entry of the disclosure layer -- every validation the cart already
- * carries, blockers and non-blockers alike (plan section 5.1). */
+ * carries, blockers and non-blockers alike . */
 export interface DisclosedValidation {
   code: string;
   level: "error" | "warning" | "info";
@@ -91,7 +91,7 @@ export interface DisclosedValidation {
   is_known?: boolean;
 }
 
-/** One row of the delivery-channel comparison (amendment A7). */
+/** One row of the delivery-channel comparison (the delivery-channel comparison). */
 export interface ChannelComparisonRow {
   delivery_type: string;
   /** Decimal-as-string: this channel's own gap to its minOrderCost. */

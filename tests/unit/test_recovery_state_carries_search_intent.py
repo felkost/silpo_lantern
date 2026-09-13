@@ -1,4 +1,4 @@
-"""Found while wiring the graph nodes together: `collect_options` (§4.2
+"""Found while wiring the graph nodes together: `collect_options` (wiring
 step 5) needs the planner's `SearchIntent` — search terms, which
 `build_action_proposals` needs downstream. Nodes only communicate through
 `RecoveryState`, so the planner's output needs a field to land in.

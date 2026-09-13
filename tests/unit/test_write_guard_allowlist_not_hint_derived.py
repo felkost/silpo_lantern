@@ -1,4 +1,4 @@
-"""A forward constraint for later stages, not something this stage's own
+"""A forward constraint for later work, not something this change's own
 code can violate yet — `src/lantern/safety/write_guard.py` doesn't exist.
 Honestly a tripwire, not present-day coverage: zero files anywhere in this
 repo match `*allowlist*` today, so this test currently exercises nothing. Kept
@@ -44,6 +44,6 @@ def test_no_allowlist_named_module_imports_tool_annotations() -> None:
 
 def test_this_check_currently_has_nothing_to_exercise() -> None:
     """Documents this explicitly: this is a tripwire, not
-    coverage, until a later stage creates a `*allowlist*`-named module.
+    coverage, until later work creates a `*allowlist*`-named module.
     """
     assert _allowlist_named_files() == []

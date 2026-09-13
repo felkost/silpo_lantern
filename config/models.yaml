@@ -1,12 +1,12 @@
 # Model basket. Ids and prices dated 03.09.2026 against the OpenRouter
 # catalogue — these must be re-verified in the dashboard before any spend
-# (IV-05), not trusted as still-current on the strength of this file alone.
+# (the model smoke check), not trusted as still-current on the strength of this file alone.
 #
 # Catalogue re-verification (id exists, price matches, context window
-# sufficient) and the IV-05 smoke call (model actually answers) are
+# sufficient) and the the model smoke check smoke call (model actually answers) are
 # deliberately two separate checks — a model can still answer while having
 # quietly changed price or been deprecated-but-still-served. This file
-# records the FIRST half's starting point; IV-05 performs the check and
+# records the FIRST half's starting point; the model smoke check performs the check and
 # updates `verified_at`/`verified_price_*` once run.
 
 snapshot_date: "2026-09-03" # dated catalogue snapshot, not re-fetched yet
@@ -14,9 +14,9 @@ snapshot_date: "2026-09-03" # dated catalogue snapshot, not re-fetched yet
 # measured spend -- a decision, not a balance; the provider's dashboard is
 # the only authority on what remains.
 budget_ceiling_usd: 20
-# IV-05 narrow smoke (2026-09-06): planner + fallback both returned valid
-# structured output live (datasets/evidence/iv05_smoke_20260906T152356Z.json,
-# gitignored). This confirms CALLABILITY only.
+# the model smoke check narrow smoke (2026-09-06): planner + fallback both returned valid
+# structured output live (local evidence run,
+# not tracked). This confirms CALLABILITY only.
 #
 # Catalogue re-check (2026-09-06, scripts/iv05_catalogue_check.py against the
 # live OpenRouter /api/v1/models, 430 entries): all ids still exist, all
@@ -88,7 +88,7 @@ eval_judge:
   # Opus/GPT-5-flagship class, per the author's explicit exclusion.
   # Original x-ai/grok-4.6 candidate replaced: the author called its
   # $2.00/M input price "already fairly high" against a $20 ceiling that
-  # covers the WHOLE PROJECT, not just this stage.
+  # covers the WHOLE PROJECT, not just this change.
   candidates:
     - model: "openai/gpt-5.6-luna"
       price_usd_per_million: { input: 0.20, output: 1.20 }

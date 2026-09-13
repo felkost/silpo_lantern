@@ -138,7 +138,7 @@ def test_trace_tags_reach_both_the_planner_and_explainer_call() -> None:
 
 def test_the_production_graph_tags_every_traced_call() -> None:
     """the lesson, and it was lost again: `production.py` was
-    written without `trace_tags`, so every live run of this stage — six
+    written without `trace_tags`, so every live run of this change — six
     real cart writes included — went to LangSmith indistinguishable from
     any other trace in the project.
 

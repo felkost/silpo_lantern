@@ -15,7 +15,7 @@ Two phases, run separately:
                      `datasets/fixtures/raw/replay_tape_<timestamp>.json`.
                      Costs a live LLM call and a live MCP write --
                      needs the author's explicit go-ahead, shown as the
-                     exact command before it runs (CLAUDE.md section 8).
+                     exact command before it runs (the project rules).
 
                      it used to stop at the read chain, on the
                      reasoning that the author would drive the write

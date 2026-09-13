@@ -1,4 +1,4 @@
-"""Found while wiring the graph nodes together (§4.2 steps 6-7 of the stage
+"""Found while wiring the graph nodes together (wiring steps 6-7 of the stage
 spec): `gate_candidates` returns `EvidenceTuple`s (DR-10's deliberately
 minimal audit record — no product name), but `ActionProposal.product_name`
 needs one for the consent sentence. `build_action_proposals` re-pairs each

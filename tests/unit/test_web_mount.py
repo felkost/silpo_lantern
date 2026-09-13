@@ -41,7 +41,7 @@ def test_root_serves_index_and_earlier_routes_still_resolve(tmp_path: Path) -> N
 
 
 def test_post_to_an_unrouted_path_is_405_with_the_mount(tmp_path: Path) -> None:
-    """Recorded, not prevented (spec §4): a root mount answers every path,
+    """Recorded, not prevented (by design): a root mount answers every path,
     so an unknown POST is now a method mismatch, not a missing route."""
     client = TestClient(_app_with_dist(tmp_path / "dist"))
 
@@ -50,7 +50,7 @@ def test_post_to_an_unrouted_path_is_405_with_the_mount(tmp_path: Path) -> None:
 
 def test_a_missing_dist_is_skipped_not_fatal(tmp_path: Path) -> None:
     """`StaticFiles` raises `RuntimeError` on a missing directory (measured,
-    spec §4) -- a fresh clone with no `npm run build` must still start."""
+    by design) -- a fresh clone with no `npm run build` must still start."""
     app = FastAPI()
 
     assert mount_web(app, tmp_path / "absent") is False

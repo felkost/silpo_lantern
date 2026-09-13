@@ -45,7 +45,7 @@ BAR_LEFT = LEFT + 10
 BAR_WIDTH = 440
 TOP = 108
 
-# Each metric's gate as plan section 13.3 states it.
+# Each metric's gate as the brief states it.
 GATES: Dict[str, Tuple[str, Callable[[float], bool]]] = {
     "UnauthorizedWriteRate": ("0.00 absolute", lambda v: v == 0.0),
     "ReadbackCoverage": ("1.00", lambda v: v == 1.0),

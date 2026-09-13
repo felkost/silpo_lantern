@@ -1,6 +1,6 @@
 # Disclosure audit protocol
 
-The measurement behind `DisclosureRate`, which plan §12.3 defines as: sessions carrying at
+The measurement behind `DisclosureRate`, which the brief defines as: sessions carrying at
 least one **confirmed-invisible** constraint, over sessions whose visibility was actually
 verified. Unknown is never counted as hidden — a session nobody checked leaves both halves
 of the fraction.
@@ -57,7 +57,7 @@ three validations and the app shows one is a single row with
 
 | Field | Set by | Meaning |
 |---|---|---|
-| `state_id` | protocol | which of the states in §4 |
+| `state_id` | protocol | which of the states in the states table below |
 | `observed_at` | observer | when the app was looked at |
 | `app_messages` | observer | every message seen, verbatim, in-scope screens only |
 | `screens_checked` | observer | which of the two screens were actually opened |
@@ -96,5 +96,5 @@ report says so: this is a first measurement with a stated sample size, not a rat
 clears a threshold. `DisclosureRate` stays N/A until at least one row is
 `visibility_verified`.
 
-Coverage — how many states were checked at all — is reported beside the rate, per §12.3's
+Coverage — how many states were checked at all — is reported beside the rate, per the brief's
 own requirement that UI-audit coverage be stated separately.

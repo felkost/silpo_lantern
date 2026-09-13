@@ -6,7 +6,7 @@ and the stdlib -- enforced by `tests/unit/test_layering.py`'s ban on
 `httpx`/`mcp`/`sqlalchemy`/`psycopg` etc. reaching `domain`.
 
 Every metric returns a `MetricResult(value, n)`. `value is None` means
-"not applicable" (zero eligible rows) -- plan section 13.1's own rule:
+"not applicable" (zero eligible rows) -- the brief's own rule:
 an empty population reports N/A, never a misleading 0% or 100%.
 """
 
@@ -46,7 +46,7 @@ def wilson(p: float, n: int, z: float = 1.96) -> Tuple[float, float]:
 COUNT_METRICS = frozenset({"FalseRecovery"})
 
 # what a reader must know before reading each number. Rendered beside
-# it on every surface; a metric without one is not shown (plan section 12.3).
+# it on every surface; a metric without one is not shown .
 METRIC_CAVEATS: Mapping[str, str] = {
     "UnauthorizedWriteRate": ("Gate 0.00 absolute. Denominator: idempotency claims."),
     "ReadbackCoverage": (
@@ -226,7 +226,7 @@ def write_delta_fidelity(rows: Sequence[WriteDeltaRow]) -> MetricResult:
 
 @dataclass(frozen=True)
 class RecoveryEpisode:
-    """One participant/cart/task/condition episode (plan section 13.1) --
+    """One participant/cart/task/condition episode  --
     retries and resumes within one episode do not create a new one."""
 
     completed: bool

@@ -321,7 +321,7 @@ def make_collect_and_gate_node(
         evidence = gate_candidates(raw_candidates)
         # The gap, not the planner's `quantity_hint`, decides how many
         # units to propose: the amount of money a write moves is code's to
-        # compute (CLAUDE.md), and a hint that always came back as 1 left
+        # compute (a project invariant), and a hint that always came back as 1 left
         # every proposal unable to close the gap it was answering.
         diagnosis = state["diagnosis"]
         assert diagnosis is not None and diagnosis.gap is not None
@@ -383,7 +383,7 @@ def make_write_guard_node(
     tool_schema_hashes: Callable[[str], Tuple[str, str, bool]],
     now: Callable[[], datetime],
 ) -> Node:
-    """The single point of write authorization (`CLAUDE.md` section 4).
+    """The single point of write authorization (the project invariants).
     Receives NO write-tool callable at all -- it cannot perform a write
     even by mistake, only decide whether the next node may. This is the
     node `build_recovery_graph` pauses in front of via `interrupt_before`.
@@ -520,7 +520,7 @@ def make_write_and_readback_node(
     now: Callable[[], datetime],
     registry: PolicyRegistry,
 ) -> Node:
-    """The ONLY node that calls a write tool (`CLAUDE.md` section 4).
+    """The ONLY node that calls a write tool (the project invariants).
     Claims the idempotency journal row and consumes the consent in one
     transaction immediately before the call (an earlier decision) -- measured
     (probe M2b against the installed LangGraph SDK) that
@@ -708,7 +708,7 @@ def make_write_and_readback_node(
 
 
 # `make_persist_receipt_node` moved to `graph/compensation_nodes.py`:
-# `nodes.py` was already past `CLAUDE.md` section 5's file-size
+# `nodes.py` was already past the file-size
 # ceiling, and that node's own logic grew materially once it had to decide
 # whether to offer a compensation. `call_write_tool` stays a parameter of
 # exactly one factory in exactly this module -- see

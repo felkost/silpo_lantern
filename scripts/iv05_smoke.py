@@ -1,4 +1,4 @@
-"""IV-05 narrow smoke: one live call each to the planner model and its
+"""the model smoke check narrow smoke: one live call each to the planner model and its
 fallback, on SYNTHETIC state (no live MCP read) — proves the OpenRouter API
 key works, the pinned model ids are still valid, tool calling / structured
 output binds correctly for this model+provider pair, and records real token

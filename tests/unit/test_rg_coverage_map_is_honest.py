@@ -1,7 +1,7 @@
 """the RG coverage map may not claim anything it
 cannot back.
 
-This is the test the kickoff audit own finding motivates: five RG
+This is the test the initial review's finding motivates: five RG
 rows had been claimed `pass` on the strength of topically-related tests
 that did not exercise the rubric. A coverage map is worth less than
 nothing if it can say `pass` without a run artefact -- it converts an
@@ -46,7 +46,7 @@ def test_every_status_is_one_of_the_declared_four() -> None:
 
 
 def test_no_row_claims_pass_without_a_run_artefact() -> None:
-    """Plan section 12.4, verbatim: a new test's status before it runs is
+    """the brief, verbatim: a new test's status before it runs is
     `not_run`, never `pass`. A `pass` must name the artefact that backs
     it."""
     for row in _rows():
@@ -136,7 +136,7 @@ def test_an_integration_only_row_is_blocked_without_a_database() -> None:
 
 
 def test_a_pass_row_names_an_artefact_git_tracks() -> None:
-    """A tracked file may only reference tracked files (CLAUDE.md §4): a
+    """A tracked file may only reference tracked files (the project invariants): a
     `run_artefact` under a gitignored directory is a claim a fresh clone
     cannot check. Caught delivery B, where the first recorder wrote
     into `datasets/evidence/`, which `.gitignore` excludes."""

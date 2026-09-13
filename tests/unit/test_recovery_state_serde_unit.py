@@ -91,7 +91,7 @@ def _compensation_proposal() -> ActionProposal:
     """T22: the production serializer must round-trip the
     two fields the undo added (`kind`, `compensates_action_id`) and a NEGATIVE
     `Decimal` quantity/delta cleanly -- probed once in the session that
-    produced the stage spec (M3); pinned here as a repeatable test rather
+    produced the design note ; pinned here as a repeatable test rather
     than left as a claim only that session could re-derive.
     """
     evidence = EvidenceTuple(

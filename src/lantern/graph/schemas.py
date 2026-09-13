@@ -21,7 +21,7 @@ class SearchIntent(BaseModel):
     meant in practice: the model returned 1 every time, so a 208.10 gap
     was answered with a 9.34 drink and the guest could consent to a write
     that could not unblock their cart. How many units close a gap is
-    arithmetic, and `CLAUDE.md` reserves arithmetic for code —
+    arithmetic, and the project rules reserves arithmetic for code —
     `build_action_proposals` derives it from the gap and the price and
     never read this field even while it was declared.
     """

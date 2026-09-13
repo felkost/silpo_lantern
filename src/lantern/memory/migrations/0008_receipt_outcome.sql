@@ -7,7 +7,7 @@
 -- `oldPrice: null`).
 --
 -- Without these columns the receipt cannot answer the only question the
--- guest actually asked -- "can I check out now?" -- and plan section 13's
+-- guest actually asked -- "can I check out now?" -- and the brief's
 -- recovery metrics would have to re-derive it from the stored
 -- `after_state` JSON on every read.
 ALTER TABLE receipts ADD COLUMN blocker_cleared BOOLEAN NOT NULL DEFAULT false;

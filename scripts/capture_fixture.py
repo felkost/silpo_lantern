@@ -5,7 +5,7 @@ before it can do anything at all.
 
 Uses the raw `mcp` SDK directly (`ClientSession` + `streamablehttp_client`),
 matching this project's own MCP client (`src/lantern/mcp/client.py`) — not
-the donor's `langchain_mcp_adapters` wrapper, which this project does not
+that earlier project's `langchain_mcp_adapters` wrapper, which this project does not
 depend on (confirmed: `langchain-mcp-adapters` is not in requirements.txt;
 that wrapper exists to turn MCP tools into LangChain tools for an
 LLM-tool-calling loop this project does not need).

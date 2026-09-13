@@ -7,7 +7,7 @@
 -- session.
 --
 -- Storage form: plain JSONB. Neon encrypts at rest and every connection
--- is TLS, and plan section 1.2's requirement is "tokens only on the
+-- is TLS, and the brief's requirement is "tokens only on the
 -- backend" -- which this satisfies (the browser never receives one).
 -- Deliberately NOT additionally encrypted at the application layer: that
 -- needs a managed key whose loss silently bricks every live session, and

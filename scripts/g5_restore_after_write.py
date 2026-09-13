@@ -1,7 +1,7 @@
 """Criterion A6's restore write: puts the author's cart back the way a
 recorded write found it.
 
-**Why this is a script and not a graph node.** `CLAUDE.md`'s invariant is
+**Why this is a script and not a graph node.** the project rules's invariant is
 that only one node in the graph may call a write tool, and the Write Guard's
 allowlist holds exactly one: `silpo_add_or_update_cart_products`. Restoring
 sometimes needs `silpo_remove_cart_products`, which the live server marks
@@ -158,7 +158,7 @@ def main() -> None:
     response = call_tool(tool, payload)
     print("\nwrite response:", json.dumps(response, ensure_ascii=False)[:200])
 
-    # The server's own answer proves nothing (CLAUDE.md): read the cart back.
+    # The server's own answer proves nothing (a project invariant): read the cart back.
     after = fetch_cart_by_id(fetch_my_cart()["shoppingCartId"])["cart"]
     restored = _current_quantity(after, product_id)
     print(f"quantity after read-back: {restored}")

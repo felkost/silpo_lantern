@@ -8,7 +8,7 @@ ever touched.
 What these tests deliberately do NOT prove: that Silpo's real
 authorization server accepts the resulting redirect. That needs a human
 completing Silpo's own login in a real browser (the exact step
-`CLAUDE.md` forbids an agent from driving), and an OAuth client whose
+the project rules forbids an agent from driving), and an OAuth client whose
 registered `redirect_uri` actually points at this app's `/auth/callback`
 -- an operator decision with an external effect on Silpo's own server.
 """

@@ -11,7 +11,7 @@ shapes, not a hand-typed fixture.
 
 Deliberately uses FAKE `planner_call`/`explainer_call` (no live LLM) —
 this is about the Evidence Gate surviving live MCP data, not a second live
-LLM spend on top of IV-05's already-approved smoke. The fake planner
+LLM spend on top of the model smoke check's already-approved smoke. The fake planner
 searches for the cart's own line-item names, so `find_products_batch` has
 a realistic chance of matching something.
 
@@ -115,7 +115,7 @@ def _sync_call(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
 def _fake_planner(state: RecoveryState) -> SearchIntent:
     """No live LLM call — search for the cart's own real line-item names,
     the same recall a live planner would reasonably reach for near-miss
-    gap-clearing, without a second IV-05 spend on top of this already-narrow
+    gap-clearing, without a second model-smoke spend on top of this already-narrow
     live-MCP scope."""
     cart = state["cart"]
     names = [li.name for li in cart.products][:5] if cart else []

@@ -99,7 +99,7 @@
     "/session/{session_id}/events": {
       "get": {
         "summary": "Session Events",
-        "description": "Drives the graph one segment further and streams each completed\nnode as one of plan section 1.5's five SSE events. Called twice by a\nreal client: once right after `POST /session` (runs the read\npipeline to its `awaiting_consent` pause), and once again after\n`POST /session/{id}/consent` (resumes into the write pipeline to a\n`receipt`/`error` outcome).",
+        "description": "Drives the graph one segment further and streams each completed\nnode as one of the brief's five SSE events. Called twice by a\nreal client: once right after `POST /session` (runs the read\npipeline to its `awaiting_consent` pause), and once again after\n`POST /session/{id}/consent` (resumes into the write pipeline to a\n`receipt`/`error` outcome).",
         "operationId": "session_events_session__session_id__events_get",
         "parameters": [
           {

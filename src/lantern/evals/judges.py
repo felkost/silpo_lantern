@@ -1,14 +1,14 @@
 """the three offline DeepEval judges, and the boundary they
 are not allowed to cross.
 
-Plan §13.3 names three: `RecoveryExplanationQuality`,
+The brief names three: `RecoveryExplanationQuality`,
 `UserControlAndConsentClarity`, `UncertaintyAndRefusal`. All three score
 the guest-facing SENTENCE and nothing else.
 
 **The boundary, and why it is a boundary rather than a preference.** A
 judge must never score arithmetic, authorization, or whether a write
 happened. Those are decided by pure code and proved by an independent
-read-back (`CLAUDE.md`'s third and fourth invariants); a model that also
+read-back (the project's invariants); a model that also
 graded them would be a second, weaker opinion competing with a proof, and
 the project's own rule is that money and post-conditions are never the
 model's to judge. Stated in every criterion below AND enforced by T22,

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://lantern.local/schemas/sse-event.json",
   "title": "SSE event envelope",
-  "description": "`event` is now the closed enum plan section 1.5 declares. Corrected in place -- this description previously named a different, seven-value vocabulary (read/diagnose/plan/consent/write/readback/receipt) that was never actually emitted by any route; the five values below are what `apps/api/routes.py`'s `session_events` endpoint emits. per-event `data` shapes added for `diagnosis` and `receipt` -- previously only the three envelope fields common to every event were declared, so the disclosure layer and channel comparison the guest actually needs were never schema-checked at all. a sixth event, `stage` -- one frame per graph node the stream observed completing, `{node, io}`; an append-only log of what ran, with no index, no counters and no start signal (`stream_mode=\"updates\"` reports completions only).",
+  "description": "`event` is now the closed enum the brief declares. Corrected in place -- this description previously named a different, seven-value vocabulary (read/diagnose/plan/consent/write/readback/receipt) that was never actually emitted by any route; the five values below are what `apps/api/routes.py`'s `session_events` endpoint emits. per-event `data` shapes added for `diagnosis` and `receipt` -- previously only the three envelope fields common to every event were declared, so the disclosure layer and channel comparison the guest actually needs were never schema-checked at all. a sixth event, `stage` -- one frame per graph node the stream observed completing, `{node, io}`; an append-only log of what ran, with no index, no counters and no start signal (`stream_mode=\"updates\"` reports completions only).",
   "type": "object",
   "required": [
     "event",
@@ -23,11 +23,11 @@
         "error",
         "stage"
       ],
-      "description": "Plan section 1.5's five SSE event names, plus `stage`."
+      "description": "The brief's five SSE event names, plus `stage`."
     },
     "data": {
       "type": "object",
-      "description": "Every event's `data` carries session_id, trace_id, and the version tuple (plan section 1.5); the remaining fields are specific to the event name.",
+      "description": "Every event's `data` carries session_id, trace_id, and the version tuple ; the remaining fields are specific to the event name.",
       "required": [
         "session_id",
         "trace_id",
@@ -84,7 +84,7 @@
               },
               "validations": {
                 "type": "array",
-                "description": "Every validation the cart already carries -- blockers and disclosures alike (plan section 5.1's disclosure-layer requirement).",
+                "description": "Every validation the cart already carries -- blockers and disclosures alike (the brief's disclosure-layer requirement).",
                 "items": {
                   "type": "object",
                   "required": [
@@ -117,7 +117,7 @@
               },
               "channels": {
                 "type": "array",
-                "description": "The delivery-channel comparison (amendment A7).",
+                "description": "The delivery-channel comparison (the delivery-channel comparison).",
                 "items": {
                   "type": "object",
                   "required": [

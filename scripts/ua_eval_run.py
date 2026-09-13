@@ -5,7 +5,7 @@ calls the candidate model with every prompt in
 
 Call volume: 4 candidates x 28 prompts = 112 generation calls, then 112
 judge calls — matching prompts/eval_judge_v1.md's own "up to 120 calls"
-estimate for the judge step, and the largest call volume in this stage.
+estimate for the judge step, and the largest call volume in this change.
 
 Judge model: `x-ai/grok-4.6` — `eval_judge.selected` is still null in
 `config/models.yaml` (a cost/availability decision), so this run picks the
@@ -21,7 +21,7 @@ reviews the manual-review sample (10 responses per candidate, printed
 separately) before deciding.
 
 Requires a real OPENROUTER_API_KEY in `.env`. Never run by the offline gate
-or any automated test — this is IV-05/UA-Eval territory, run by the author
+or any automated test — this is model-smoke / UA-Eval territory, run by the author
 on explicit go-ahead. Writes full raw results to
 `datasets/evidence/ua_eval_<timestamp>.json` (gitignored).
 """

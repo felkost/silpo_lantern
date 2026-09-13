@@ -1,6 +1,6 @@
 """T14: the compensation offer, proven through the REAL
 compiled graph at the PRODUCTION `MAX_WRITE_ROUNDS` -- not patched down to
-1. The first draft of this stage's design hid the trigger's own
+1. The first draft of this change's design hid the trigger's own
 unreachability by patching the constant; this harness runs three real
 add rounds, each falling short of the blocker by the same discount
 mechanism an earlier decision measured live (the cart applies a lower price than the
@@ -128,7 +128,7 @@ class _RealisticFakeBackend:
     """Correct REPLACE semantics (`addQuantity: False` sets the line's
     total quantity), and applies `_ACTUAL_PRICE` regardless of the
     catalogue's `_CATALOG_PRICE` -- reproducing the exact discount
-    mechanism this stage's compensation trigger exists for."""
+    mechanism this change's compensation trigger exists for."""
 
     def __init__(self) -> None:
         self.quantity = 0

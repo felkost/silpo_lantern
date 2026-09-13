@@ -74,7 +74,7 @@ def build_action_proposals(
     runs: every proposal came back as one unit, so a 208.10 gap was
     answered with drinks worth 9-32, and the guest could consent to a
     write that provably could not unblock their cart. That also put the
-    model in charge of an amount of money, which `CLAUDE.md` reserves for
+    model in charge of an amount of money, which the project rules reserves for
     code. The hint is no longer consulted.
 
     A candidate is dropped (not merely reduced in quantity) when: the

@@ -5,7 +5,7 @@
   "generator_version": "n/a-recorded",
   "seed": null,
   "transformations": [
-    "live tools/list re-capture, superseding tools_list_2026-09-05.json for schema-hash-sensitive tests only -- a live write attempt (the stage plan) found silpo_add_or_update_cart_products (and four other tools) had drifted from the 2026-09-05 snapshot; description-text-only for the write tool, confirmed structurally identical inputSchema. The 2026-09-05 file is left untouched -- several docs quote it verbatim by exact date/path."
+    "live tools/list re-capture, superseding tools_list_2026-09-05.json for schema-hash-sensitive tests only -- a live write attempt (the design plan) found silpo_add_or_update_cart_products (and four other tools) had drifted from the 2026-09-05 snapshot; description-text-only for the write tool, confirmed structurally identical inputSchema. The 2026-09-05 file is left untouched -- several docs quote it verbatim by exact date/path."
   ],
   "expected_outcome": {
     "schema_hash_matches": true

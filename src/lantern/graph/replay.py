@@ -1,6 +1,6 @@
 """offline replay of the REAL compiled hero graph against a
 tracked bundle file -- no MCP network call, no LLM call, no Postgres
-connection. This is the "replay bundle" plan section 14's replay row asks
+connection. This is the "replay bundle" the brief's replay row asks
 for, and the labelled demo fallback the project's Definition of Done
 requires alongside the live proof ("a controlled live proof and an
 explicitly labeled replay fallback both exist").
@@ -69,7 +69,7 @@ IN_FLIGHT: IdempotencyState = "in_flight"
 # may depend on; the recorder's own test pins the two agree.
 TAPED_ERROR_KEY = "__mcp_error__"
 
-# plan section 11.1 -- mirrors `apps/api/routes.py`'s own `CONSENT_TTL`.
+# five minutes, per the brief -- mirrors `apps/api/routes.py`'s own `CONSENT_TTL`.
 # Not imported from there: `apps/api` is the interface layer and this
 # module is `application` (graph/**) -- importing "up" would invert the
 # direction `tests/unit/test_layering.py` enforces for every other
@@ -332,8 +332,7 @@ def replay(
     the 18 core repeats wire in the REAL live planner/explainer
     while MCP still replays from the tape (via `mcp_by_tool`'s fallback
     for the planner's own varying search terms) -- "live LLM against
-    replayed MCP", the configuration the author approved at the kickoff
-    kickoff."""
+    replayed MCP", the configuration the author approved at the start."""
     player = BundlePlayer(bundle)
     planner_call = planner_call or player.next_planner
     explainer_call = explainer_call or player.next_explainer

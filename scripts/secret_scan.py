@@ -1,5 +1,6 @@
 """Scan every tracked-or-trackable file for likely secrets before it can leak
-into a public repository (IV-03: "Жодного токена в клієнті/логах/репозиторії").
+into a public repository (the no-secrets rule: "Жодного токена в клієнті/логах/
+репозиторії").
 
 Uses `git ls-files --cached --others --exclude-standard` rather than reading
 the working directory directly, so a file `.gitignore` already excludes

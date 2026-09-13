@@ -11,7 +11,7 @@ hashed, `args_hash` proves nothing about what was actually called, and
 every other check in the Write Guard is guarding a value with no
 relationship to the write.
 
-Both were declared at kickoff and neither was written. A3 was reported as
+Both were declared at the start and neither was written. A3 was reported as
 passing on the strength of six accepted live writes -- which show the
 server tolerated the arguments, not that they match what the guest
 approved. Found by an adversarial audit before merge.

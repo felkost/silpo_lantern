@@ -69,7 +69,7 @@ class WriteBackendFixture:
     applied_price_ratio: float = 1.0
     # rounds (1-based) in which the write tool reports success and
     # the cart does NOT move -- the one case the server's own success flag
-    # cannot rule out (CLAUDE.md's fourth invariant), and the only way to
+    # cannot rule out (the project's invariants), and the only way to
     # reach `unverified` through a read-back that actually COMPLETED
     # rather than one that crashed.
     silent_write_rounds: Tuple[int, ...] = ()

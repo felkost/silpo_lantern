@@ -265,7 +265,7 @@ def test_events_streams_the_read_pipeline_node_by_node(
     assert '"gap": "194.11"' in body
     assert '"session_id": "s1"' in body
     # the disclosure layer and channel comparison must reach
-    # this frame -- an adversarial audit of the stage plan found the naive
+    # this frame -- an adversarial audit of the design plan found the naive
     # fix (emit on the `diagnose` chunk) ships `channels: []` because
     # `channel_comparison` does not exist until the LATER
     # `compare_channels` chunk arrives.

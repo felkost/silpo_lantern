@@ -1,5 +1,5 @@
 """runs every `not_run` row of the RG coverage map and
-keeps the pytest output as the run artefact plan section 12.4 requires
+keeps the pytest output as the run artefact the brief requires
 before a row may read `pass`. The tests already exist and pass in the
 gate; what was missing was a RECORDED run naming which node ids ran,
 when, on which commit, with what result -- the map's own test

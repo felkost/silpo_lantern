@@ -1,5 +1,5 @@
-"""Plan section 9.1's "typed errors" strengthening, measured to have zero
-donor precedent: the donor's silpo_mcp.py
+"""the brief's "typed errors" strengthening, measured to have zero
+precedent: that earlier project's silpo_mcp.py
 never touches `McpError`/`ErrorData`/JSON-RPC codes at all. This is new code.
 An unrecognized JSON-RPC error code must still map to a typed exception, never
 crash the mapping itself or get silently swallowed (same fail-safe philosophy

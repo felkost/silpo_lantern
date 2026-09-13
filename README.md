@@ -98,7 +98,7 @@ technical tests. The replay fallback exists as tracked recorded bundles replayed
 
 ## Unit economics
 
-Stated as the plan's formula with variables, not a projection:
+Stated as a formula with variables, not a projection:
 
 `Vnet = B × (p₁ × M₁ − p₀ × M₀ − c) + ΔS × C − F`
 
@@ -134,7 +134,7 @@ confirmation. New blockers (stock, timeslot) are added only after ten sanitised 
 and a deterministic rule each. The value hypothesis — fewer abandoned carts and support
 contacts — remains to be tested with an A/B pilot on eligible checkout episodes.
 
-Reused components from the donor project, third-party notices and the disclosure of
+Reused components from the author's earlier project, third-party notices and the disclosure of
 AI assistance are delivered with the submission package.
 
 ## License

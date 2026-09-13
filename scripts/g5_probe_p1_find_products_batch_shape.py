@@ -8,7 +8,7 @@ Read-only, no LLM spend. Reuses `scripts/g4_live_evidence_gate_run.py`'s
 already-proven live-connection pattern (fresh session per call, disk-cached
 OAuth token, the exception-group unwrap) rather than inventing a new one.
 
-Author-run per the stage spec's own §10 ("Handed over, not run") — the
+Author-run per the review notes ("Handed over, not run") — the
 assistant does not self-initiate a live MCP call.
 
 Usage:
