@@ -3,7 +3,7 @@ say nothing about discounts.
 
 GD-05's whole subject is that `minOrderCost` is compared against
 `productsTotal` alone -- never `total` or `totalAfterDiscounts`
-(`CLAUDE.md`'s own invariant, a previously-shipped mistake the field
+(the project's invariants, a previously-shipped mistake the field
 report reversed). On a discounted cart those three numbers differ by more
 than the gap itself, so a case that asserts only `primary_code` passes
 just as happily against an implementation comparing the wrong one.

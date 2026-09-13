@@ -3,7 +3,7 @@ own reported `usage`, never from an estimate.
 
 an earlier decision established that this project has NO other source: `enforce_budget`
 is called from nowhere and `cycles_used`/`tokens_used` are never
-incremented, so plan section 13.4's per-run "tokens and cost" would
+incremented, so the brief's per-run "tokens and cost" would
 otherwise have nothing behind it at all.
 
 The arithmetic is pure and lives in `domain/repeat_accounting.py`; the

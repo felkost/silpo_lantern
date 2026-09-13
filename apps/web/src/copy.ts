@@ -71,7 +71,7 @@ export function translateValidationCode(validation: DisclosedValidation): string
 // Ordered [substring, Ukrainian sentence] pairs, checked in order --
 // substring rather than equality because several of `write_guard.py`'s
 // refusal reasons interpolate a tool name or a Python `set` repr and are
-// never a stable literal (an adversarial audit of this stage's own plan
+// never a stable literal (an adversarial audit of this change's own plan
 // found 4 of 14 authorize_write() reasons are f-strings, not literals).
 const ERROR_REASON_UK: Array<[string, string]> = [
   // authorize_write (src/lantern/safety/write_guard.py)

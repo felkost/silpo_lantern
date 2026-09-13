@@ -263,7 +263,7 @@ def build_planner_llm(model: str, api_key: str, fallback: Optional[str] = None) 
     with `SearchIntent` structured output (see module docstring) — never
     called offline. `fallback` is accepted but not yet wired to an
     automatic retry: a fallback model must pass the same contract/golden
-    gate as the primary before it can be trusted, and this stage does not
+    gate as the primary before it can be trusted, and this change does not
     build that gate, so an unverified fallback stays unused rather than
     silently auto-switching.
     """

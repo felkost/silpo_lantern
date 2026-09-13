@@ -1,5 +1,5 @@
 {
-  "$comment": "the RG-01..07 coverage map. Plan section 12.4's own rule is verbatim: a new test's status BEFORE it runs is `not_run`, never `pass`. Only a recorded run artefact promotes a row. The the kickoff audit found five rows had been claimed `pass` on the strength of topically-related tests that did not actually exercise the rubric -- this file exists so that cannot happen silently again.",
+  "$comment": "The RG-01..07 coverage map. The brief's own rule is verbatim: a new test's status BEFORE it runs is `not_run`, never `pass`. Only a recorded run artefact promotes a row. The the initial review found five rows had been claimed `pass` on the strength of topically-related tests that did not actually exercise the rubric -- this file exists so that cannot happen silently again.",
   "version": "1.0.0",
   "statuses": {
     "not_run": "The test exists but no recorded run artefact promotes it yet.",

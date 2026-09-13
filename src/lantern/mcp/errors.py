@@ -1,4 +1,4 @@
-"""Typed error hierarchy for the MCP adapter — the donor's `silpo_mcp.py`
+"""Typed error hierarchy for the MCP adapter — that earlier project's `silpo_mcp.py`
 never touched `McpError` or JSON-RPC codes at all.
 """
 

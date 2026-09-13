@@ -12,7 +12,7 @@ import json
 from src.lantern.config import PROJECT_ROOT
 from scripts.compute_metrics import METRICS_OUTPUT_PATH, build_metrics_report
 
-# `CostDeltaAccuracy` (plan section 13.3's name) became TWO entries.
+# `CostDeltaAccuracy` (the brief's name) became TWO entries.
 # It compared the recorded delta against the price the product SEARCH
 # advertised and was gated at "exact" -- on an assumption an earlier decision disproved,
 # since the cart applies a per-product loyalty discount the search does

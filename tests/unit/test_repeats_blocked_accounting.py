@@ -86,7 +86,7 @@ def test_a_clean_full_run_reports_its_real_ratio() -> None:
 
 
 def test_sixteen_of_eighteen_is_the_documented_pass_bar() -> None:
-    """Plan section 13.4's own reading rule: 0.85 over 18 repeats means
+    """the brief's own reading rule: 0.85 over 18 repeats means
     >=16/18, not a rounded 0.85."""
     assert summarise_repeats(
         _outcomes(passed=16, failed=2), expected_total=18

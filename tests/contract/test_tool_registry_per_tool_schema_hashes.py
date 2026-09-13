@@ -3,7 +3,7 @@
 Guard needs -- distinct from the whole-array `schema_hash` drift tripwire.
 
 points at `tools_list_2026-09-07.json`, not the
-`...-09-05` fixture -- a live write attempt (the stage plan)
+`...-09-05` fixture -- a live write attempt (the design plan)
 found `silpo_add_or_update_cart_products`'s description had drifted from
 the 09-05 snapshot (clarifying prose only, confirmed structurally
 identical `inputSchema`), and `reviewed_tools.json` was regenerated from

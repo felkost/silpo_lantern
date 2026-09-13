@@ -1,6 +1,6 @@
 """Typed wrappers binding `mcp.session.call_tool` to each of the graph's
 required `Callable` signatures. Closes the long-carried risk this project's
-own stage reports named twice: "live MCP fetchers are proven live
+own review noted twice: "live MCP fetchers are proven live
 (`scripts/g4_live_evidence_gate_run.py`) but not wired into any production
 entry point." `apps/api` needs a real graph to serve `/session` from --
 these functions are that wiring, one per read tool plus the single write

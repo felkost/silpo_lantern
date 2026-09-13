@@ -2,7 +2,7 @@
 (C1-C9) -- each independently, mirroring `test_write_guard_authorization.py`'s
 own one-baseline-flip-one-thing discipline. A compensation proposal must
 pass every EXISTING branch too (consent binding, schema hash, budget
-reserve) plus these; C6 in particular is plan section 11's own "no
+reserve) plus these; C6 in particular is the brief's own "no
 auto-compensation when the cart was concurrently modified" at full
 strength.
 """
@@ -214,7 +214,7 @@ def test_c5_compensation_for_another_session_is_refused() -> None:
 
 
 def test_c6_compensation_refused_when_the_cart_moved_since_the_write() -> None:
-    """plan section 11: no auto-compensation when the cart was
+    """the brief: no auto-compensation when the cart was
     concurrently modified. C6 binds to the RECEIPT's own `after_state`,
     distinct from the pre-existing `consent.state_hash` check (which binds
     to consent time) -- isolated here by granting consent against the

@@ -1,6 +1,6 @@
 """Enforce this project's Clean Architecture layer table by walking
-imports, not by trusting directory placement alone. Adapted from the donor
-project's `SupportFlow/tests/test_layering.py` — the shape (LAYER_OF +
+imports, not by trusting directory placement alone. Adapted from the earlier project
+project's its own layering test — the shape (LAYER_OF +
 ALLOWED map, AST-walk, one negative rule beyond the plain cross-layer
 check) is reused directly; only the layer names and the write-allowlist
 rule are Lantern's own.
@@ -189,7 +189,7 @@ def _iter_python_files():
 
 def _iter_write_allowlist_scan_files():
     """the write-allowlist tripwire below used to scan
-    only `src/`, so `apps/api` -- the interface layer this stage adds a
+    only `src/`, so `apps/api` -- the interface layer this change adds a
     consent endpoint to -- could import `WRITE_TOOL_ALLOWLIST` directly
     with every existing test staying green. `apps/` is not in `LAYER_OF`
     (it has no place in the kernel/domain/safety/infra/application table
@@ -248,7 +248,7 @@ def _general_layering_violations(files) -> list[str]:
 
 
 def test_no_python_files_yet_or_all_respect_layering():
-    """No lantern/ source files exist yet at kickoff; once they do, each
+    """No lantern/ source files exist yet at the start; once they do, each
     one's imports must stay within the layer table defined by LAYER_OF and
     ALLOWED above.
     """
@@ -259,7 +259,7 @@ def test_no_python_files_yet_or_all_respect_layering():
 def test_evals_package_is_mapped_and_scanned():
     """`src/lantern/evals/` (the DeepEval judge wrapper) must
     be a mapped layer, not silently skipped by `_layer_of_module` returning
-    `None` -- CLAUDE.md §2 claims layer assignment is a property of every
+    `None` -- the layer table claims layer assignment is a property of every
     file, and an unmapped package makes that claim false for it.
     """
     assert LAYER_OF.get("evals") is not None

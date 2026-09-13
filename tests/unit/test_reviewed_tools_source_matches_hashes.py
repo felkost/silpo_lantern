@@ -1,6 +1,6 @@
 """T3: `reviewed_tools.json`'s `source`, `source_schema_hash`
 and `reviewed_at` must all describe the SAME baseline as its stored
-`tool_hashes`. Found stale (audit row 10 kickoff): `source` named the
+`tool_hashes`. Found stale (in review): `source` named the
 2026-09-05 fixture and `source_schema_hash` was that fixture's own
 whole-array hash, while all 39 stored `tool_hashes` actually matched the
 2026-09-07 fixture (the live regeneration) -- a file that misdescribes

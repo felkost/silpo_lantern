@@ -36,7 +36,7 @@ DEFAULT_MCP_URL = "https://mcp.silpo.ua/mcp"
 # time -- so one shared, cached production graph serves every guest
 # instead of being rebuilt per session.
 #
-# Measured, not assumed (kickoff probe): a `ContextVar` set in the async
+# Measured, not assumed (an early probe): a `ContextVar` set in the async
 # caller IS visible inside LangGraph's SYNC node functions, through both
 # `ainvoke` and `astream`. Had it not propagated, the fallback would have
 # been a per-session graph.

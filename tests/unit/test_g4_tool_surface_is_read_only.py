@@ -1,4 +1,4 @@
-"""No write-capable tool is reachable from any code path this stage adds.
+"""No write-capable tool is reachable from any code path this change adds.
 Two independent proofs, since either alone leaves a gap: (a) the planner's
 tool list is a fixed, typed set of function parameters on
 `build_recovery_graph` — there is no generic "call any tool by name"

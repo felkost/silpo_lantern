@@ -2,7 +2,7 @@
 does not reflect.
 
 The one thing the MCP server's own `{success: true}` cannot prove is that
-the cart actually changed (`CLAUDE.md`'s fourth invariant). The offline
+the cart actually changed (the project's invariants). The offline
 fixture had no way to produce that case: every write it accepted, it also
 applied, so a read-back always showed exactly what was written and the
 `unverified` branch could only be reached by killing the read-back

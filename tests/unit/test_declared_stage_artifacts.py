@@ -1,7 +1,7 @@
-"""Three gate tests one stage spec declared (T21, T22, T24), each
+"""Three gate tests one design note declared , each
 guarding an artefact that is easy to let drift because nothing executes it.
 
-T21 restores plan section 19's actual guarantee -- the state machine is
+The first restores the brief's actual guarantee -- the state machine is
 exported FROM the code, and CI fails when the committed copy no longer
 matches. The export lives under `tests/unit/fixtures/` rather than beside
 the rendered diagrams, because the generated-documentation tree is
@@ -57,7 +57,7 @@ def test_t21_exported_graph_matches_the_committed_copy() -> None:
 
 
 def test_t21b_the_export_carries_the_write_path_and_its_interrupt() -> None:
-    """Pins the two properties the diagrams and CLAUDE.md's own invariants
+    """Pins the two properties the diagrams and the project's invariants
     depend on: the write segment exists, and the guard is the interrupted
     node -- not merely that some export file is present."""
     topology = _topology()

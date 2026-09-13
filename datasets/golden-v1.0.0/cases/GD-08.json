@@ -1,6 +1,6 @@
 {
   "case_id": "GD-08",
-  "scenario": "A validation code absent from the policy registry (product.offer.status.not_available) is disclosed as an UNKNOWN blocker, never silently trusted or aliased to a known code -- CLAUDE.md's fail-safe for validation-code drift.",
+  "scenario": "A validation code absent from the policy registry (product.offer.status.not_available) is disclosed as an UNKNOWN blocker, never silently trusted or aliased to a known code -- the project rules's fail-safe for validation-code drift.",
   "gd_ref": "GD-08",
   "input": {
     "fixture_id": "unknown_validation_code",

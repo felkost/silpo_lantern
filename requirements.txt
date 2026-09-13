@@ -1,4 +1,4 @@
-# Pinned per agentic-project-kickoff step 6: "pin what you measure".
+# Pinned per a setup rule: "pin what you measure".
 # Updated 2026-09-05: resolved to the latest mutually-compatible versions by
 # letting pip pick them (mcp fixed at 1.29.0, everything else unconstrained),
 # then verified with `pip check` (0 broken requirements) and a full local
@@ -7,7 +7,7 @@
 # made by skipping that verification once.
 #
 # mcp stays pinned to 1.29.0 deliberately, not bumped to whatever is latest:
-# `src/lantern/mcp/auth.py` (reused from the donor project) was verified
+# `src/lantern/mcp/auth.py` (reused from the author's earlier project) was verified
 # against this exact version's API by direct source inspection
 # (`TokenStorage` as a `typing.Protocol`, `OAuthClientInformationFull` shape).
 # Bumping the SDK version without re-running that verification would silently
@@ -17,7 +17,7 @@ uvicorn[standard]==0.52.4
 pydantic==2.13.5
 mcp==1.29.0
 langgraph==1.2.11
-# an earlier decision (the kickoff audit): OpenRouter's LLM gateway (plan section 8.5), called
+# an earlier decision (the initial review): OpenRouter's LLM gateway , called
 # through langchain-openai's ChatOpenAI with base_url pointed at OpenRouter
 # — chosen over a raw httpx client (reimplements retry/tool-calling/
 # structured-output already in the library) and the bare openai SDK
@@ -32,14 +32,14 @@ langgraph-checkpoint-postgres==3.1.2
 langsmith==0.12.2
 psycopg[binary]==3.3.5
 psycopg-pool==3.3.1 # pinned explicitly — was transitive-only via
-# langgraph-checkpoint-postgres, and this stage builds the write path's own
+# langgraph-checkpoint-postgres, and this change builds the write path's own
 # sync repository directly on it.
 sqlalchemy==2.0.52
 httpx==0.28.1
 python-dotenv==1.2.3
 PyYAML==6.0.3
 # Already installed transitively via mcp>=1.29.0 (mcp requires jsonschema>=4.20.0);
-# pinned directly here because the fixture-validation pipeline (plan section 12.1.1)
+# pinned directly here because the fixture-validation pipeline 
 # depends on it too, and a future mcp bump must not silently drop it out from under
 # that unrelated part of the codebase (a stage-spec correction).
 jsonschema==4.26.0

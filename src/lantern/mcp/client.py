@@ -1,6 +1,6 @@
-"""MCP client: port of the donor project's `silpo_mcp.py`, strengthened with
+"""MCP client: port of the author's earlier project's `silpo_mcp.py`, strengthened with
 a dynamic `tools/list` registry (TTL + event-driven invalidation) and typed
-error mapping — both measured to have zero donor precedent.
+error mapping — both measured to have zero precedent.
 
 `ToolRegistry` is per-process by design: it has no shared store across
 worker processes. A forked worker cannot reliably detect its own siblings,
@@ -89,7 +89,7 @@ def compute_schema_hash(tools_raw: List[Dict[str, Any]]) -> str:
 
 def compute_per_tool_schema_hashes(tools_raw: List[Dict[str, Any]]) -> Dict[str, str]:
     """one hash per tool, not the whole-array hash above.
-    An earlier stage report itself named the whole-array granularity "adequate
+    An earlier review named the whole-array granularity "adequate
     while no write allowlist exists to make 'which tool moved' matter" —
     that condition ends once a Write Guard exists: the guard must detect
     drift in `silpo_add_or_update_cart_products` specifically, not treat

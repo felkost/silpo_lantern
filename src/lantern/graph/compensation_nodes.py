@@ -1,13 +1,13 @@
 """`persist_receipt`, and the compensation offer it may produce. Split out of
 `nodes.py`: `nodes.py` was already 30% past
-`CLAUDE.md` section 5's ~400-line ceiling before this stage, and this
+the ~400-line file ceiling before this change, and this
 node's own logic grew materially to decide whether a just-persisted write
 is compensable and, if the graph is not going to run another add round,
 whether to offer to undo it.
 
 `make_write_guard_node` and `make_write_and_readback_node` STAY in
 `nodes.py` -- `call_write_tool` remains a parameter of exactly one node
-factory in exactly one module (`CLAUDE.md` section 4: only one node may
+factory in exactly one module (the project invariants: only one node may
 call a write tool), and `test_write_node_is_only_call_site_of_write_tool.py`
 was widened to scan all of `src/lantern/graph/**` in the same
 commit that added this module, so a second write call site anywhere in
@@ -64,7 +64,7 @@ def make_persist_receipt_node(
         )
 
         # a compensation is never itself compensated, and never
-        # restarts the an earlier decision add-retry loop -- it deliberately leaves the
+        # restarts the add-retry loop -- it deliberately leaves the
         # cart blocked (that is the whole point of undoing our own add),
         # and that is the end of this session's write activity.
         if written is not None and written.kind == "compensate":

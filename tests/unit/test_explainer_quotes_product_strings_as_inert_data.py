@@ -26,7 +26,7 @@ def test_an_ordinary_product_name_is_wrapped_in_the_data_block() -> None:
 def test_the_plans_own_adversarial_string_is_still_wrapped_not_specially_handled() -> (
     None
 ):
-    """The exact live "BUDGET" instruction (§8b finding 22's corrected
+    """The exact live "BUDGET" instruction (the corrected
     quote) reaching the explainer as if it were a product description —
     the function does not try to detect or strip instruction-shaped text
     (that would be a losing pattern-matching game); it wraps it as data,

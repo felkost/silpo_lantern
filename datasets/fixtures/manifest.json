@@ -1,5 +1,5 @@
 {
-  "$comment": "Skeleton per plan section 12.1.1 step 4/8. Populated with real sanitized/synthetic/mutated fixture entries. Schema: datasets/fixtures/envelope.schema.json",
+  "$comment": "Skeleton by design. Populated with real sanitized/synthetic/mutated fixture entries. Schema: datasets/fixtures/envelope.schema.json",
   "coverage": {
     "DR": [
       "a line item with price:0 and an explicit stock/error signal (DR-08)",

@@ -47,7 +47,7 @@ class ActionAlreadyInFlightError(Exception):
     """Raised by `claim_and_consume` when the journal row for this
     `(owner, cart_id, action_id)` already exists with a different
     `canonical_args_hash` -- the same logical action requested with
-    different arguments, which plan section 11.1 requires be rejected
+    different arguments, which the brief requires be rejected
     rather than silently overwritten."""
 
 
@@ -192,7 +192,7 @@ def delete_session_token(pool: ConnectionPool, session_id: str) -> None:
 def save_consent(pool: ConnectionPool, consent: ConsentRecord) -> None:
     """`ON CONFLICT (action_id) DO NOTHING` -- a double-clicked
     consent button, or a retried request, used to raise a bare primary-key
-    violation and 500 the endpoint. §12.4's mandatory RG variants name
+    violation and 500 the endpoint. the mandatory RG variants name
     «подвійний клік» explicitly, so this is an RG obligation, not a nicety.
     A second call with the SAME `action_id` is, by construction, consent to
     the same proposal (the API recomputes both hashes server-side from the

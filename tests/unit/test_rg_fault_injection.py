@@ -1,7 +1,7 @@
 """the fault-injection cases RG-01, RG-02, RG-04 and RG-05
-name. Written rather than relabelled: plan section 12.4's own rule is
+name. Written rather than relabelled: the brief's own rule is
 that a new test's status before it runs is `not_run`, never `pass`, and
-the kickoff audit found five RG rows had been claimed on the strength of
+the initial review found five RG rows had been claimed on the strength of
 topically-related tests that did not actually exercise the rubric.
 
 RG-03 (injected instructions via a tool error and via a tool description)

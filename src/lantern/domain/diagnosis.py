@@ -23,7 +23,7 @@ from src.lantern.policies.loader import PolicyRegistry
 
 # A declared POLICY CONSTANT, not a measured value.
 # The only thing actually established is that the declared test needs
-# epsilon > 0.01; 1.00 was the author's choice at kickoff. What would
+# epsilon > 0.01; 1.00 was the author's choice at the start. What would
 # calibrate it: the minimum observed product price from a live
 # `silpo_find_products_batch` sweep (blocked on the OAuth login same as
 # every other live measurement).

@@ -1,5 +1,5 @@
 """`RecoveryCompletionRate` with `n == 0` returns N/A, never
-0% -- plan section 13.1's own rule, because a 0% completion rate over zero
+0% -- the brief's own rule, because a 0% completion rate over zero
 episodes reads as "every guest failed" when in fact none were measured.
 `DisclosureRate` never counts "unknown" (visibility not verified) as
 "hidden" -- an unmeasured constraint is not evidence it was invisible to

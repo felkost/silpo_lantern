@@ -1,11 +1,11 @@
 // Screen 1 of 3: Diagnosis with its disclosure layer -- every validation
 // the cart already carries, including the ones the app's own UI does not
-// render (plan section 5.1, the product's whole point), plus the
-// delivery-channel comparison (amendment A7).
+// render (the product's whole point), plus the
+// delivery-channel comparison (the delivery-channel comparison).
 //
 // the SSE `diagnosis` event now actually carries
 // `validations`/`channels` (it used to be dropped before reaching this
-// component at all -- an adversarial audit of the stage plan caught it),
+// component at all -- an adversarial audit of the design plan caught it),
 // and both are rendered in Ukrainian rather than as raw validation codes.
 
 import { translateValidationCode } from "../copy";

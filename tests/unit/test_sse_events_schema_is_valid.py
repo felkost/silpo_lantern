@@ -1,6 +1,6 @@
 """The SSE event envelope schema must
 itself be a well-formed JSON Schema, and validates the five concrete
-`event` names plan section 1.5 declares -- not the placeholder
+`event` names the brief declares -- not the placeholder
 node-name vocabulary this file used before any route existed to emit any
 of it.
 
@@ -98,7 +98,7 @@ def test_a_real_diagnosis_event_validates() -> None:
 
 
 def test_a_diagnosis_event_missing_channels_is_rejected() -> None:
-    """The exact regression an adversarial audit of the stage plan caught:
+    """The exact regression an adversarial audit of the design plan caught:
     emitting the frame before `compare_channels` had run would ship this
     shape -- now the schema itself refuses it."""
     data = _diagnosis_data()

@@ -110,7 +110,7 @@ def health() -> Dict[str, str]:
 def mount_web(app: FastAPI, dist: Path) -> bool:
     """serves the built recovery card from `/`. Must be called
     AFTER every API route is registered -- a root mount registered earlier
-    shadows `/health` (measured, spec §4). `StaticFiles` raises on a missing
+    shadows `/health` (measured, by design). `StaticFiles` raises on a missing
     directory, so a clone without `npm run build` is warned about, not
     broken. `html=True` serves `index.html` at `/`; there is no SPA
     fallback because the app has no client-side router -- every screen is

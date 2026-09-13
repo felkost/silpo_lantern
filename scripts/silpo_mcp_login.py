@@ -37,7 +37,7 @@ DEFAULT_MCP_URL = "https://mcp.silpo.ua/mcp"
 
 # A lightweight, read-only tool with no required arguments beyond a limit —
 # calling it is what forces the OAuth flow to run and gives an observable
-# success signal, matching the donor script's own choice of the equivalent
+# success signal, matching the earlier script's own choice of the equivalent
 # `silpo_list_branches` call.
 LOGIN_PROBE_TOOL = "silpo_list_branches"
 LOGIN_PROBE_ARGS = {"limit": 1}

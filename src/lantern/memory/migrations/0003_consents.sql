@@ -1,6 +1,6 @@
 -- Consent is bound to a specific action, not a session — action_id,
 -- canonical args, args_hash, state_hash, and expiry (TTL initially 5 min).
--- Exact consumption/expiry logic is a later stage's job; this stage only
+-- Exact consumption/expiry logic is later work; this change only
 -- owns the table existing.
 CREATE TABLE IF NOT EXISTS consents (
     action_id UUID PRIMARY KEY,

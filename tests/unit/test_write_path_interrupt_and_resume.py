@@ -7,7 +7,7 @@ next resume instead of writing twice.
 
 Offline throughout: `langgraph.checkpoint.memory.InMemorySaver` stands in
 for the Neon-backed `AsyncPostgresSaver` this project uses in production —
-measured (kickoff probe) to expose the same pause/resume contract for a
+measured (an early probe) to expose the same pause/resume contract for a
 sync graph. No live MCP or LLM call.
 """
 

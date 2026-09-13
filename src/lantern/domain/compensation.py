@@ -1,11 +1,11 @@
-"""Guest-facing compensation (an earlier decision, plan section 11): a controlled,
+"""Guest-facing compensation (a requirement of the brief): a controlled,
 consent-bound restoration of the cart to what it held before a write this
 project performed. Pure per the "domain core does no I/O" invariant --
 `derive_compensation` and `build_compensation_proposal` take a `Receipt`
 and the ORIGINAL write's own `canonical_args` and produce, or refuse to
 produce, the inverse write. No LLM anywhere on this path: the sentence
 that names an amount of money is rendered here, in code
-(`CLAUDE.md` section 4).
+(the project invariants).
 
 compensation is not always the ordinary add tool run
 backwards. Candidates come from `silpo_find_products_batch`, so most
@@ -13,8 +13,8 @@ writes ADD A NEW LINE rather than increase an existing one, and the add
 tool's own schema (`quantity: {"type":"number","exclusiveMinimum":0}`)
 cannot express "set this line to zero" -- a write that added a line has
 no inverse without `silpo_remove_cart_products`. This is a dated
-divergence from plan section 11.1's "hero keeps one write-tool" sentence,
-recorded as amendment A9, not presented as compliance.
+divergence from the brief's "hero keeps one write-tool" sentence,
+recorded as a deliberate divergence, not presented as compliance.
 
 a receipt is compensable only when the diff it recorded is
 KNOWN, never when the state is unknown. `receipt_is_compensable` mirrors
@@ -24,9 +24,9 @@ whenever it did not clear the blocker; two specific `unverified` reasons
 are compensable because `finalize_write_outcome` only reaches them AFTER
 already establishing `len(matched) == 1 and not other_changes` (our
 product, and nothing else, changed) -- the diff is known and unwanted,
-exactly what plan section 11 names. Every other `unverified` reason means
+exactly what the brief names. Every other `unverified` reason means
 the state is genuinely unknown, and compensating from an unknown state is
-guessing, which plan section 11's own last clause forbids.
+guessing, which the brief's own last clause forbids.
 """
 
 import uuid

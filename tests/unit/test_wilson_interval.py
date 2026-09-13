@@ -8,7 +8,7 @@ behaviour is asserted rather than eyeballed.
 
 Reference values recomputed independently against the exact
 Clopper-Pearson interval for the same data (agreeing to within 0.002 at
-these n), and recorded in the stage report's own comparison table.
+these n), and recorded in the review notes's own comparison table.
 """
 
 from scripts.render_metrics_chart import wilson

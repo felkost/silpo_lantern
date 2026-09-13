@@ -113,3 +113,48 @@ def test_no_tracked_file_carries_a_stage_or_decision_id() -> None:
             line = text.count("\n", 0, match.start()) + 1
             violations.append(f"{rel_path}:{line}: {match.group(0)!r}")
     assert not violations, "\n".join(violations)
+
+
+# Beyond bare ids, the words that only mean something next to the plan or
+# the local-only process documents: a plan section citation, an "IV-05"
+# infrastructure item, "kickoff", "this stage", "the stage report", an
+# amendment id, the name of a gitignored process file, or the "donor"
+# project the reused components came from. Each one sends a fresh clone
+# looking for a document that is not there. The SSE event named `stage`
+# and the graph node named `plan` are product vocabulary and are not
+# matched: only the plan-citation and stage-of-work phrasings are.
+_PLAN_VOCABULARY = re.compile(
+    r"[Pp]lan (?:section|\u00a7)\s?\d"
+    r"|\u00a7\s?\d"
+    r"|\bIV-\d{1,2}\b"
+    r"|\bkickoff\b"
+    r"|\b(?:this|an earlier|a later|later|earlier) stages?\b"
+    r"|\bstage (?:reports?|specs?|plans?|close)\b"
+    r"|\bamendment A\d+\b"
+    r"|\b(?:CLAUDE|AGENTS|AI_USAGE|BACKGROUND_MATERIALS|THIRD_PARTY_NOTICES)(?:\.md)?\b"
+    r"|\bdonor\b"
+    r"|\bSupportFlow\b"
+)
+
+_VOCABULARY_EXEMPT = {
+    "tests/unit/test_tracked_files_reference_tracked_files.py",
+    ".gitignore",
+}
+
+
+def test_no_tracked_file_carries_plan_or_stage_vocabulary() -> None:
+    violations: list[str] = []
+    for rel_path in _tracked_files():
+        if rel_path in _VOCABULARY_EXEMPT:
+            continue
+        full_path = PROJECT_ROOT / rel_path
+        if not full_path.is_file():
+            continue
+        try:
+            text = full_path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        for match in _PLAN_VOCABULARY.finditer(text):
+            line = text.count("\n", 0, match.start()) + 1
+            violations.append(f"{rel_path}:{line}: {match.group(0)!r}")
+    assert not violations, "\n".join(violations)

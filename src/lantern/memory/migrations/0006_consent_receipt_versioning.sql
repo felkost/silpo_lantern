@@ -1,4 +1,4 @@
--- an earlier decision (the kickoff audit): the consent record plan section 11
+-- an earlier decision (the initial review): the consent record the brief
 -- describes carries cart_id, prompt_version and policy_version, and none
 -- of the three existed on `consents` — a consent could not be bound to
 -- the cart it was granted against by id, nor to the prompt/policy version
@@ -12,7 +12,7 @@ ALTER TABLE consents ALTER COLUMN cart_id DROP DEFAULT;
 ALTER TABLE consents ADD COLUMN prompt_version TEXT;
 ALTER TABLE consents ADD COLUMN policy_version TEXT;
 
--- The receipt as `0005` defined it cannot represent what plan section 13.3
+-- The receipt as `0005` defined it cannot represent what the brief
 -- requires the metrics to measure: `ReadbackCoverage` needs "attempt made" and
 -- "verification succeeded" as separate facts, `CostDeltaAccuracy` needs a
 -- stored expected delta to compare against, and no column let a receipt

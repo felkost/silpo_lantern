@@ -1,5 +1,5 @@
 """two forced changes to the sanitizer, found by
-an adversarial audit of this stage's plan against `sanitize_payload`'s
+an adversarial audit of this change's plan against `sanitize_payload`'s
 actual coverage.
 
 [A-5]: `ALLOWED_KEYS` was built for cart-snapshot fields; sanitizing a

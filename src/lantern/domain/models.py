@@ -244,7 +244,7 @@ class ActionProposal(BaseModel):
 class ConsentRecord(BaseModel):
     """Mirrors `0003_consents.sql` + `0006_consent_receipt_versioning.sql`
     column for column. `cart_id`/`prompt_version`/`policy_version` were
-    added at plan section 11 requires a consent bound to
+    added because the brief requires a consent bound to
     the specific cart and the prompt/policy version that produced it, and
     `state_hash` deliberately excludes cart identity (it hashes contents,
     not identity), so `cart_id` has to live here explicitly. `owner` is
@@ -269,7 +269,7 @@ class ConsentRecord(BaseModel):
 class Receipt(BaseModel):
     """Mirrors `0005_receipts.sql` + `0006_consent_receipt_versioning.sql`.
     `status`/`reason`/`expected_delta`/`actual_delta`/`trace_id` were added
-    at plan section 13.3's metrics need "read-back
+    at the brief's metrics need "read-back
     attempted" separated from "verification succeeded", a stored
     expectation to compare a delta against, and a way to join a receipt
     back to its own LangSmith trace — none of which `verified: bool` alone

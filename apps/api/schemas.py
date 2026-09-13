@@ -1,5 +1,5 @@
 """Request/response Pydantic models for the session/consent routes
-(plan section 1.5). Kept separate from `main.py` so the route module
+. Kept separate from `main.py` so the route module
 stays focused on wiring, not shape declarations.
 """
 

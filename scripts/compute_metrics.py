@@ -1,7 +1,7 @@
 """the I/O shell around `src/lantern/domain/metrics.py`'s
 pure functions. Reads the golden/repeat runs' own emitted records from the tracked
-`datasets/evidence` directory (the own "source of truth" decision --
-not the author's historical Neon rows, so the numbers stay reproducible
+`datasets/evidence` directory (so the numbers
+reproducible from the repository, not from the author's Neon rows
 from the repository) and writes the metrics report to
 `METRICS_OUTPUT_PATH` below, in the shape `render_report.py`'s
 `_load_metrics` reads.
@@ -141,7 +141,7 @@ def build_metrics_report(
     false_recovery_rows: List[FalseRecoveryRow] = []
 
     for record in records:
-        # One episode per run: plan section 13.1's unit is the
+        # One episode per run: the brief's unit is the
         # participant/cart/task/condition, and the three repeats of a case
         # are three episodes, not one retried.
         episodes.append(RecoveryEpisode(completed=bool(record.get("completed"))))

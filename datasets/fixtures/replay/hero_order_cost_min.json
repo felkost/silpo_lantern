@@ -5,7 +5,7 @@
   "generator_version": "replay-recorder-v1",
   "seed": null,
   "transformations": [
-    "built from tests/unit/test_write_path_interrupt_and_resume.py's own synthetic fixture (already pseudonymised test_* identifiers, no real cart/guest data) -- not a live capture; a live-recorded bundle is scripts/record_replay_bundle.py's job, pending the author's explicit go-ahead for a live MCP write (the stage plan)"
+    "built from tests/unit/test_write_path_interrupt_and_resume.py's own synthetic fixture (already pseudonymised test_* identifiers, no real cart/guest data) -- not a live capture; a live-recorded bundle is scripts/record_replay_bundle.py's job, pending the author's explicit go-ahead for a live MCP write (the design plan)"
   ],
   "expected_outcome": {
     "final_status": "unverified",

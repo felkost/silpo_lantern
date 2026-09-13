@@ -1,4 +1,4 @@
-"""Settles a risk carried since kickoff as "unmeasured" — the only
+"""Settles a risk carried since the start as "unmeasured" — the only
 tracked live cart capture available had an EMPTY
 `shipments[].products[]`, so this project had never seen a real line
 item's shape. A live multi-item capture (the author added

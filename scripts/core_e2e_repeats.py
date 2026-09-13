@@ -1,7 +1,7 @@
 """the 18 core E2E repeats -- GD-01..06 x 3, with a LIVE
 planner and explainer against REPLAYED MCP and Postgres.
 
-The configuration the author approved at the kickoff audit: only the two
+The configuration the author approved at the initial review: only the two
 LLM boundaries are live. MCP stays on the tape, so the repeats measure
 planner/explainer non-determinism without touching a real cart and
 without a real write. `replay()`'s optional `planner_call`/

@@ -1,4 +1,4 @@
-"""IV-05: re-verifies every model id in `config/models.yaml` against
+"""the model smoke check: re-verifies every model id in `config/models.yaml` against
 OpenRouter's live, public `/api/v1/models` catalogue — a free,
 unauthenticated read (no LLM inference, no token cost), deliberately
 separate from the smoke call. A model can still answer a smoke call while
